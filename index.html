@@ -20,6 +20,7 @@
         --border-strong: #4a4a4a;
         --focus: #ff3a3a;
         --accent: #ff2e2e;
+        --logo-crop-y: 52%;
       }
       * {
         box-sizing: border-box;
@@ -130,7 +131,7 @@
         width: 190px;
         height: 74px;
         object-fit: cover;
-        object-position: center 52%;
+        object-position: center var(--logo-crop-y);
         display: block;
         border-radius: 8px;
       }
