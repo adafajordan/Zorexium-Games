@@ -8,12 +8,80 @@
       :root {
         color-scheme: dark;
       }
+      * {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
         font-family: Arial, sans-serif;
         background: #111827;
         color: #e5e7eb;
       }
+
+      /* ── Sidebar ─────────────────────────────── */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 100;
+      }
+      .sidebar-overlay.open {
+        display: block;
+      }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -300px;
+        width: 300px;
+        height: 100%;
+        background: #1f2937;
+        z-index: 200;
+        transition: left 0.25s ease;
+        overflow-y: auto;
+        padding-bottom: 24px;
+      }
+      .sidebar.open {
+        left: 0;
+      }
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid #374151;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .sidebar-close {
+        background: none;
+        border: none;
+        color: #e5e7eb;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 2px 8px;
+        line-height: 1;
+      }
+      .sidebar-bubbles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 16px;
+      }
+      .sidebar-bubbles span {
+        background: #111827;
+        border: 1px solid #374151;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .sidebar-bubbles span:hover {
+        background: #374151;
+      }
+
+      /* ── Header ──────────────────────────────── */
       header {
         display: flex;
         align-items: center;
@@ -22,9 +90,17 @@
         background: #1f2937;
         position: sticky;
         top: 0;
+        z-index: 50;
       }
       .menu {
         font-size: 22px;
+        cursor: pointer;
+        user-select: none;
+        background: none;
+        border: none;
+        color: #e5e7eb;
+        padding: 4px 6px;
+        line-height: 1;
       }
       .brand {
         font-weight: 700;
@@ -45,808 +121,678 @@
         color: #f9fafb;
         border-radius: 6px;
         padding: 8px 12px;
+        cursor: pointer;
       }
-      main {
-        padding: 16px;
+      button:hover {
+        background: #4b5563;
+      }
+
+      /* ── Ad blocks ───────────────────────────── */
+      .ad-banner {
+        background: #161e2d;
+        border-top: 1px dashed #374151;
+        border-bottom: 1px dashed #374151;
+        color: #4b5563;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-align: center;
+        padding: 22px 16px;
+        width: 100%;
+      }
+      .ad-side {
+        background: #161e2d;
+        border: 1px dashed #374151;
+        color: #4b5563;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-align: center;
+        padding: 16px 4px;
+        width: 130px;
+        min-width: 130px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        writing-mode: vertical-rl;
+        align-self: stretch;
+      }
+
+      /* ── Tabs bar ────────────────────────────── */
+      .tabs-bar {
+        background: #1f2937;
+        border-bottom: 1px solid #374151;
+        padding: 10px 16px;
+        width: 100%;
+        overflow-x: auto;
+      }
+      .tabs-bar::-webkit-scrollbar {
+        height: 4px;
+      }
+      .tabs-bar::-webkit-scrollbar-thumb {
+        background: #374151;
+        border-radius: 2px;
       }
       .tabs {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-bottom: 24px;
       }
       .tabs span {
-        background: #1f2937;
+        background: #111827;
         border: 1px solid #374151;
         border-radius: 999px;
-        padding: 6px 10px;
-        font-size: 14px;
+        padding: 6px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
       }
+      .tabs span:hover {
+        background: #374151;
+      }
+
+      /* ── Page layout ─────────────────────────── */
+      .page-body {
+        display: flex;
+        align-items: flex-start;
+      }
+      main {
+        flex: 1;
+        min-width: 0;
+        padding: 16px;
+      }
+
+      /* ── Game grid ───────────────────────────── */
+      .game-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      @media (max-width: 900px) {
+        .game-grid { grid-template-columns: repeat(4, 1fr); }
+        .ad-side { display: none; }
+      }
+      @media (max-width: 600px) {
+        .game-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      .game-card {
+        background: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        padding: 10px 6px;
+        text-align: center;
+        font-size: 11px;
+        cursor: pointer;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.3;
+        word-break: break-word;
+        hyphens: auto;
+        overflow: hidden;
+        transition: background 0.15s;
+      }
+      .game-card:hover {
+        background: #2d3748;
+      }
+
+      /* ── Headings & text ─────────────────────── */
       h2 {
-        margin-top: 22px;
+        margin-top: 24px;
+        margin-bottom: 12px;
       }
-      .list {
-        white-space: pre-line;
-        line-height: 1.35;
+      .about-section p {
+        line-height: 1.75;
+        max-width: 860px;
+      }
+      .genre-list {
+        line-height: 2;
+        margin: 8px 0 16px;
       }
     </style>
   </head>
   <body>
+
+    <!-- Sidebar overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span>ZorexiumGames</span>
+        <button class="sidebar-close" onclick="closeSidebar()">&#10005;</button>
+      </div>
+      <div class="sidebar-bubbles">
+        <span>All</span>
+        <span>New</span>
+        <span>Multiplayer</span>
+        <span>Puzzle</span>
+        <span>Arcade</span>
+        <span>Board</span>
+        <span>Strategy</span>
+        <span>Sports</span>
+        <span>Action</span>
+        <span>Card</span>
+        <span>Word</span>
+        <span>Racing</span>
+        <span>Simulation</span>
+        <span>Adventure</span>
+        <span>Educational</span>
+        <span>Trivia</span>
+        <span>Music</span>
+        <span>Fighting</span>
+        <span>Shooting</span>
+        <span>Platformer</span>
+        <span>Casual</span>
+        <span>Horror</span>
+        <span>Idle</span>
+        <span>Merge</span>
+        <span>Tower Defense</span>
+        <span>Dress Up</span>
+        <span>Cooking</span>
+        <span>2 Player</span>
+        <span>3D</span>
+        <span>RPG</span>
+        <span>Stickman</span>
+        <span>Zombie</span>
+        <span>Chess</span>
+      </div>
+    </nav>
+
+    <!-- Header -->
     <header>
-      <span class="menu">☰</span>
+      <span class="menu" role="button" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</span>
       <span class="brand">ZorexiumGames</span>
-      <input class="search" type="search" placeholder="search games" />
+      <input class="search" type="search" placeholder="search games" aria-label="Search games" />
       <button>login</button>
       <button>register</button>
     </header>
-    <main>
-      <section class="tabs">
-        <span>All</span><span>New</span><span>Multiplayer</span><span>Puzzle</span><span>Arcade</span><span>Board</span><span>Strategy</span><span>Sports</span><span>Action</span><span>Card</span><span>Word</span><span>Racing</span><span>Simulation</span><span>Adventure</span><span>Educational</span><span>Trivia</span><span>Music</span>
-      </section>
 
-      <h2>Continue playing</h2>
-      <div class="list">Basketball Stars
-Subway Surfers</div>
+    <!-- Full-width tabs bar -->
+    <div class="tabs-bar">
+      <div class="tabs">
+        <span>All</span>
+        <span>New</span>
+        <span>Multiplayer</span>
+        <span>Puzzle</span>
+        <span>Arcade</span>
+        <span>Board</span>
+        <span>Strategy</span>
+        <span>Sports</span>
+        <span>Action</span>
+        <span>Card</span>
+        <span>Word</span>
+        <span>Racing</span>
+        <span>Simulation</span>
+        <span>Adventure</span>
+        <span>Educational</span>
+        <span>Trivia</span>
+        <span>Music</span>
+        <span>Fighting</span>
+        <span>Shooting</span>
+        <span>Platformer</span>
+        <span>Casual</span>
+        <span>Horror</span>
+        <span>Idle</span>
+        <span>Merge</span>
+        <span>Tower Defense</span>
+        <span>Dress Up</span>
+        <span>Cooking</span>
+        <span>2 Player</span>
+        <span>3D</span>
+        <span>RPG</span>
+        <span>Stickman</span>
+        <span>Zombie</span>
+        <span>Chess</span>
+      </div>
+    </div>
 
-      <h2>All games</h2>
-      <div class="list">Subway Surfers
-Subway Surfers
-Hills of Steel
-Hills of Steel
-Tiny Fishing
-Tiny Fishing
-Longcat
-Longcat
-Snow Rider 3D
-Snow Rider 3D
-Level Devil
-Level Devil
-Duo Vikings 3
-Duo Vikings 3
-New
-Smash Karts
-Smash Karts
-Temple Of Boom
-Temple Of Boom
-Iron Snout
-Iron Snout
-Stickman Kingdom Clash
-Stickman Kingdom Clash
-OvO Classic
-OvO Classic
-Connector
-Connector
-Road Fury
-Road Fury
-Stickman Escape
-Stickman Escape
-New
-Fruit Ninja
-Fruit Ninja
-New
-Wave Dash: Geometry Arrow
-Wave Dash: Geometry Arrow
-Raft Wars Multiplayer
-Raft Wars Multiplayer
-Vero Life - Dress Up & Decor
-Vero Life - Dress Up & Decor
-Monster Tracks
-Monster Tracks
-MR RACER - Car Racing
-MR RACER - Car Racing
-Apple Worm
-Apple Worm
-Streetfight King of the Gang
-Streetfight King of the Gang
-Tiles Master
-Tiles Master
-Gym Stack
-Gym Stack
-Arcane Archer
-Arcane Archer
-New
-Daily Dadish
-Daily Dadish
-Gas Station
-Gas Station
-Crazy Bikes
-Crazy Bikes
-House of Hazards
-House of Hazards
-Drift King
-Drift King
-Boom Slingers ReBoom
-Boom Slingers ReBoom
-Foggy Fox
-Foggy Fox
-Fragen
-Fragen
-Dadish 3
-Dadish 3
-Sandtris
-Sandtris
-Golf Zero
-Golf Zero
-Portal Pusher
-Portal Pusher
-Basketball FRVR
-Basketball FRVR
-Sniper Shot: Bullet Time
-Sniper Shot: Bullet Time
-Rio Rex
-Rio Rex
-Cozy Room Design
-Cozy Room Design
-Jump Only
-Jump Only
-Noob: Zombie Prison Escape
-Noob: Zombie Prison Escape
-New
-Tower Mania
-Tower Mania
-OvO Dimensions
-OvO Dimensions
-Tank Duel
-Tank Duel
-Wood Blocks 3D
-Wood Blocks 3D
-Drive Mad
-Drive Mad
-New
-Ragdoll Massacre
-Ragdoll Massacre
-Slice Master 3D
-Slice Master 3D
-8x8 Match Tiles
-8x8 Match Tiles
-Zombie Bounce
-Zombie Bounce
-Fruit Chef
-Fruit Chef
-Steam Trucker
-Steam Trucker
-Duck Life
-Duck Life
-New
-Yeah Bunny 2
-Yeah Bunny 2
-Droid-O
-Droid-O
-Tile Jumper 3D
-Tile Jumper 3D
-Stack Bounce
-Stack Bounce
-Duo Vikings
-Duo Vikings
-New
-It's Story Time!
-It's Story Time!
-New
-Into the Pit
-Into the Pit
-Dino Bros
-Dino Bros
-3D Block Gladiator: Sword Draw
-3D Block Gladiator: Sword Draw
-Backyard Zombie Defense
-Backyard Zombie Defense
-Crush It!
-Crush It!
-Stick Defenders
-Stick Defenders
-Swingo
-Swingo
-Dark Light Swap
-Dark Light Swap
-Elite Chess
-Elite Chess
-Merge Cyber Racers
-Merge Cyber Racers
-Who Is?
-Who Is?
-Dwerg
-Dwerg
-Cricket Hero
-Cricket Hero
-Aqua Blocks
-Aqua Blocks
-Sling Kong
-Sling Kong
-Adventure Jumper
-Adventure Jumper
-A Grim Love Tale
-A Grim Love Tale
-Paint Strike
-Paint Strike
-Dadish 2
-Dadish 2
-Basketball Stars
-Basketball Stars
-Blacktop Police Chase
-Blacktop Police Chase
-Tile Puzzle
-Tile Puzzle
-Space Waves
-Space Waves
-Tower Merge
-Tower Merge
-Pro Shooter: Missions
-Pro Shooter: Missions
-Blumgi Slime
-Blumgi Slime
-Short Ride
-Short Ride
-Kawaii Dress-Up
-Kawaii Dress-Up
-Dreadhead Parkour
-Dreadhead Parkour
-Space Survivor
-Space Survivor
-Coin Machine Game
-Coin Machine Game
-67 Game
-67 Game
-Sky Racer
-Sky Racer
-Draw the Bridge
-Draw the Bridge
-Daily Emoji Hunt
-Daily Emoji Hunt
-New
-Chess Multiplayer
-Chess Multiplayer
-Escaping the Prison
-Escaping the Prison
-New
-Emerald and Amber
-Emerald and Amber
-We Skate
-We Skate
-Football Stars
-Football Stars
-Jumpossess
-Jumpossess
-Mummy's Path Deluxe
-Mummy's Path Deluxe
-Ragdoll Smash
-Ragdoll Smash
-Raft Wars
-Raft Wars
-Hit the Fan
-Hit the Fan
-Diva Hair Salon
-Diva Hair Salon
-Daily Word Search
-Daily Word Search
-Track Racing Rage
-Track Racing Rage
-Stock Car Hero
-Stock Car Hero
-Crossy Road
-Crossy Road
-UVSU Demo
-UVSU Demo
-Shuriken Slash
-Shuriken Slash
-Kingdom Solitaire
-Kingdom Solitaire
-Blumgi Bloom
-Blumgi Bloom
-Wiggle Out
-Wiggle Out
-Rooftop Snipers 2
-Rooftop Snipers 2
-Golfinity
-Golfinity
-SandBlocks
-SandBlocks
-Farming 10x10
-Farming 10x10
-Quivershot
-Quivershot
-Yeah Bunny
-Yeah Bunny
-Escape Road 2
-Escape Road 2
-A Grim Chase
-A Grim Chase
-Bearsus
-Bearsus
-Pirate Poker
-Pirate Poker
-Duo Survival 2
-Duo Survival 2
-The Last Light of Lyra
-The Last Light of Lyra
-Knife Smash
-Knife Smash
-Rabbit Samurai 2
-Rabbit Samurai 2
-Urban Racer
-Urban Racer
-Chess Grandmaster
-Chess Grandmaster
-Temple Run 2
-Temple Run 2
-Jumping Clones
-Jumping Clones
-The Walking Merge
-The Walking Merge
-Bow Mania
-Bow Mania
-FullSpeed Racing
-FullSpeed Racing
-Big Tall Small
-Big Tall Small
-Rescue the Fish
-Rescue the Fish
-Archers Random
-Archers Random
-Quack Quest
-Quack Quest
-Square Jump
-Square Jump
-Joe Jumper
-Joe Jumper
-Street Ball Jam
-Street Ball Jam
-Earth's Greatest Defender
-Earth's Greatest Defender
-Detective Loupe Puzzle 2
-Detective Loupe Puzzle 2
-Pin the UFO
-Pin the UFO
-Chicky Farm
-Chicky Farm
-Addiction Mini
-Addiction Mini
-Grass Knight
-Grass Knight
-Master Hit
-Master Hit
-Stacktris
-Stacktris
-Light Line
-Light Line
-Hide Ball: Brain Teaser
-Hide Ball: Brain Teaser
-Life in the Static
-Life in the Static
-Stickman Parkour 2: Lucky Block
-Stickman Parkour 2: Lucky Block
-New
-Chicken Wars 2
-Chicken Wars 2
-Blumgi Merge
-Blumgi Merge
-Super Billy Boy
-Super Billy Boy
-Tiny Town Racing
-Tiny Town Racing
-Cat Bird Adventure
-Cat Bird Adventure
-Temple Run
-Temple Run
-Snake Pivot
-Snake Pivot
-Domino Adventure
-Domino Adventure
-One Way Shooter
-One Way Shooter
-Papercraft Wars
-Papercraft Wars
-Stair Slash
-Stair Slash
-Jelly Jam by Sam
-Jelly Jam by Sam
-Bird Sort Quest
-Bird Sort Quest
-Bacon May Die
-Bacon May Die
-Giraffe Volley
-Giraffe Volley
-Zombie Derby: Pixel Survival
-Zombie Derby: Pixel Survival
-A Grim Granny
-A Grim Granny
-Fluffy Out
-Fluffy Out
-Fury Ops
-Fury Ops
-Fill the Heart
-Fill the Heart
-Rhomb
-Rhomb
-Moon Waltz
-Moon Waltz
-Free Kick Screamers
-Free Kick Screamers
-Break the Glass
-Break the Glass
-Royal Tower Defense
-Royal Tower Defense
-8 Ball Billiards Classic
-8 Ball Billiards Classic
-Beauty Room
-Beauty Room
-Bubbly Lab
-Bubbly Lab
-Max and Mink
-Max and Mink
-Sqube Darkness
-Sqube Darkness
-Subway Surfers Match
-Subway Surfers Match
-Drop Wizard Tower
-Drop Wizard Tower
-Fruitmates: Adventure
-Fruitmates: Adventure
-Racing Limits
-Racing Limits
-Tile Journey
-Tile Journey
-Speed King
-Speed King
-Stunt Bike Extreme
-Stunt Bike Extreme
-Flipchamps Dual Strike
-Flipchamps Dual Strike
-Stunt Car Extreme
-Stunt Car Extreme
-2048 Balls Number Puzzle
-2048 Balls Number Puzzle
-Blocky Puzzle
-Blocky Puzzle
-Flip Bros
-Flip Bros
-Mini Golf World
-Mini Golf World
-Unicycle Legend
-Unicycle Legend
-Ledge Throw
-Ledge Throw
-Power Wash Cleanup
-Power Wash Cleanup
-Dyna Boy
-Dyna Boy
-Wild Bullets
-Wild Bullets
-Digging Master
-Digging Master
-Jumping Shell
-Jumping Shell
-Stickman Parkour Skyland
-Stickman Parkour Skyland
-New
-Stickman Weapon Master
-Stickman Weapon Master
-PixLinks
-PixLinks
-Timber Guy
-Timber Guy
-Merge Zoo
-Merge Zoo
-Limited Survive
-Limited Survive
-Neon Car Maze
-Neon Car Maze
-Bouncy Woods
-Bouncy Woods
-Awesome Tanks
-Awesome Tanks
-Kitty Jump Hunt
-Kitty Jump Hunt
-Road of Fury 4
-Road of Fury 4
-Glitch
-Glitch
-Platform Countdown
-Platform Countdown
-Mekabolt
-Mekabolt
-FireBlob
-FireBlob
-One Line Shield
-One Line Shield
-Speed Stars
-Speed Stars
-Clash Of Armour
-Clash Of Armour
-Speed Pool King
-Speed Pool King
-Supernova
-Supernova
-Blob Drop
-Blob Drop
-Zombie Hunter: Survival
-Zombie Hunter: Survival
-Rotate
-Rotate
-Free Rider Jumps
-Free Rider Jumps
-Gomu Goman
-Gomu Goman
-Stickman Climb
-Stickman Climb
-Glitch Dash
-Glitch Dash
-Ping Pong Go
-Ping Pong Go
-Mine Shooter 2: Noob vs Mobs
-Mine Shooter 2: Noob vs Mobs
-Shenzhen Mahjong
-Shenzhen Mahjong
-Fantasy Sandbox
-Fantasy Sandbox
-Bunny Goes Boom
-Bunny Goes Boom
-Hunter Hitman
-Hunter Hitman
-Merge & Fight
-Merge & Fight
-Lava Land
-Lava Land
-Fowlst
-Fowlst
-Blumgi Racers
-Blumgi Racers
-Big Shot Boxing
-Big Shot Boxing
-Fish Eat Fish
-Fish Eat Fish
-Egg Hunt Mania
-Egg Hunt Mania
-Tropical Merge
-Tropical Merge
-Fruit Slot Machine
-Fruit Slot Machine
-Bacon War
-Bacon War
-Tightrope Theatre
-Tightrope Theatre
-Lollipop World: Match 3
-Lollipop World: Match 3
-Crazy Cars
-Crazy Cars
-Count War
-Count War
-New
-Thief Puzzle
-Thief Puzzle
-Jump With Justin 2
-Jump With Justin 2
-Rowdy Wrestling
-Rowdy Wrestling
-Ragdoll Arrows
-Ragdoll Arrows
-Last Warriors
-Last Warriors
-Magic Bridge
-Magic Bridge
-Basket Champs
-Basket Champs
-Wild West Shooter: Duels
-Wild West Shooter: Duels
-Geometry Dash Lite
-Geometry Dash Lite
-FireBlob Winter
-FireBlob Winter
-Super Bike the Champion
-Super Bike the Champion
-Evo Game
-Evo Game
-Idle Lumber Inc
-Idle Lumber Inc
-Color Pin
-Color Pin
-Splotch!
-Splotch!
-Murder
-Murder
-Pulse Ball
-Pulse Ball
-Dana: Relics for Sale
-Dana: Relics for Sale
-Grapple Grip
-Grapple Grip
-Block Shooter Arena
-Block Shooter Arena
-Time Clones
-Time Clones
-Jewel Magic
-Jewel Magic
-Just Tanks
-Just Tanks
-Foosball Cup World
-Foosball Cup World
-Larry World
-Larry World
-Getaway Shootout
-Getaway Shootout
-Retro Highway
-Retro Highway
-Lost Yeti
-Lost Yeti
-Blumgi Paintball
-Blumgi Paintball
-Royal Card Clash
-Royal Card Clash
-Super Onion Boy 2
-Super Onion Boy 2
-New
-Honey Sweeper
-Honey Sweeper
-Splash Dunk Game
-Splash Dunk Game
-Rally Drift Racing
-Rally Drift Racing
-Clash of Skulls
-Clash of Skulls
-Onet Master
-Onet Master
-Fear Response
-Fear Response
-Merge and Double
-Merge and Double
-Boxing Physics 2
-Boxing Physics 2
-Master Prankster
-Master Prankster
-Kitty Drop Fruits
-Kitty Drop Fruits
-9 Ball Pool
-9 Ball Pool
-Super Liquid Soccer
-Super Liquid Soccer
-Cave Blast
-Cave Blast
-Finn's Fantastic Food Machine
-Finn's Fantastic Food Machine
-Bubble Shooter
-Bubble Shooter
-Pool Club
-Pool Club
-PolyTrack
-PolyTrack
-Xtreme Furball
-Xtreme Furball
-Short Life
-Short Life
-Farm Block Puzzle
-Farm Block Puzzle
-We Become What We Behold
-We Become What We Behold
-Monster Merge
-Monster Merge
-Slime War
-Slime War
-Bounce Ball
-Bounce Ball
-Monster Hero
-Monster Hero
-MineFun.io
-MineFun.io
-Zombie Derby: Blocky Roads
-Zombie Derby: Blocky Roads
-Retro Rex: City Smash
-Retro Rex: City Smash
-Blob Swap
-Blob Swap
-Tiny Towers
-Tiny Towers
-Drifting Mania
-Drifting Mania
-Sandbox City
-Sandbox City
-Slime Laboratory 2
-Slime Laboratory 2
-Eyes Drop
-Eyes Drop
-Unpark Me
-Unpark Me
-Tiny Dangerous Dungeons
-Tiny Dangerous Dungeons
-Pick a Lock
-Pick a Lock
-Thumb Fighter
-Thumb Fighter
-Roller
-Roller
-Night Drive
-Night Drive
-Perfect Piano
-Perfect Piano
-Flappy Bird
-Flappy Bird
-Fish Drop
-Fish Drop
-Zumba Quest
-Zumba Quest
-Fixing Time
-Fixing Time
-Color Merge Lines
-Color Merge Lines
-Rooftop Snipers
-Rooftop Snipers
-Recoil
-Recoil
-Hop Chop
-Hop Chop
-Blumgi Ball
-Blumgi Ball
-Mekorama
-Mekorama
-Stickman Fighter Mega
-Stickman Fighter Mega
-Mech Bots Arena
-Mech Bots Arena
-Invaders.io
-Invaders.io
-New
-Crazy Balls
-Crazy Balls
-Horror Tale
-Horror Tale
-Card Hog
-Card Hog
-Stupidella Click
-Stupidella Click
-Boost Buddies
-Boost Buddies
-Blumgi Dragon
-Blumgi Dragon
-Laser Blade 3000
-Laser Blade 3000
-Adventure Miner
-Adventure Miner
-Go Escape
-Go Escape
-Chess Classic
-Chess Classic
-Mine Zombie Shooter
-Mine Zombie Shooter
-Unscrew Master
-Unscrew Master
-Cozyland: Hidden Objects Game
-Cozyland: Hidden Objects Game
-Fruits of Fury
-Fruits of Fury
-Stupidella Horror 2
-Stupidella Horror 2
-A Pretty Odd Bunny
-A Pretty Odd Bunny
-Moto X3M
-Moto X3M
-Blumgi Rocket
-Blumgi Rocket
-Zombies ate my Castle
-Zombies ate my Castle
-Bottle Flip Home Alone
-Bottle Flip Home Alone
-Zuma Boom
-Zuma Boom</div>
+    <!-- Top ad banner -->
+    <div class="ad-banner">Advertisement</div>
 
-      <h2>About Arcadrome</h2>
-      <h3>Free Online Games</h3>
-      <p>Arcadrome is your ultimate destination for free online games you can play instantly — no downloads, no registrations, and zero annoying pop-ups. Whether you want a quick solo session or to have fun with friends, Arcadrome makes it easy to jump right in anytime, anywhere. All our games work perfectly on desktop, tablet, and mobile, so you can enjoy your favorites at home, in school, or on the go.</p>
+    <div class="page-body">
 
-      <h3>Our best games</h3>
-      <p>We update our collection regularly to keep it fresh and exciting, so there’s always something new waiting for you. Among our most popular games are worldwide favorites like Drive Mad, Temple Run 2, Plonky, and Moto X3M — all ready to play instantly on Arcadrome. You’ll also find timeless hits such as Level Devil, Rooftop Snipers, Stick Fighter, Blumgi Bloom, FullSpeed Racing, Temple Of Boom, and Beauty Room. Whatever your mood or skill level, there’s a game that fits you here.</p>
+      <!-- Left ad -->
+      <div class="ad-side">Advertisement</div>
 
-      <h3>Explore by Genre</h3>
-      <p>Not sure what to play? Browse directly from our homepage or explore our most popular categories. Whether you’re into adrenaline-fueled action or something calm and relaxing, you’ll discover games that match your style. Check out these categories to find your next favorite:</p>
-      <div class="list">Arcade games
-Racing games
-Card games
-Puzzle games
-Sports games
-Board games</div>
+      <main>
 
-      <h3>What is ZorexiumGames?</h3>
-      <p>ZorexiumGames brings together high-quality HTML5 games across every genre imaginable. From thrilling action and fast racing to mind-bending puzzles and clever strategy, our library has something for everyone. Whether you’ve got five minutes or a whole afternoon, you can find a game to suit your time and mood — and start playing instantly, without downloads or sign-ups.</p>
+        <h2>Continue playing</h2>
+        <div class="game-grid">
+          <div class="game-card">Basketball Stars</div>
+          <div class="game-card">Subway Surfers</div>
+        </div>
 
-      <p>These games are brought to you by ZorexiumGames.</p>
-      <p>By using ZorexiumGames, you agree to the policies outlined in our Privacy Center. We use cookies to improve the site, understand how it’s used, and show relevant content. More about the site is on the About page. For any questions, please Contact.</p>
-    </main>
+        <!-- Mid ad banner -->
+        <div class="ad-banner">Advertisement</div>
+
+        <h2>All games</h2>
+        <div class="game-grid">
+          <div class="game-card">Subway Surfers</div>
+          <div class="game-card">Hills of Steel</div>
+          <div class="game-card">Tiny Fishing</div>
+          <div class="game-card">Longcat</div>
+          <div class="game-card">Snow Rider 3D</div>
+          <div class="game-card">Level Devil</div>
+          <div class="game-card">Duo Vikings 3</div>
+          <div class="game-card">Smash Karts</div>
+          <div class="game-card">Temple Of Boom</div>
+          <div class="game-card">Iron Snout</div>
+          <div class="game-card">Stickman Kingdom Clash</div>
+          <div class="game-card">OvO Classic</div>
+          <div class="game-card">Connector</div>
+          <div class="game-card">Road Fury</div>
+          <div class="game-card">Stickman Escape</div>
+          <div class="game-card">Fruit Ninja</div>
+          <div class="game-card">Wave Dash: Geometry Arrow</div>
+          <div class="game-card">Raft Wars Multiplayer</div>
+          <div class="game-card">Vero Life - Dress Up &amp; Decor</div>
+          <div class="game-card">Monster Tracks</div>
+          <div class="game-card">MR RACER - Car Racing</div>
+          <div class="game-card">Apple Worm</div>
+          <div class="game-card">Streetfight King of the Gang</div>
+          <div class="game-card">Tiles Master</div>
+          <div class="game-card">Gym Stack</div>
+          <div class="game-card">Arcane Archer</div>
+          <div class="game-card">Daily Dadish</div>
+          <div class="game-card">Gas Station</div>
+          <div class="game-card">Crazy Bikes</div>
+          <div class="game-card">House of Hazards</div>
+          <div class="game-card">Drift King</div>
+          <div class="game-card">Boom Slingers ReBoom</div>
+          <div class="game-card">Foggy Fox</div>
+          <div class="game-card">Fragen</div>
+          <div class="game-card">Dadish 3</div>
+          <div class="game-card">Sandtris</div>
+          <div class="game-card">Golf Zero</div>
+          <div class="game-card">Portal Pusher</div>
+          <div class="game-card">Basketball FRVR</div>
+          <div class="game-card">Sniper Shot: Bullet Time</div>
+          <div class="game-card">Rio Rex</div>
+          <div class="game-card">Cozy Room Design</div>
+          <div class="game-card">Jump Only</div>
+          <div class="game-card">Noob: Zombie Prison Escape</div>
+          <div class="game-card">Tower Mania</div>
+          <div class="game-card">OvO Dimensions</div>
+          <div class="game-card">Tank Duel</div>
+          <div class="game-card">Wood Blocks 3D</div>
+          <div class="game-card">Drive Mad</div>
+          <div class="game-card">Ragdoll Massacre</div>
+          <div class="game-card">Slice Master 3D</div>
+          <div class="game-card">8x8 Match Tiles</div>
+          <div class="game-card">Zombie Bounce</div>
+          <div class="game-card">Fruit Chef</div>
+          <div class="game-card">Steam Trucker</div>
+          <div class="game-card">Duck Life</div>
+          <div class="game-card">Yeah Bunny 2</div>
+          <div class="game-card">Droid-O</div>
+          <div class="game-card">Tile Jumper 3D</div>
+          <div class="game-card">Stack Bounce</div>
+          <div class="game-card">Duo Vikings</div>
+          <div class="game-card">It&#39;s Story Time!</div>
+          <div class="game-card">Into the Pit</div>
+          <div class="game-card">Dino Bros</div>
+          <div class="game-card">3D Block Gladiator: Sword Draw</div>
+          <div class="game-card">Backyard Zombie Defense</div>
+          <div class="game-card">Crush It!</div>
+          <div class="game-card">Stick Defenders</div>
+          <div class="game-card">Swingo</div>
+          <div class="game-card">Dark Light Swap</div>
+          <div class="game-card">Elite Chess</div>
+          <div class="game-card">Merge Cyber Racers</div>
+          <div class="game-card">Who Is?</div>
+          <div class="game-card">Dwerg</div>
+          <div class="game-card">Cricket Hero</div>
+          <div class="game-card">Aqua Blocks</div>
+          <div class="game-card">Sling Kong</div>
+          <div class="game-card">Adventure Jumper</div>
+          <div class="game-card">A Grim Love Tale</div>
+          <div class="game-card">Paint Strike</div>
+          <div class="game-card">Dadish 2</div>
+          <div class="game-card">Basketball Stars</div>
+          <div class="game-card">Blacktop Police Chase</div>
+          <div class="game-card">Tile Puzzle</div>
+          <div class="game-card">Space Waves</div>
+          <div class="game-card">Tower Merge</div>
+          <div class="game-card">Pro Shooter: Missions</div>
+          <div class="game-card">Blumgi Slime</div>
+          <div class="game-card">Short Ride</div>
+          <div class="game-card">Kawaii Dress-Up</div>
+          <div class="game-card">Dreadhead Parkour</div>
+          <div class="game-card">Space Survivor</div>
+          <div class="game-card">Coin Machine Game</div>
+          <div class="game-card">67 Game</div>
+          <div class="game-card">Sky Racer</div>
+          <div class="game-card">Draw the Bridge</div>
+          <div class="game-card">Daily Emoji Hunt</div>
+          <div class="game-card">Chess Multiplayer</div>
+          <div class="game-card">Escaping the Prison</div>
+          <div class="game-card">Emerald and Amber</div>
+          <div class="game-card">We Skate</div>
+          <div class="game-card">Football Stars</div>
+          <div class="game-card">Jumpossess</div>
+          <div class="game-card">Mummy&#39;s Path Deluxe</div>
+          <div class="game-card">Ragdoll Smash</div>
+          <div class="game-card">Raft Wars</div>
+          <div class="game-card">Hit the Fan</div>
+          <div class="game-card">Diva Hair Salon</div>
+          <div class="game-card">Daily Word Search</div>
+          <div class="game-card">Track Racing Rage</div>
+          <div class="game-card">Stock Car Hero</div>
+          <div class="game-card">Crossy Road</div>
+          <div class="game-card">UVSU Demo</div>
+          <div class="game-card">Shuriken Slash</div>
+          <div class="game-card">Kingdom Solitaire</div>
+          <div class="game-card">Blumgi Bloom</div>
+          <div class="game-card">Wiggle Out</div>
+          <div class="game-card">Rooftop Snipers 2</div>
+          <div class="game-card">Golfinity</div>
+          <div class="game-card">SandBlocks</div>
+          <div class="game-card">Farming 10x10</div>
+          <div class="game-card">Quivershot</div>
+          <div class="game-card">Yeah Bunny</div>
+          <div class="game-card">Escape Road 2</div>
+          <div class="game-card">A Grim Chase</div>
+          <div class="game-card">Bearsus</div>
+          <div class="game-card">Pirate Poker</div>
+          <div class="game-card">Duo Survival 2</div>
+          <div class="game-card">The Last Light of Lyra</div>
+          <div class="game-card">Knife Smash</div>
+          <div class="game-card">Rabbit Samurai 2</div>
+          <div class="game-card">Urban Racer</div>
+          <div class="game-card">Chess Grandmaster</div>
+          <div class="game-card">Temple Run 2</div>
+          <div class="game-card">Jumping Clones</div>
+          <div class="game-card">The Walking Merge</div>
+          <div class="game-card">Bow Mania</div>
+          <div class="game-card">FullSpeed Racing</div>
+          <div class="game-card">Big Tall Small</div>
+          <div class="game-card">Rescue the Fish</div>
+          <div class="game-card">Archers Random</div>
+          <div class="game-card">Quack Quest</div>
+          <div class="game-card">Square Jump</div>
+          <div class="game-card">Joe Jumper</div>
+          <div class="game-card">Street Ball Jam</div>
+          <div class="game-card">Earth&#39;s Greatest Defender</div>
+          <div class="game-card">Detective Loupe Puzzle 2</div>
+          <div class="game-card">Pin the UFO</div>
+          <div class="game-card">Chicky Farm</div>
+          <div class="game-card">Addiction Mini</div>
+          <div class="game-card">Grass Knight</div>
+          <div class="game-card">Master Hit</div>
+          <div class="game-card">Stacktris</div>
+          <div class="game-card">Light Line</div>
+          <div class="game-card">Hide Ball: Brain Teaser</div>
+          <div class="game-card">Life in the Static</div>
+          <div class="game-card">Stickman Parkour 2: Lucky Block</div>
+          <div class="game-card">Chicken Wars 2</div>
+          <div class="game-card">Blumgi Merge</div>
+          <div class="game-card">Super Billy Boy</div>
+          <div class="game-card">Tiny Town Racing</div>
+          <div class="game-card">Cat Bird Adventure</div>
+          <div class="game-card">Temple Run</div>
+          <div class="game-card">Snake Pivot</div>
+          <div class="game-card">Domino Adventure</div>
+          <div class="game-card">One Way Shooter</div>
+          <div class="game-card">Papercraft Wars</div>
+          <div class="game-card">Stair Slash</div>
+          <div class="game-card">Jelly Jam by Sam</div>
+          <div class="game-card">Bird Sort Quest</div>
+          <div class="game-card">Bacon May Die</div>
+          <div class="game-card">Giraffe Volley</div>
+          <div class="game-card">Zombie Derby: Pixel Survival</div>
+          <div class="game-card">A Grim Granny</div>
+          <div class="game-card">Fluffy Out</div>
+          <div class="game-card">Fury Ops</div>
+          <div class="game-card">Fill the Heart</div>
+          <div class="game-card">Rhomb</div>
+          <div class="game-card">Moon Waltz</div>
+          <div class="game-card">Free Kick Screamers</div>
+          <div class="game-card">Break the Glass</div>
+          <div class="game-card">Royal Tower Defense</div>
+          <div class="game-card">8 Ball Billiards Classic</div>
+          <div class="game-card">Beauty Room</div>
+          <div class="game-card">Bubbly Lab</div>
+          <div class="game-card">Max and Mink</div>
+          <div class="game-card">Sqube Darkness</div>
+          <div class="game-card">Subway Surfers Match</div>
+          <div class="game-card">Drop Wizard Tower</div>
+          <div class="game-card">Fruitmates: Adventure</div>
+          <div class="game-card">Racing Limits</div>
+          <div class="game-card">Tile Journey</div>
+          <div class="game-card">Speed King</div>
+          <div class="game-card">Stunt Bike Extreme</div>
+          <div class="game-card">Flipchamps Dual Strike</div>
+          <div class="game-card">Stunt Car Extreme</div>
+          <div class="game-card">2048 Balls Number Puzzle</div>
+          <div class="game-card">Blocky Puzzle</div>
+          <div class="game-card">Flip Bros</div>
+          <div class="game-card">Mini Golf World</div>
+          <div class="game-card">Unicycle Legend</div>
+          <div class="game-card">Ledge Throw</div>
+          <div class="game-card">Power Wash Cleanup</div>
+          <div class="game-card">Dyna Boy</div>
+          <div class="game-card">Wild Bullets</div>
+          <div class="game-card">Digging Master</div>
+          <div class="game-card">Jumping Shell</div>
+          <div class="game-card">Stickman Parkour Skyland</div>
+          <div class="game-card">Stickman Weapon Master</div>
+          <div class="game-card">PixLinks</div>
+          <div class="game-card">Timber Guy</div>
+          <div class="game-card">Merge Zoo</div>
+          <div class="game-card">Limited Survive</div>
+          <div class="game-card">Neon Car Maze</div>
+          <div class="game-card">Bouncy Woods</div>
+          <div class="game-card">Awesome Tanks</div>
+          <div class="game-card">Kitty Jump Hunt</div>
+          <div class="game-card">Road of Fury 4</div>
+          <div class="game-card">Glitch</div>
+          <div class="game-card">Platform Countdown</div>
+          <div class="game-card">Mekabolt</div>
+          <div class="game-card">FireBlob</div>
+          <div class="game-card">One Line Shield</div>
+          <div class="game-card">Speed Stars</div>
+          <div class="game-card">Clash Of Armour</div>
+          <div class="game-card">Speed Pool King</div>
+          <div class="game-card">Supernova</div>
+          <div class="game-card">Blob Drop</div>
+          <div class="game-card">Zombie Hunter: Survival</div>
+          <div class="game-card">Rotate</div>
+          <div class="game-card">Free Rider Jumps</div>
+          <div class="game-card">Gomu Goman</div>
+          <div class="game-card">Stickman Climb</div>
+          <div class="game-card">Glitch Dash</div>
+          <div class="game-card">Ping Pong Go</div>
+          <div class="game-card">Mine Shooter 2: Noob vs Mobs</div>
+          <div class="game-card">Shenzhen Mahjong</div>
+          <div class="game-card">Fantasy Sandbox</div>
+          <div class="game-card">Bunny Goes Boom</div>
+          <div class="game-card">Hunter Hitman</div>
+          <div class="game-card">Merge &amp; Fight</div>
+          <div class="game-card">Lava Land</div>
+          <div class="game-card">Fowlst</div>
+          <div class="game-card">Blumgi Racers</div>
+          <div class="game-card">Big Shot Boxing</div>
+          <div class="game-card">Fish Eat Fish</div>
+          <div class="game-card">Egg Hunt Mania</div>
+          <div class="game-card">Tropical Merge</div>
+          <div class="game-card">Fruit Slot Machine</div>
+          <div class="game-card">Bacon War</div>
+          <div class="game-card">Tightrope Theatre</div>
+          <div class="game-card">Lollipop World: Match 3</div>
+          <div class="game-card">Crazy Cars</div>
+          <div class="game-card">Count War</div>
+          <div class="game-card">Thief Puzzle</div>
+          <div class="game-card">Jump With Justin 2</div>
+          <div class="game-card">Rowdy Wrestling</div>
+          <div class="game-card">Ragdoll Arrows</div>
+          <div class="game-card">Last Warriors</div>
+          <div class="game-card">Magic Bridge</div>
+          <div class="game-card">Basket Champs</div>
+          <div class="game-card">Wild West Shooter: Duels</div>
+          <div class="game-card">Geometry Dash Lite</div>
+          <div class="game-card">FireBlob Winter</div>
+          <div class="game-card">Super Bike the Champion</div>
+          <div class="game-card">Evo Game</div>
+          <div class="game-card">Idle Lumber Inc</div>
+          <div class="game-card">Color Pin</div>
+          <div class="game-card">Splotch!</div>
+          <div class="game-card">Murder</div>
+          <div class="game-card">Pulse Ball</div>
+          <div class="game-card">Dana: Relics for Sale</div>
+          <div class="game-card">Grapple Grip</div>
+          <div class="game-card">Block Shooter Arena</div>
+          <div class="game-card">Time Clones</div>
+          <div class="game-card">Jewel Magic</div>
+          <div class="game-card">Just Tanks</div>
+          <div class="game-card">Foosball Cup World</div>
+          <div class="game-card">Larry World</div>
+          <div class="game-card">Getaway Shootout</div>
+          <div class="game-card">Retro Highway</div>
+          <div class="game-card">Lost Yeti</div>
+          <div class="game-card">Blumgi Paintball</div>
+          <div class="game-card">Royal Card Clash</div>
+          <div class="game-card">Super Onion Boy 2</div>
+          <div class="game-card">Honey Sweeper</div>
+          <div class="game-card">Splash Dunk Game</div>
+          <div class="game-card">Rally Drift Racing</div>
+          <div class="game-card">Clash of Skulls</div>
+          <div class="game-card">Onet Master</div>
+          <div class="game-card">Fear Response</div>
+          <div class="game-card">Merge and Double</div>
+          <div class="game-card">Boxing Physics 2</div>
+          <div class="game-card">Master Prankster</div>
+          <div class="game-card">Kitty Drop Fruits</div>
+          <div class="game-card">9 Ball Pool</div>
+          <div class="game-card">Super Liquid Soccer</div>
+          <div class="game-card">Cave Blast</div>
+          <div class="game-card">Finn&#39;s Fantastic Food Machine</div>
+          <div class="game-card">Bubble Shooter</div>
+          <div class="game-card">Pool Club</div>
+          <div class="game-card">PolyTrack</div>
+          <div class="game-card">Xtreme Furball</div>
+          <div class="game-card">Short Life</div>
+          <div class="game-card">Farm Block Puzzle</div>
+          <div class="game-card">We Become What We Behold</div>
+          <div class="game-card">Monster Merge</div>
+          <div class="game-card">Slime War</div>
+          <div class="game-card">Bounce Ball</div>
+          <div class="game-card">Monster Hero</div>
+          <div class="game-card">MineFun.io</div>
+          <div class="game-card">Zombie Derby: Blocky Roads</div>
+          <div class="game-card">Retro Rex: City Smash</div>
+          <div class="game-card">Blob Swap</div>
+          <div class="game-card">Tiny Towers</div>
+          <div class="game-card">Drifting Mania</div>
+          <div class="game-card">Sandbox City</div>
+          <div class="game-card">Slime Laboratory 2</div>
+          <div class="game-card">Eyes Drop</div>
+          <div class="game-card">Unpark Me</div>
+          <div class="game-card">Tiny Dangerous Dungeons</div>
+          <div class="game-card">Pick a Lock</div>
+          <div class="game-card">Thumb Fighter</div>
+          <div class="game-card">Roller</div>
+          <div class="game-card">Night Drive</div>
+          <div class="game-card">Perfect Piano</div>
+          <div class="game-card">Flappy Bird</div>
+          <div class="game-card">Fish Drop</div>
+          <div class="game-card">Zumba Quest</div>
+          <div class="game-card">Fixing Time</div>
+          <div class="game-card">Color Merge Lines</div>
+          <div class="game-card">Rooftop Snipers</div>
+          <div class="game-card">Recoil</div>
+          <div class="game-card">Hop Chop</div>
+          <div class="game-card">Blumgi Ball</div>
+          <div class="game-card">Mekorama</div>
+          <div class="game-card">Stickman Fighter Mega</div>
+          <div class="game-card">Mech Bots Arena</div>
+          <div class="game-card">Invaders.io</div>
+          <div class="game-card">Crazy Balls</div>
+          <div class="game-card">Horror Tale</div>
+          <div class="game-card">Card Hog</div>
+          <div class="game-card">Stupidella Click</div>
+          <div class="game-card">Boost Buddies</div>
+          <div class="game-card">Blumgi Dragon</div>
+          <div class="game-card">Laser Blade 3000</div>
+          <div class="game-card">Adventure Miner</div>
+          <div class="game-card">Go Escape</div>
+          <div class="game-card">Chess Classic</div>
+          <div class="game-card">Mine Zombie Shooter</div>
+          <div class="game-card">Unscrew Master</div>
+          <div class="game-card">Cozyland: Hidden Objects Game</div>
+          <div class="game-card">Fruits of Fury</div>
+          <div class="game-card">Stupidella Horror 2</div>
+          <div class="game-card">A Pretty Odd Bunny</div>
+          <div class="game-card">Moto X3M</div>
+          <div class="game-card">Blumgi Rocket</div>
+          <div class="game-card">Zombies ate my Castle</div>
+          <div class="game-card">Bottle Flip Home Alone</div>
+          <div class="game-card">Zuma Boom</div>
+        </div>
+
+        <!-- Pre-about ad banner -->
+        <div class="ad-banner">Advertisement</div>
+
+        <section class="about-section">
+          <h2>About ZorexiumGames</h2>
+          <h3>Free Online Games</h3>
+          <p>ZorexiumGames is your go-to hub for free online games you can launch instantly &mdash; no installs, no sign-ups, and no intrusive ads. Whether you&#39;re looking for a quick solo session or want to play alongside friends, ZorexiumGames makes it effortless to dive in from any device, anywhere. Every title in our library runs flawlessly on desktop, tablet, and mobile, so you can enjoy your favorites at home, at school, or on the move.</p>
+
+          <h3>Explore by Genre</h3>
+          <p>Unsure where to start? Browse our homepage or dive into our most visited categories. From heart-pounding action to relaxing puzzle sessions, there&#39;s something that fits every mood and play style. Explore these categories to uncover your next obsession:</p>
+          <div class="genre-list">
+            Arcade games<br>
+            Racing games<br>
+            Card games<br>
+            Puzzle games<br>
+            Sports games<br>
+            Board games
+          </div>
+
+          <h3>What is ZorexiumGames?</h3>
+          <p>ZorexiumGames curates a growing selection of premium HTML5 games spanning every genre you can think of. From intense action and blazing-fast racing to brain-twisting puzzles and deep strategy, our catalog has something for every type of player. Whether you have five minutes to spare or an entire afternoon free, you&#39;ll always find the right game for the moment &mdash; and jump straight in with no downloads or accounts required.</p>
+
+          <p>These games are brought to you by ZorexiumGames.</p>
+          <p>By visiting ZorexiumGames, you agree to the terms described in our Privacy Center. Cookies are used to enhance your experience, analyze site usage, and serve tailored content. Learn more on our About page or reach out via our Contact page with any questions.</p>
+        </section>
+
+      </main>
+
+      <!-- Right ad -->
+      <div class="ad-side">Advertisement</div>
+
+    </div>
+
+    <!-- Bottom ad banner -->
+    <div class="ad-banner">Advertisement</div>
+
+    <script>
+      function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebar-overlay').classList.toggle('open');
+      }
+      function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-overlay').classList.remove('open');
+      }
+      // Accessibility: make category bubbles and game cards keyboard-navigable
+      document.querySelectorAll('.tabs span, .sidebar-bubbles span').forEach(function(el) {
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+        });
+      });
+      document.querySelectorAll('.game-card').forEach(function(el) {
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+        });
+      });
+    </script>
   </body>
-  </html>
+</html>
