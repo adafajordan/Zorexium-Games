@@ -139,7 +139,7 @@
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: #000;
+        background: var(--bg);
         pointer-events: none;
       }
       .brand-logo {
@@ -283,7 +283,6 @@
         border-radius: 8px;
         padding: 10px 6px;
         text-align: center;
-        font-size: 0;
         cursor: pointer;
         aspect-ratio: 1;
         display: flex;
@@ -350,7 +349,7 @@
         width: min(520px, 100%);
         border: 1px solid var(--border-strong);
         border-radius: 12px;
-        background: #090909;
+        background: var(--surface);
         box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
         padding: 22px;
         position: relative;
@@ -435,6 +434,11 @@
         color: var(--text-muted);
         text-decoration: none;
         font-size: 12px;
+      }
+      .auth-link-button {
+        border: none;
+        background: none;
+        padding: 0;
       }
       .auth-link:hover {
         color: var(--accent);
@@ -556,7 +560,7 @@
               <input id="remember-login" type="checkbox" />
               Keep me signed in
             </label>
-            <a class="auth-link" href="#" onclick="event.preventDefault()">Forgot password?</a>
+            <button class="auth-link auth-link-button" type="button">Forgot password?</button>
           </div>
           <button class="auth-submit" type="submit">Log In</button>
         </form>
@@ -1169,6 +1173,7 @@
       document.querySelectorAll('.game-card').forEach(function(el) {
         var gameTitle = el.textContent.trim();
         if (gameTitle) {
+          el.setAttribute('data-game-title', gameTitle);
           el.setAttribute('aria-label', 'Open ' + gameTitle);
         }
         el.textContent = '';
