@@ -3,13 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZorexiumGames</title>
+    <title>UltimeGames</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       :root {
         color-scheme: dark;
+        --brand-logo-source: url('https://github.com/user-attachments/assets/298bbeb1-3e8a-4f6e-9d68-bf73c824c2b9');
         --bg: #030712;
         --surface: #071225;
         --surface-soft: #0f1d35;
@@ -127,7 +128,7 @@
       .brand-wordmark {
         width: 208px;
         height: 62px;
-        background-image: url('https://github.com/user-attachments/assets/298bbeb1-3e8a-4f6e-9d68-bf73c824c2b9');
+        background-image: var(--brand-logo-source);
         background-size: 440px auto;
         background-position: center 72%;
         background-repeat: no-repeat;
@@ -137,7 +138,7 @@
       .brand-emblem {
         width: 58px;
         height: 64px;
-        background-image: url('https://github.com/user-attachments/assets/298bbeb1-3e8a-4f6e-9d68-bf73c824c2b9');
+        background-image: var(--brand-logo-source);
         background-size: 460px auto;
         background-position: center 19%;
         background-repeat: no-repeat;
@@ -359,7 +360,7 @@
     <!-- Header -->
     <header>
       <span class="menu" role="button" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</span>
-      <span class="brand"><span class="brand-wordmark" role="img" aria-label="Ultime Games"></span><span class="brand-emblem" aria-hidden="true"></span></span>
+      <span class="brand" role="img" aria-label="Ultime Games logo"><span class="brand-wordmark" aria-hidden="true"></span><span class="brand-emblem" aria-hidden="true"></span></span>
       <input class="search" type="search" placeholder="search games" aria-label="Search games" />
       <button>login</button>
       <button>register</button>
