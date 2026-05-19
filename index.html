@@ -103,7 +103,7 @@
       header {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         padding: 12px 16px;
         background: rgba(0, 0, 0, 0.94);
         position: sticky;
@@ -123,11 +123,24 @@
         line-height: 1;
       }
       .brand {
+        position: relative;
         display: inline-flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: flex-start;
         white-space: nowrap;
-        margin-left: auto;
+        flex-shrink: 0;
+        margin-right: 8px;
+      }
+      .brand::after {
+        content: '';
+        position: absolute;
+        right: 4px;
+        bottom: 4px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--bg);
+        pointer-events: none;
       }
       .brand-logo {
         width: 190px;
@@ -145,6 +158,14 @@
         border-radius: 6px;
         background: var(--surface);
         color: var(--text);
+      }
+      .header-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .auth-trigger {
+        text-transform: lowercase;
       }
       .search:focus {
         outline: 2px solid var(--focus);
@@ -262,7 +283,6 @@
         border-radius: 8px;
         padding: 10px 6px;
         text-align: center;
-        font-size: 11px;
         cursor: pointer;
         aspect-ratio: 1;
         display: flex;
@@ -273,6 +293,14 @@
         hyphens: auto;
         overflow: hidden;
         transition: background 0.15s, border-color 0.15s;
+        color: transparent;
+        position: relative;
+      }
+      .game-card::before {
+        content: attr(data-card-label);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
         color: var(--text-muted);
       }
       .game-card:hover {
@@ -301,6 +329,146 @@
       }
       .search::placeholder {
         color: var(--text-placeholder);
+      }
+
+      /* ── Auth modal ───────────────────────────── */
+      .auth-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0, 0, 0, 0.78);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .auth-modal.open {
+        display: flex;
+      }
+      .auth-panel {
+        width: min(520px, 100%);
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+        padding: 22px;
+        position: relative;
+      }
+      .auth-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        font-size: 18px;
+        line-height: 1;
+      }
+      .auth-title {
+        margin: 0 0 14px;
+        color: var(--accent);
+      }
+      .auth-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .auth-tab {
+        flex: 1;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+      }
+      .auth-tab.active {
+        background: #2a1717;
+        border-color: #7f3131;
+      }
+      .auth-form {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .auth-form.active {
+        display: flex;
+      }
+      .auth-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .auth-field label {
+        font-size: 12px;
+        color: var(--text-muted);
+        letter-spacing: 0.03em;
+      }
+      .auth-field input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+      }
+      .auth-field input:focus {
+        outline: 2px solid var(--focus);
+        border-color: var(--focus);
+      }
+      .auth-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .auth-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .auth-check input {
+        accent-color: var(--accent);
+      }
+      .auth-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 12px;
+      }
+      .auth-link-button {
+        border: none;
+        background: none;
+        padding: 0;
+      }
+      .auth-link:hover {
+        color: var(--accent);
+      }
+      .auth-submit {
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+      }
+      .auth-status {
+        min-height: 18px;
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .auth-status.error {
+        color: #ff6d6d;
+      }
+      .auth-status.success {
+        color: #8ef18e;
+      }
+      @media (max-width: 600px) {
+        .auth-panel {
+          padding: 18px;
+        }
+        .auth-row {
+          flex-direction: column;
+          align-items: flex-start;
+        }
       }
       </style>
   </head>
@@ -354,10 +522,6 @@
 
     <!-- Header -->
     <header>
-      <span class="menu" role="button" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</span>
-      <input class="search" type="search" placeholder="search games" aria-label="Search games" />
-      <button>login</button>
-      <button>register</button>
       <span class="brand">
         <img
           class="brand-logo"
@@ -365,7 +529,71 @@
           alt="UltimeGames logo"
         />
       </span>
+      <span class="menu" role="button" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</span>
+      <input class="search" type="search" placeholder="search games" aria-label="Search games" />
+      <div class="header-actions">
+        <button id="login-button" class="auth-trigger" type="button">login</button>
+        <button id="register-button" class="auth-trigger" type="button">register</button>
+      </div>
     </header>
+
+    <div id="auth-modal" class="auth-modal" aria-hidden="true">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button id="auth-close" class="auth-close" type="button" aria-label="Close authentication form">&#10005;</button>
+        <h2 id="auth-title" class="auth-title">Welcome back</h2>
+        <div class="auth-tabs" role="tablist" aria-label="Authentication views">
+          <button id="auth-tab-login" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="login-form" data-auth-view="login">Login</button>
+          <button id="auth-tab-register" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="register-form" data-auth-view="register">Sign Up</button>
+        </div>
+
+        <form id="login-form" class="auth-form active" novalidate>
+          <div class="auth-field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+          </div>
+          <div class="auth-row">
+            <label class="auth-check" for="remember-login">
+              <input id="remember-login" type="checkbox" />
+              Keep me signed in
+            </label>
+            <button class="auth-link auth-link-button" type="button">Forgot password?</button>
+          </div>
+          <button class="auth-submit" type="submit">Log In</button>
+        </form>
+
+        <form id="register-form" class="auth-form" novalidate>
+          <div class="auth-field">
+            <label for="register-username">Username</label>
+            <input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-email">Email</label>
+            <input id="register-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-password">Password</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-confirm-password">Confirm Password</label>
+            <input id="register-confirm-password" name="confirm-password" type="password" autocomplete="new-password" minlength="8" required />
+          </div>
+          <div class="auth-row">
+            <label class="auth-check" for="accept-terms">
+              <input id="accept-terms" type="checkbox" required />
+              I agree to the terms and privacy policy
+            </label>
+          </div>
+          <button class="auth-submit" type="submit">Create Account</button>
+        </form>
+
+        <p id="auth-status" class="auth-status" aria-live="polite"></p>
+      </div>
+    </div>
 
     <!-- Full-width tabs bar -->
     <div class="tabs-bar">
@@ -834,6 +1062,106 @@
         document.getElementById('sidebar').classList.remove('open');
         document.getElementById('sidebar-overlay').classList.remove('open');
       }
+
+      const authModal = document.getElementById('auth-modal');
+      const authTitle = document.getElementById('auth-title');
+      const authStatus = document.getElementById('auth-status');
+      const authTabs = document.querySelectorAll('.auth-tab');
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const loginButton = document.getElementById('login-button');
+      const registerButton = document.getElementById('register-button');
+      const authCloseButton = document.getElementById('auth-close');
+
+      function setAuthStatus(message, type) {
+        authStatus.textContent = message || '';
+        authStatus.className = 'auth-status';
+        if (type) {
+          authStatus.classList.add(type);
+        }
+      }
+
+      function switchAuthView(view) {
+        const isLogin = view === 'login';
+        loginForm.classList.toggle('active', isLogin);
+        registerForm.classList.toggle('active', !isLogin);
+        authTitle.textContent = isLogin ? 'Welcome back' : 'Create your account';
+        authTabs.forEach(function(tab) {
+          const selected = tab.getAttribute('data-auth-view') === view;
+          tab.classList.toggle('active', selected);
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+        setAuthStatus('');
+      }
+
+      function openAuthModal(view) {
+        switchAuthView(view || 'login');
+        authModal.classList.add('open');
+        authModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeAuthModal() {
+        authModal.classList.remove('open');
+        authModal.setAttribute('aria-hidden', 'true');
+        setAuthStatus('');
+      }
+
+      loginButton.addEventListener('click', function() {
+        openAuthModal('login');
+      });
+      registerButton.addEventListener('click', function() {
+        openAuthModal('register');
+      });
+      authCloseButton.addEventListener('click', closeAuthModal);
+
+      authTabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          switchAuthView(tab.getAttribute('data-auth-view'));
+        });
+      });
+
+      authModal.addEventListener('click', function(e) {
+        if (e.target === authModal) {
+          closeAuthModal();
+        }
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && authModal.classList.contains('open')) {
+          closeAuthModal();
+        }
+      });
+
+      loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!loginForm.checkValidity()) {
+          loginForm.reportValidity();
+          setAuthStatus('Please enter a valid email and password.', 'error');
+          return;
+        }
+        setAuthStatus('Demo mode: login form submitted successfully.', 'success');
+      });
+
+      registerForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!registerForm.checkValidity()) {
+          registerForm.reportValidity();
+          setAuthStatus('Please complete all required fields.', 'error');
+          return;
+        }
+
+        const registerPassword = document.getElementById('register-password').value;
+        const registerConfirmPassword = document.getElementById('register-confirm-password').value;
+        if (registerPassword !== registerConfirmPassword) {
+          setAuthStatus('Passwords do not match.', 'error');
+          return;
+        }
+
+        registerForm.reset();
+        switchAuthView('login');
+        setAuthStatus('Demo mode: signup form submitted successfully.', 'success');
+      });
+
       // Accessibility: make category bubbles and game cards keyboard-navigable
       document.querySelectorAll('.tabs span, .sidebar-bubbles span').forEach(function(el) {
         el.setAttribute('role', 'button');
@@ -843,6 +1171,15 @@
         });
       });
       document.querySelectorAll('.game-card').forEach(function(el) {
+        const gameTitle = el.textContent.trim();
+        if (gameTitle) {
+          el.setAttribute('data-card-label', 'play');
+          el.setAttribute('data-game-title', gameTitle);
+          el.setAttribute('aria-label', 'Open ' + gameTitle);
+        } else {
+          el.setAttribute('data-card-label', 'play');
+        }
+        el.textContent = '';
         el.setAttribute('role', 'button');
         el.setAttribute('tabindex', '0');
         el.addEventListener('keydown', function(e) {
