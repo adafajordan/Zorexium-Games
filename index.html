@@ -98,6 +98,43 @@
       .sidebar-bubbles span:hover {
         background: var(--border);
       }
+      .sidebar-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 4px 16px;
+      }
+      .sidebar-nav {
+        list-style: none;
+        margin: 0;
+        padding: 8px 0;
+      }
+      .sidebar-nav li a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 13px;
+        transition: background 0.15s, color 0.15s;
+      }
+      .sidebar-nav li a:hover {
+        background: var(--surface-soft);
+        color: var(--text);
+      }
+      .sidebar-nav li a .nav-icon {
+        font-size: 15px;
+        width: 18px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .sidebar-section-label {
+        padding: 10px 20px 4px;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-soft);
+      }
 
       /* ── Header ──────────────────────────────── */
       header {
@@ -518,6 +555,47 @@
         <span>Zombie</span>
         <span>Chess</span>
       </div>
+
+      <div class="sidebar-divider"></div>
+
+      <p class="sidebar-section-label">My Games</p>
+      <ul class="sidebar-nav">
+        <li><a href="recently-played.html"><span class="nav-icon">🕹️</span>Recently Played Games</a></li>
+        <li><a href="liked-games.html"><span class="nav-icon">❤️</span>Liked Games</a></li>
+        <li><a href="recommended-games.html"><span class="nav-icon">⭐</span>Recommended Games</a></li>
+      </ul>
+
+      <div class="sidebar-divider"></div>
+
+      <p class="sidebar-section-label">Discover</p>
+      <ul class="sidebar-nav">
+        <li><a href="videos.html"><span class="nav-icon">▶️</span>Videos</a></li>
+        <li><a href="newsroom.html"><span class="nav-icon">📰</span>Newsroom</a></li>
+        <li><a href="upload-game.html"><span class="nav-icon">📤</span>Upload Your Game</a></li>
+      </ul>
+
+      <div class="sidebar-divider"></div>
+
+      <p class="sidebar-section-label">Developers</p>
+      <ul class="sidebar-nav">
+        <li><a href="game-publishers.html"><span class="nav-icon">🏢</span>Game Publishers</a></li>
+        <li><a href="game-studios.html"><span class="nav-icon">🎬</span>Browse Game Studios</a></li>
+        <li><a href="game-developers.html"><span class="nav-icon">💻</span>Game Developers</a></li>
+        <li><a href="y8-browser.html"><span class="nav-icon">🌐</span>Y8 Browser</a></li>
+        <li><a href="flash-games.html"><span class="nav-icon">⚡</span>For Flash Games</a></li>
+      </ul>
+
+      <div class="sidebar-divider"></div>
+
+      <p class="sidebar-section-label">Info</p>
+      <ul class="sidebar-nav">
+        <li><a href="about-us.html"><span class="nav-icon">ℹ️</span>About Us</a></li>
+        <li><a href="newsroom.html"><span class="nav-icon">📣</span>Newsroom</a></li>
+        <li><a href="contact-us.html"><span class="nav-icon">✉️</span>Contact Us</a></li>
+        <li><a href="privacy-policy.html"><span class="nav-icon">🔒</span>Privacy Policy</a></li>
+        <li><a href="cookies-settings.html"><span class="nav-icon">🍪</span>Cookies Settings</a></li>
+        <li><a href="terms-of-use.html"><span class="nav-icon">📋</span>Terms of Use</a></li>
+      </ul>
     </nav>
 
     <!-- Header -->
