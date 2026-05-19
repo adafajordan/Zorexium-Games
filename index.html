@@ -297,7 +297,7 @@
         position: relative;
       }
       .game-card::before {
-        content: 'play';
+        content: attr(data-card-label);
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -1063,15 +1063,15 @@
         document.getElementById('sidebar-overlay').classList.remove('open');
       }
 
-      var authModal = document.getElementById('auth-modal');
-      var authTitle = document.getElementById('auth-title');
-      var authStatus = document.getElementById('auth-status');
-      var authTabs = document.querySelectorAll('.auth-tab');
-      var loginForm = document.getElementById('login-form');
-      var registerForm = document.getElementById('register-form');
-      var loginButton = document.getElementById('login-button');
-      var registerButton = document.getElementById('register-button');
-      var authCloseButton = document.getElementById('auth-close');
+      const authModal = document.getElementById('auth-modal');
+      const authTitle = document.getElementById('auth-title');
+      const authStatus = document.getElementById('auth-status');
+      const authTabs = document.querySelectorAll('.auth-tab');
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const loginButton = document.getElementById('login-button');
+      const registerButton = document.getElementById('register-button');
+      const authCloseButton = document.getElementById('auth-close');
 
       function setAuthStatus(message, type) {
         authStatus.textContent = message || '';
@@ -1082,12 +1082,12 @@
       }
 
       function switchAuthView(view) {
-        var isLogin = view === 'login';
+        const isLogin = view === 'login';
         loginForm.classList.toggle('active', isLogin);
         registerForm.classList.toggle('active', !isLogin);
         authTitle.textContent = isLogin ? 'Welcome back' : 'Create your account';
         authTabs.forEach(function(tab) {
-          var selected = tab.getAttribute('data-auth-view') === view;
+          const selected = tab.getAttribute('data-auth-view') === view;
           tab.classList.toggle('active', selected);
           tab.setAttribute('aria-selected', selected ? 'true' : 'false');
         });
@@ -1139,7 +1139,7 @@
           setAuthStatus('Please enter a valid email and password.', 'error');
           return;
         }
-        setAuthStatus('Login successful. Redirecting to your dashboard...', 'success');
+        setAuthStatus('Demo mode: login form submitted successfully.', 'success');
       });
 
       registerForm.addEventListener('submit', function(e) {
@@ -1150,8 +1150,8 @@
           return;
         }
 
-        var registerPassword = document.getElementById('register-password').value;
-        var registerConfirmPassword = document.getElementById('register-confirm-password').value;
+        const registerPassword = document.getElementById('register-password').value;
+        const registerConfirmPassword = document.getElementById('register-confirm-password').value;
         if (registerPassword !== registerConfirmPassword) {
           setAuthStatus('Passwords do not match.', 'error');
           return;
@@ -1159,7 +1159,7 @@
 
         registerForm.reset();
         switchAuthView('login');
-        setAuthStatus('Account created successfully. You can now log in.', 'success');
+        setAuthStatus('Demo mode: signup form submitted successfully.', 'success');
       });
 
       // Accessibility: make category bubbles and game cards keyboard-navigable
@@ -1171,10 +1171,13 @@
         });
       });
       document.querySelectorAll('.game-card').forEach(function(el) {
-        var gameTitle = el.textContent.trim();
+        const gameTitle = el.textContent.trim();
         if (gameTitle) {
+          el.setAttribute('data-card-label', 'play');
           el.setAttribute('data-game-title', gameTitle);
           el.setAttribute('aria-label', 'Open ' + gameTitle);
+        } else {
+          el.setAttribute('data-card-label', 'play');
         }
         el.textContent = '';
         el.setAttribute('role', 'button');
