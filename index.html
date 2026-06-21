@@ -337,7 +337,6 @@
       @media (max-width: 600px) {
         .game-grid { grid-template-columns: repeat(3, 1fr); }
         .brand-logo { width: 128px; height: 50px; }
-        header { grid-template-columns: auto 1fr auto; }
       }
       .game-card {
         background: var(--surface);
@@ -756,7 +755,7 @@
     </div>
 
     <!-- News bar -->
-    <div class="news-bar" role="banner" aria-label="News">
+    <div class="news-bar" role="region" aria-label="News">
       <span class="news-bar-label">&#128240; News</span>
       <div class="news-ticker" aria-live="polite">
         <span>&#127381; New games added weekly — check out our latest releases!</span>
@@ -771,7 +770,7 @@
       <p class="social-section-title">Follow us</p>
       <div class="social-grid">
         <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon">&#120143;</span> Twitter / X</div>
+          <div class="social-card-platform"><span class="social-card-platform-icon">&#120143;</span> X (Twitter)</div>
           <div class="social-card-body">New games every week! Follow us for the latest drops and gaming news. &#127377;</div>
         </div>
         <div class="social-card">
@@ -1318,8 +1317,8 @@
         document.getElementById('search-bar').classList.toggle('open');
       }
       function openAddGameDialog() {
-        /* Placeholder: upload / add game flow to be implemented */
-        alert('Add game: coming soon!');
+        /* Navigate to the upload game page */
+        window.location.href = 'upload-game.html';
       }
 
       const authModal = document.getElementById('auth-modal');
