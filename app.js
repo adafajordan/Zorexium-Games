@@ -326,7 +326,7 @@
   }
 
   function getAvatarColor(seed) {
-    const palette = ['#e02020', '#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#db2777', '#059669'];
+    const palette = ['#b91c1c', '#1d4ed8', '#15803d', '#6d28d9', '#92400e', '#0f766e', '#be185d', '#065f46'];
     const source = String(seed || 'zorexium');
     let hash = 0;
     for (let index = 0; index < source.length; index += 1) {
@@ -480,6 +480,7 @@
   async function buildMediaFragment(post) {
     const fragment = document.createDocumentFragment();
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
+    const altBase = post.text ? post.text.trim().replace(/\s+/g, ' ').split(' ').slice(0, 12).join(' ') : 'User upload';
 
     if (imageIds.length) {
       const grid = document.createElement('div');
@@ -498,7 +499,7 @@
 
         const image = document.createElement('img');
         image.src = mediaUrl;
-        image.alt = (post.text || 'User upload').slice(0, 80) || 'User upload';
+        image.alt = altBase + ' (image ' + (index + 1) + ' of ' + imageIds.length + ')';
         image.loading = 'lazy';
         item.appendChild(image);
         grid.appendChild(item);
@@ -518,6 +519,7 @@
         const video = document.createElement('video');
         video.className = 'post-video';
         video.src = mediaUrl;
+        video.setAttribute('aria-label', altBase + ' (video)');
         video.controls = true;
         video.preload = 'metadata';
         fragment.appendChild(video);
