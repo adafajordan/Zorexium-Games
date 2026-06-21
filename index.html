@@ -1232,7 +1232,9 @@
       registerButton.addEventListener('click', function() {
         openAuthModal('register');
       });
-      stickyFooterSearchButton.addEventListener('click', toggleSearchBar);
+      stickyFooterSearchButton.addEventListener('click', function() {
+        document.getElementById('search-bar').classList.toggle('open');
+      });
       authCloseButton.addEventListener('click', closeAuthModal);
 
       authTabs.forEach(function(tab) {
