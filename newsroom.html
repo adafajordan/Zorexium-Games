@@ -205,6 +205,7 @@
           <button class="auth-submit" type="submit">Log In</button>
         </form>
         <form id="register-form" class="auth-form" novalidate>
+          <div class="auth-field"><label for="register-name">Name</label><input id="register-name" name="name" type="text" autocomplete="name" minlength="2" required /></div>
           <div class="auth-field"><label for="register-username">Username</label><input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required /></div>
           <div class="auth-field"><label for="register-email">Email</label><input id="register-email" name="email" type="email" autocomplete="email" required /></div>
           <div class="auth-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required /></div>
@@ -249,8 +250,7 @@
       authTabs.forEach(function(t){ t.addEventListener('click', function(){ switchAuthView(t.getAttribute('data-auth-view')); }); });
       authModal.addEventListener('click', function(e){ if(e.target===authModal) closeAuthModal(); });
       document.addEventListener('keydown', function(e){ if(e.key==='Escape'&&authModal.classList.contains('open')) closeAuthModal(); });
-      loginForm.addEventListener('submit', function(e){ e.preventDefault(); if(!loginForm.checkValidity()){ loginForm.reportValidity(); setAuthStatus('Please enter a valid email and password.','error'); return; } setAuthStatus('Demo mode: login submitted.','success'); });
-      registerForm.addEventListener('submit', function(e){ e.preventDefault(); if(!registerForm.checkValidity()){ registerForm.reportValidity(); setAuthStatus('Please complete all required fields.','error'); return; } var p=document.getElementById('register-password').value; var c=document.getElementById('register-confirm-password').value; if(p!==c){ setAuthStatus('Passwords do not match.','error'); return; } registerForm.reset(); switchAuthView('login'); setAuthStatus('Demo mode: signup submitted.','success'); });
     </script>
+    <script src="app.js"></script>
   </body>
 </html>

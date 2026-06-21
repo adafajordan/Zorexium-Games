@@ -657,6 +657,32 @@
         letter-spacing: 0.06em;
         text-transform: uppercase;
       }
+      .post-media-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .post-media-grid.single {
+        grid-template-columns: 1fr;
+      }
+      .post-media-item {
+        min-width: 0;
+      }
+      .post-media-item img,
+      .post-video {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface-soft);
+        object-fit: cover;
+      }
+      .post-media-item img {
+        aspect-ratio: 16 / 10;
+      }
+      .post-video {
+        max-height: 480px;
+      }
       .post-actions {
         display: flex;
         gap: 20px;
@@ -782,6 +808,35 @@
         outline: 2px solid var(--focus);
         border-color: var(--focus);
       }
+      .new-post-media-panel {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .new-post-file-input {
+        width: 100%;
+        border: 1px dashed var(--border-strong);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+      }
+      .new-post-file-input::file-selector-button {
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-right: 10px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .new-post-helper {
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.5;
+      }
       </style>
   </head>
   <body>
@@ -892,6 +947,10 @@
         </form>
 
         <form id="register-form" class="auth-form" novalidate>
+          <div class="auth-field">
+            <label for="register-name">Name</label>
+            <input id="register-name" name="name" type="text" autocomplete="name" minlength="2" required />
+          </div>
           <div class="auth-field">
             <label for="register-username">Username</label>
             <input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required />
@@ -1133,7 +1192,21 @@
         <h2 id="new-post-title" class="auth-title">Create Post</h2>
         <form id="new-post-form" novalidate>
           <div class="auth-field">
-            <textarea id="new-post-text" class="new-post-textarea" placeholder="What's on your mind?" rows="4" required></textarea>
+            <label for="new-post-text">Post</label>
+            <textarea id="new-post-text" class="new-post-textarea" placeholder="What's on your mind?" rows="4" aria-describedby="new-post-requirements"></textarea>
+            <div id="new-post-requirements" class="new-post-helper">Add text, photos, or a video to publish your post. Text is optional when media is attached.</div>
+          </div>
+          <div class="new-post-media-panel">
+            <div class="auth-field">
+              <label for="new-post-images">Pictures</label>
+              <input id="new-post-images" class="new-post-file-input" type="file" accept="image/*" multiple aria-describedby="new-post-images-helper" />
+              <div id="new-post-images-helper" class="new-post-helper">Upload up to 10 pictures with a maximum size of 10MB each.</div>
+            </div>
+            <div class="auth-field">
+              <label for="new-post-video">Video</label>
+              <input id="new-post-video" class="new-post-file-input" type="file" accept="video/*" aria-describedby="new-post-video-helper" />
+              <div id="new-post-video-helper" class="new-post-helper">Upload one video up to 10 minutes long.</div>
+            </div>
           </div>
           <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
         </form>
@@ -1170,19 +1243,6 @@
       document.getElementById('new-post-modal').addEventListener('click', function(e) {
         if (e.target === this) closeNewPostModal();
       });
-      document.getElementById('new-post-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const text = document.getElementById('new-post-text').value.trim();
-        if (!text) {
-          document.getElementById('new-post-status').textContent = 'Please write something before posting.';
-          document.getElementById('new-post-status').className = 'auth-status error';
-          return;
-        }
-        document.getElementById('new-post-status').textContent = 'Post submitted (demo mode).';
-        document.getElementById('new-post-status').className = 'auth-status success';
-        setTimeout(closeNewPostModal, 1200);
-      });
-
       /* Post action buttons — toggle liked state and increment/decrement count */
       document.querySelectorAll('.post-action[data-action="like"]').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1214,7 +1274,6 @@
       const searchBar = document.getElementById('search-bar');
       const searchInput = searchBar ? searchBar.querySelector('.search-bar-input') : null;
 
-      let isLoggedIn = false;
 
       function setAuthStatus(message, type) {
         authStatus.textContent = message || '';
@@ -1250,7 +1309,7 @@
       }
 
       function handlePlusClick() {
-        if (!isLoggedIn) {
+        if (document.body.getAttribute('data-authenticated') !== 'true') {
           openAuthModal('login');
         } else {
           openNewPost();
@@ -1267,16 +1326,16 @@
         }
       });
       stickyFooterProfileButton.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       stickyFooterNotificationsButton.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       headerProfileBtn.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       headerNotificationsBtn.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       authCloseButton.addEventListener('click', closeAuthModal);
 
@@ -1299,40 +1358,7 @@
         }
       });
 
-      loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!loginForm.checkValidity()) {
-          loginForm.reportValidity();
-          setAuthStatus('Please enter a valid email and password.', 'error');
-          return;
-        }
-        setAuthStatus('Demo mode: login form submitted successfully.', 'success');
-        isLoggedIn = true;
-        setTimeout(closeAuthModal, 1200);
-      });
-
-      registerForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!registerForm.checkValidity()) {
-          registerForm.reportValidity();
-          setAuthStatus('Please complete all required fields.', 'error');
-          return;
-        }
-
-        const registerPassword = document.getElementById('register-password').value;
-        const registerConfirmPassword = document.getElementById('register-confirm-password').value;
-        if (registerPassword !== registerConfirmPassword) {
-          setAuthStatus('Passwords do not match.', 'error');
-          return;
-        }
-
-        registerForm.reset();
-        isLoggedIn = true;
-        switchAuthView('login');
-        setAuthStatus('Demo mode: signup form submitted successfully.', 'success');
-        setTimeout(closeAuthModal, 1200);
-      });
-
     </script>
+    <script src="app.js"></script>
   </body>
 </html>
