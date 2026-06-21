@@ -28,7 +28,7 @@
         --focus: #e02020;
         --accent: #cc2222;
         --sticky-footer-height: 52px;
-        --sticky-footer-spacing: 6px;
+        --sticky-footer-padding-x: 6px;
         --post-card-padding: 16px;
       }
       * {
@@ -39,7 +39,7 @@
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: #fff;
         color: var(--text);
-        padding-bottom: calc(var(--sticky-footer-height) + var(--sticky-footer-spacing));
+        padding-bottom: var(--sticky-footer-height);
       }
 
       /* ── Sidebar ─────────────────────────────── */
@@ -708,7 +708,7 @@
         display: flex;
         align-items: center;
         justify-content: space-around;
-        padding: 0 6px;
+        padding: 0 var(--sticky-footer-padding-x);
       }
       .sticky-footer-item {
         display: inline-flex;
