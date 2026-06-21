@@ -9,7 +9,7 @@
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
-  const PASSWORD_ITERATIONS = 210000;
+  const PASSWORD_ITERATIONS = 600000;
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');

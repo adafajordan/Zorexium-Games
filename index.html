@@ -1199,13 +1199,13 @@
           <div class="new-post-media-panel">
             <div class="auth-field">
               <label for="new-post-images">Pictures</label>
-              <input id="new-post-images" class="new-post-file-input" type="file" accept="image/*" multiple />
-              <div class="new-post-helper">Upload up to 10 pictures with a maximum size of 10MB each.</div>
+              <input id="new-post-images" class="new-post-file-input" type="file" accept="image/*" multiple aria-describedby="new-post-images-helper" />
+              <div id="new-post-images-helper" class="new-post-helper">Upload up to 10 pictures with a maximum size of 10MB each.</div>
             </div>
             <div class="auth-field">
               <label for="new-post-video">Video</label>
-              <input id="new-post-video" class="new-post-file-input" type="file" accept="video/*" />
-              <div class="new-post-helper">Upload one video up to 10 minutes long.</div>
+              <input id="new-post-video" class="new-post-file-input" type="file" accept="video/*" aria-describedby="new-post-video-helper" />
+              <div id="new-post-video-helper" class="new-post-helper">Upload one video up to 10 minutes long.</div>
             </div>
           </div>
           <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
