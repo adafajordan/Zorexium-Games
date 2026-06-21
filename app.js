@@ -1,13 +1,15 @@
 (function () {
-  const ACCOUNTS_KEY = 'zorexium.accounts.v1';
-  const POSTS_KEY = 'zorexium.posts.v1';
-  const LOCAL_SESSION_KEY = 'zorexium.session.local.v1';
-  const SESSION_SESSION_KEY = 'zorexium.session.session.v1';
-  const MEDIA_DB_NAME = 'zorexium-media-db';
-  const MEDIA_STORE_NAME = 'media';
+  const DB_NAME = 'zorexium-app-db';
+  const DB_VERSION = 1;
+  const ACCOUNTS_STORE = 'accounts';
+  const POSTS_STORE = 'posts';
+  const SESSION_STORE = 'session';
+  const MEDIA_STORE = 'media';
+  const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
+  const PASSWORD_ITERATIONS = 210000;
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');
@@ -26,88 +28,212 @@
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
 
   let currentUser = null;
-  let mediaDbPromise = null;
+  let appDbPromise = null;
   let generatedMediaUrls = [];
 
-  function safeParse(value, fallback) {
-    try {
-      return value ? JSON.parse(value) : fallback;
-    } catch (error) {
-      return fallback;
+  function requestToPromise(request) {
+    return new Promise(function (resolve, reject) {
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+      request.onerror = function () {
+        reject(request.error || new Error('IndexedDB request failed.'));
+      };
+    });
+  }
+
+  function transactionDone(transaction) {
+    return new Promise(function (resolve, reject) {
+      transaction.oncomplete = function () {
+        resolve();
+      };
+      transaction.onerror = function () {
+        reject(transaction.error || new Error('IndexedDB transaction failed.'));
+      };
+      transaction.onabort = function () {
+        reject(transaction.error || new Error('IndexedDB transaction aborted.'));
+      };
+    });
+  }
+
+  function ensureCryptoSupport() {
+    if (!window.crypto || typeof window.crypto.getRandomValues !== 'function' || !window.crypto.subtle || !window.TextEncoder) {
+      throw new Error('Your browser does not support secure account storage.');
     }
   }
 
-  function readAccounts() {
-    return safeParse(localStorage.getItem(ACCOUNTS_KEY), []);
+  function bytesToHex(bytes) {
+    return Array.from(bytes).map(function (value) {
+      return value.toString(16).padStart(2, '0');
+    }).join('');
   }
 
-  function saveAccounts(accounts) {
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  function hexToBytes(value) {
+    const pairs = String(value || '').match(/.{1,2}/g) || [];
+    return new Uint8Array(pairs.map(function (pair) {
+      return parseInt(pair, 16);
+    }));
   }
 
-  function readPosts() {
-    return safeParse(localStorage.getItem(POSTS_KEY), []);
-  }
-
-  function savePosts(posts) {
-    localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+  function secureRandomHex(byteLength) {
+    ensureCryptoSupport();
+    const bytes = new Uint8Array(byteLength);
+    window.crypto.getRandomValues(bytes);
+    return bytesToHex(bytes);
   }
 
   function generateId(prefix) {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    ensureCryptoSupport();
+    if (typeof window.crypto.randomUUID === 'function') {
       return prefix + '-' + window.crypto.randomUUID();
     }
-    return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    return prefix + '-' + secureRandomHex(16);
   }
 
-  function normalizeEmail(email) {
-    return String(email || '').trim().toLowerCase();
+  async function derivePasswordVerifier(secret, salt) {
+    ensureCryptoSupport();
+    const passwordKey = await window.crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      'PBKDF2',
+      false,
+      ['deriveBits']
+    );
+    const derivedBits = await window.crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: hexToBytes(salt),
+        iterations: PASSWORD_ITERATIONS,
+        hash: 'SHA-256'
+      },
+      passwordKey,
+      256
+    );
+    return bytesToHex(new Uint8Array(derivedBits));
   }
 
-  function normalizeUsername(username) {
-    return String(username || '').trim().toLowerCase();
+  function openAppDb() {
+    if (appDbPromise) return appDbPromise;
+    appDbPromise = new Promise(function (resolve, reject) {
+      if (!window.indexedDB) {
+        reject(new Error('IndexedDB is not available in this browser.'));
+        return;
+      }
+
+      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = function () {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(ACCOUNTS_STORE)) {
+          database.createObjectStore(ACCOUNTS_STORE, { keyPath: 'id' });
+        }
+        if (!database.objectStoreNames.contains(POSTS_STORE)) {
+          database.createObjectStore(POSTS_STORE, { keyPath: 'id' });
+        }
+        if (!database.objectStoreNames.contains(SESSION_STORE)) {
+          database.createObjectStore(SESSION_STORE, { keyPath: 'key' });
+        }
+        if (!database.objectStoreNames.contains(MEDIA_STORE)) {
+          database.createObjectStore(MEDIA_STORE, { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+      request.onerror = function () {
+        reject(request.error || new Error('Failed to open app database.'));
+      };
+    });
+    return appDbPromise;
   }
 
-  function getCurrentSession() {
-    const localSession = safeParse(localStorage.getItem(LOCAL_SESSION_KEY), null);
-    if (localSession && localSession.userId) {
-      return localSession;
+  async function getAllRecords(storeName) {
+    const database = await openAppDb();
+    const transaction = database.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+    const records = await requestToPromise(store.getAll());
+    await transactionDone(transaction);
+    return records;
+  }
+
+  async function getRecord(storeName, key) {
+    const database = await openAppDb();
+    const transaction = database.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+    const record = await requestToPromise(store.get(key));
+    await transactionDone(transaction);
+    return record || null;
+  }
+
+  async function putRecord(storeName, record) {
+    const database = await openAppDb();
+    const transaction = database.transaction(storeName, 'readwrite');
+    transaction.objectStore(storeName).put(record);
+    await transactionDone(transaction);
+  }
+
+  async function deleteRecord(storeName, key) {
+    const database = await openAppDb();
+    const transaction = database.transaction(storeName, 'readwrite');
+    transaction.objectStore(storeName).delete(key);
+    await transactionDone(transaction);
+  }
+
+  function getWindowSession() {
+    if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) {
+      return null;
     }
-    const sessionSession = safeParse(sessionStorage.getItem(SESSION_SESSION_KEY), null);
-    return sessionSession && sessionSession.userId ? sessionSession : null;
+    try {
+      const payload = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+      return payload && payload.userId ? payload : null;
+    } catch (error) {
+      return null;
+    }
   }
 
-  function setCurrentSession(userId, remember) {
-    const payload = JSON.stringify({ userId: userId });
+  function setWindowSession(userId) {
+    window.name = WINDOW_SESSION_PREFIX + JSON.stringify({ userId: userId });
+  }
+
+  function clearWindowSession() {
+    if (window.name && window.name.indexOf(WINDOW_SESSION_PREFIX) === 0) {
+      window.name = '';
+    }
+  }
+
+  async function readAccounts() {
+    return getAllRecords(ACCOUNTS_STORE);
+  }
+
+  async function readPosts() {
+    return getAllRecords(POSTS_STORE);
+  }
+
+  async function getPersistentSession() {
+    const sessionRecord = await getRecord(SESSION_STORE, 'current');
+    return sessionRecord && sessionRecord.userId ? sessionRecord : null;
+  }
+
+  async function getCurrentSession() {
+    return getWindowSession() || await getPersistentSession();
+  }
+
+  async function setCurrentSession(userId, remember) {
+    clearWindowSession();
+    await deleteRecord(SESSION_STORE, 'current');
     if (remember) {
-      localStorage.setItem(LOCAL_SESSION_KEY, payload);
-      sessionStorage.removeItem(SESSION_SESSION_KEY);
+      await putRecord(SESSION_STORE, { key: 'current', userId: userId });
       return;
     }
-    sessionStorage.setItem(SESSION_SESSION_KEY, payload);
-    localStorage.removeItem(LOCAL_SESSION_KEY);
+    setWindowSession(userId);
   }
 
-  function clearCurrentSession() {
-    localStorage.removeItem(LOCAL_SESSION_KEY);
-    sessionStorage.removeItem(SESSION_SESSION_KEY);
+  async function clearCurrentSession() {
+    clearWindowSession();
+    await deleteRecord(SESSION_STORE, 'current');
   }
 
-  function getUserById(userId) {
-    return readAccounts().find(function (account) {
-      return account.id === userId;
-    }) || null;
-  }
-
-  async function hashPassword(password) {
-    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
-      const data = new TextEncoder().encode(password);
-      const digest = await window.crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(digest)).map(function (value) {
-        return value.toString(16).padStart(2, '0');
-      }).join('');
-    }
-    return String(password || '');
+  async function getUserById(userId) {
+    return userId ? (await getRecord(ACCOUNTS_STORE, userId)) : null;
   }
 
   function setAuthStatus(message, type) {
@@ -185,7 +311,7 @@
     return String(name || '').trim().split(/\s+/)[0] || '';
   }
 
-  function escapeHandle(username) {
+  function formatHandle(username) {
     return '@' + String(username || '').trim().replace(/\s+/g, '').toLowerCase();
   }
 
@@ -263,88 +389,42 @@
       stickyFooterProfileButton.setAttribute('title', isAuthenticated ? ('Signed in as ' + currentUser.username) : 'Profile');
     }
     if (headerNotificationsButton) {
-      headerNotificationsButton.setAttribute('title', isAuthenticated ? 'Notifications' : 'Notifications');
+      headerNotificationsButton.setAttribute('title', isAuthenticated ? 'Your notifications' : 'Notifications');
     }
     document.body.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
   }
 
-  function syncCurrentUserFromSession() {
-    const session = getCurrentSession();
-    currentUser = session ? getUserById(session.userId) : null;
+  async function syncCurrentUserFromSession() {
+    const session = await getCurrentSession();
+    currentUser = session ? await getUserById(session.userId) : null;
     if (!currentUser && session) {
-      clearCurrentSession();
+      await clearCurrentSession();
     }
     updateAuthControls();
   }
 
-  function logout() {
+  async function logout() {
     currentUser = null;
-    clearCurrentSession();
+    await clearCurrentSession();
     updateAuthControls();
-    setAuthStatus('You have been logged out.', 'success');
     closeAuthModal();
   }
 
-  function openMediaDb() {
-    if (mediaDbPromise) return mediaDbPromise;
-    mediaDbPromise = new Promise(function (resolve, reject) {
-      if (!window.indexedDB) {
-        reject(new Error('IndexedDB is not available in this browser.'));
-        return;
-      }
-      const request = window.indexedDB.open(MEDIA_DB_NAME, 1);
-      request.onupgradeneeded = function () {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(MEDIA_STORE_NAME)) {
-          database.createObjectStore(MEDIA_STORE_NAME, { keyPath: 'id' });
-        }
-      };
-      request.onsuccess = function () {
-        resolve(request.result);
-      };
-      request.onerror = function () {
-        reject(request.error || new Error('Failed to open media database.'));
-      };
-    });
-    return mediaDbPromise;
-  }
-
   async function putMediaFile(file) {
-    const database = await openMediaDb();
-    const id = generateId('media');
-    await new Promise(function (resolve, reject) {
-      const transaction = database.transaction(MEDIA_STORE_NAME, 'readwrite');
-      transaction.objectStore(MEDIA_STORE_NAME).put({
-        id: id,
-        blob: file,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        createdAt: Date.now()
-      });
-      transaction.oncomplete = resolve;
-      transaction.onerror = function () {
-        reject(transaction.error || new Error('Failed to save media.'));
-      };
-      transaction.onabort = function () {
-        reject(transaction.error || new Error('Failed to save media.'));
-      };
-    });
-    return id;
+    const record = {
+      id: generateId('media'),
+      blob: file,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      createdAt: Date.now()
+    };
+    await putRecord(MEDIA_STORE, record);
+    return record.id;
   }
 
   async function getMediaRecord(id) {
-    const database = await openMediaDb();
-    return new Promise(function (resolve, reject) {
-      const transaction = database.transaction(MEDIA_STORE_NAME, 'readonly');
-      const request = transaction.objectStore(MEDIA_STORE_NAME).get(id);
-      request.onsuccess = function () {
-        resolve(request.result || null);
-      };
-      request.onerror = function () {
-        reject(request.error || new Error('Failed to load media.'));
-      };
-    });
+    return getRecord(MEDIA_STORE, id);
   }
 
   function clearGeneratedMediaUrls() {
@@ -358,7 +438,6 @@
   }
 
   function addLikeBehavior(button) {
-    if (!button) return;
     button.addEventListener('click', function () {
       const isLiked = button.getAttribute('data-liked') === 'true';
       const currentCount = Number(button.getAttribute('data-count') || '0');
@@ -373,7 +452,7 @@
     });
   }
 
-  function createActionButton(label, count, svgMarkup, isLike) {
+  function createActionButton(count, svgMarkup, isLike) {
     const button = document.createElement('button');
     button.className = 'post-action';
     button.type = 'button';
@@ -388,13 +467,11 @@
     icon.innerHTML = svgMarkup;
     button.appendChild(icon);
 
-    if (typeof count !== 'undefined' && count !== null) {
+    if (count !== null) {
       const countNode = document.createElement('span');
       countNode.className = 'post-action-count';
-      countNode.textContent = String(count);
+      countNode.textContent = String(count || 0);
       button.appendChild(countNode);
-    } else if (label) {
-      button.appendChild(document.createTextNode(label));
     }
 
     return button;
@@ -403,6 +480,7 @@
   async function buildMediaFragment(post) {
     const fragment = document.createDocumentFragment();
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
+
     if (imageIds.length) {
       const grid = document.createElement('div');
       grid.className = 'post-media-grid' + (imageIds.length === 1 ? ' single' : '');
@@ -456,14 +534,18 @@
       node.remove();
     });
 
-    const posts = readPosts().slice().sort(function (left, right) {
+    const [accounts, posts] = await Promise.all([readAccounts(), readPosts()]);
+    const accountMap = new Map(accounts.map(function (account) {
+      return [account.id, account];
+    }));
+    const orderedPosts = posts.slice().sort(function (left, right) {
       return right.createdAt - left.createdAt;
     });
     const anchor = postFeed.firstElementChild;
 
-    for (let index = posts.length - 1; index >= 0; index -= 1) {
-      const post = posts[index];
-      const user = getUserById(post.userId);
+    for (let index = orderedPosts.length - 1; index >= 0; index -= 1) {
+      const post = orderedPosts[index];
+      const user = accountMap.get(post.userId);
       if (!user) {
         continue;
       }
@@ -490,12 +572,11 @@
 
       const handle = document.createElement('span');
       handle.className = 'post-handle';
-      handle.textContent = escapeHandle(user.username) + ' · ' + formatRelativeTime(post.createdAt);
+      handle.textContent = formatHandle(user.username) + ' · ' + formatRelativeTime(post.createdAt);
 
       meta.appendChild(username);
       meta.appendChild(handle);
       header.appendChild(meta);
-
       article.appendChild(header);
 
       if (post.text) {
@@ -512,10 +593,10 @@
 
       const actions = document.createElement('div');
       actions.className = 'post-actions';
-      actions.appendChild(createActionButton('', 0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true));
-      actions.appendChild(createActionButton('', 0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false));
-      actions.appendChild(createActionButton('', 0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
-      actions.appendChild(createActionButton('', null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
+      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true));
+      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false));
+      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
+      actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
       article.appendChild(actions);
 
       postFeed.insertBefore(article, anchor);
@@ -580,19 +661,14 @@
       videoMediaId = await putMediaFile(video);
     }
 
-    const post = {
+    await putRecord(POSTS_STORE, {
       id: generateId('post'),
       userId: currentUser.id,
       text: text,
       imageMediaIds: imageMediaIds,
       videoMediaId: videoMediaId,
       createdAt: Date.now()
-    };
-
-    const posts = readPosts();
-    posts.push(post);
-    savePosts(posts);
-    return post;
+    });
   }
 
   function attachAuthenticatedClickGuard(button, onAuthenticatedClick) {
@@ -601,7 +677,8 @@
       if (!currentUser) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      onAuthenticatedClick();
+      Promise.resolve(onAuthenticatedClick()).catch(function () {
+      });
     }, true);
   }
 
@@ -617,30 +694,34 @@
           return;
         }
 
-        const email = normalizeEmail(document.getElementById('login-email') ? document.getElementById('login-email').value : '');
-        const password = document.getElementById('login-password') ? document.getElementById('login-password').value : '';
-        const remember = Boolean(document.getElementById('remember-login') && document.getElementById('remember-login').checked);
+        try {
+          const email = String(document.getElementById('login-email') ? document.getElementById('login-email').value : '').trim().toLowerCase();
+          const secret = String(document.getElementById('login-password') ? document.getElementById('login-password').value : '');
+          const remember = Boolean(document.getElementById('remember-login') && document.getElementById('remember-login').checked);
+          const accounts = await readAccounts();
+          const account = accounts.find(function (candidate) {
+            return candidate.email === email;
+          });
 
-        const account = readAccounts().find(function (candidate) {
-          return candidate.email === email;
-        });
+          if (!account) {
+            setAuthStatus('No account found for that email address.', 'error');
+            return;
+          }
 
-        if (!account) {
-          setAuthStatus('No account found for that email address.', 'error');
-          return;
+          const verifier = await derivePasswordVerifier(secret, account.passwordSalt);
+          if (account.passwordVerifier !== verifier) {
+            setAuthStatus('Incorrect password. Please try again.', 'error');
+            return;
+          }
+
+          currentUser = account;
+          await setCurrentSession(account.id, remember);
+          updateAuthControls();
+          setAuthStatus('Logged in successfully.', 'success');
+          setTimeout(closeAuthModal, 800);
+        } catch (error) {
+          setAuthStatus(error && error.message ? error.message : 'Unable to log in right now.', 'error');
         }
-
-        const passwordHash = await hashPassword(password);
-        if (account.passwordHash !== passwordHash) {
-          setAuthStatus('Incorrect password. Please try again.', 'error');
-          return;
-        }
-
-        currentUser = account;
-        setCurrentSession(account.id, remember);
-        updateAuthControls();
-        setAuthStatus('Logged in successfully.', 'success');
-        setTimeout(closeAuthModal, 800);
       }, true);
     }
 
@@ -664,9 +745,9 @@
 
         const name = String(nameInput ? nameInput.value : '').trim();
         const username = String(usernameInput ? usernameInput.value : '').trim();
-        const email = normalizeEmail(emailInput ? emailInput.value : '');
-        const password = String(passwordInput ? passwordInput.value : '');
-        const confirmPassword = String(confirmPasswordInput ? confirmPasswordInput.value : '');
+        const email = String(emailInput ? emailInput.value : '').trim().toLowerCase();
+        const secret = String(passwordInput ? passwordInput.value : '');
+        const confirmSecret = String(confirmPasswordInput ? confirmPasswordInput.value : '');
 
         if (name.length < 2) {
           setAuthStatus('Please enter your full name.', 'error');
@@ -683,42 +764,47 @@
           return;
         }
 
-        if (password !== confirmPassword) {
+        if (secret !== confirmSecret) {
           setAuthStatus('Passwords do not match.', 'error');
           return;
         }
 
-        const accounts = readAccounts();
-        const usernameKey = normalizeUsername(username);
-        if (accounts.some(function (account) { return account.usernameKey === usernameKey; })) {
-          setAuthStatus('That username is already taken.', 'error');
-          return;
+        try {
+          const accounts = await readAccounts();
+          const usernameKey = username.toLowerCase();
+          if (accounts.some(function (account) { return account.usernameKey === usernameKey; })) {
+            setAuthStatus('That username is already taken.', 'error');
+            return;
+          }
+
+          if (accounts.some(function (account) { return account.email === email; })) {
+            setAuthStatus('That email is already in use.', 'error');
+            return;
+          }
+
+          const passwordSalt = secureRandomHex(16);
+          const passwordVerifier = await derivePasswordVerifier(secret, passwordSalt);
+          const account = {
+            id: generateId('user'),
+            name: name,
+            username: username,
+            usernameKey: usernameKey,
+            email: email,
+            passwordSalt: passwordSalt,
+            passwordVerifier: passwordVerifier,
+            createdAt: Date.now()
+          };
+
+          await putRecord(ACCOUNTS_STORE, account);
+          currentUser = account;
+          await setCurrentSession(account.id, true);
+          updateAuthControls();
+          registerForm.reset();
+          setAuthStatus('Account created and logged in successfully.', 'success');
+          setTimeout(closeAuthModal, 800);
+        } catch (error) {
+          setAuthStatus(error && error.message ? error.message : 'Unable to create your account right now.', 'error');
         }
-
-        if (accounts.some(function (account) { return account.email === email; })) {
-          setAuthStatus('That email is already in use.', 'error');
-          return;
-        }
-
-        const passwordHash = await hashPassword(password);
-        const account = {
-          id: generateId('user'),
-          name: name,
-          username: username,
-          usernameKey: usernameKey,
-          email: email,
-          passwordHash: passwordHash,
-          createdAt: Date.now()
-        };
-
-        accounts.push(account);
-        saveAccounts(accounts);
-        currentUser = account;
-        setCurrentSession(account.id, true);
-        updateAuthControls();
-        registerForm.reset();
-        setAuthStatus('Account created and logged in successfully.', 'success');
-        setTimeout(closeAuthModal, 800);
       }, true);
     }
   }
@@ -766,7 +852,7 @@
     });
 
     attachAuthenticatedClickGuard(registerButton, function () {
-      logout();
+      return logout();
     });
 
     [headerProfileButton, headerNotificationsButton, stickyFooterProfileButton, stickyFooterNotificationsButton].forEach(function (button) {
@@ -783,13 +869,13 @@
     });
   }
 
-  function initSharedHandlers() {
+  async function initSharedHandlers() {
     injectNameField();
-    syncCurrentUserFromSession();
     initAuthTabs();
     attachAuthSubmitHandlers();
     attachNewPostHandler();
     attachAuthGuards();
+    await syncCurrentUserFromSession();
   }
 
   window.handlePlusClick = function () {
@@ -808,9 +894,13 @@
     }
   };
 
-  initSharedHandlers();
-  if (postFeed) {
-    renderSavedPosts().catch(function () {
-    });
-  }
+  initSharedHandlers().then(function () {
+    if (postFeed) {
+      return renderSavedPosts();
+    }
+  }).catch(function (error) {
+    if (authStatus) {
+      setAuthStatus(error && error.message ? error.message : 'Unable to initialize account features.', 'error');
+    }
+  });
 })();
