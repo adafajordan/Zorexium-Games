@@ -948,6 +948,10 @@
 
         <form id="register-form" class="auth-form" novalidate>
           <div class="auth-field">
+            <label for="register-name">Name</label>
+            <input id="register-name" name="name" type="text" autocomplete="name" minlength="2" required />
+          </div>
+          <div class="auth-field">
             <label for="register-username">Username</label>
             <input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required />
           </div>
@@ -1239,19 +1243,6 @@
       document.getElementById('new-post-modal').addEventListener('click', function(e) {
         if (e.target === this) closeNewPostModal();
       });
-      document.getElementById('new-post-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const text = document.getElementById('new-post-text').value.trim();
-        if (!text) {
-          document.getElementById('new-post-status').textContent = 'Please write something before posting.';
-          document.getElementById('new-post-status').className = 'auth-status error';
-          return;
-        }
-        document.getElementById('new-post-status').textContent = 'Post submitted (demo mode).';
-        document.getElementById('new-post-status').className = 'auth-status success';
-        setTimeout(closeNewPostModal, 1200);
-      });
-
       /* Post action buttons — toggle liked state and increment/decrement count */
       document.querySelectorAll('.post-action[data-action="like"]').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1283,7 +1274,6 @@
       const searchBar = document.getElementById('search-bar');
       const searchInput = searchBar ? searchBar.querySelector('.search-bar-input') : null;
 
-      let isLoggedIn = false;
 
       function setAuthStatus(message, type) {
         authStatus.textContent = message || '';
@@ -1319,7 +1309,7 @@
       }
 
       function handlePlusClick() {
-        if (!isLoggedIn) {
+        if (document.body.getAttribute('data-authenticated') !== 'true') {
           openAuthModal('login');
         } else {
           openNewPost();
@@ -1336,16 +1326,16 @@
         }
       });
       stickyFooterProfileButton.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       stickyFooterNotificationsButton.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       headerProfileBtn.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       headerNotificationsBtn.addEventListener('click', function() {
-        if (!isLoggedIn) openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       authCloseButton.addEventListener('click', closeAuthModal);
 
@@ -1366,40 +1356,6 @@
           if (authModal.classList.contains('open')) closeAuthModal();
           if (document.getElementById('new-post-modal').classList.contains('open')) closeNewPostModal();
         }
-      });
-
-      loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!loginForm.checkValidity()) {
-          loginForm.reportValidity();
-          setAuthStatus('Please enter a valid email and password.', 'error');
-          return;
-        }
-        setAuthStatus('Demo mode: login form submitted successfully.', 'success');
-        isLoggedIn = true;
-        setTimeout(closeAuthModal, 1200);
-      });
-
-      registerForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!registerForm.checkValidity()) {
-          registerForm.reportValidity();
-          setAuthStatus('Please complete all required fields.', 'error');
-          return;
-        }
-
-        const registerPassword = document.getElementById('register-password').value;
-        const registerConfirmPassword = document.getElementById('register-confirm-password').value;
-        if (registerPassword !== registerConfirmPassword) {
-          setAuthStatus('Passwords do not match.', 'error');
-          return;
-        }
-
-        registerForm.reset();
-        isLoggedIn = true;
-        switchAuthView('login');
-        setAuthStatus('Demo mode: signup form submitted successfully.', 'success');
-        setTimeout(closeAuthModal, 1200);
       });
 
     </script>
