@@ -1254,6 +1254,16 @@
           }
         }
       });
+      document.querySelectorAll('.sticky-footer-item.coming-soon').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          event.preventDefault();
+        });
+        button.addEventListener('keydown', function(event) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+          }
+        });
+      });
       authCloseButton.addEventListener('click', closeAuthModal);
 
       authTabs.forEach(function(tab) {
