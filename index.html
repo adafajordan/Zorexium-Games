@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UltimeGames</title>
+    <title>Zorexium</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
       :root {
         color-scheme: light;
@@ -29,7 +29,7 @@
       }
       body {
         margin: 0;
-        font-family: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: #fff;
         color: var(--text);
       }
@@ -637,6 +637,128 @@
           align-items: flex-start;
         }
       }
+      /* ── Post feed ───────────────────────────── */
+      .post-feed {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-width: 680px;
+        margin: 0 auto;
+      }
+      .post-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .post-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .post-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .post-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        flex: 1;
+        min-width: 0;
+      }
+      .post-username {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .post-handle {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .post-platform-badge {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 10px;
+        color: var(--text-soft);
+        flex-shrink: 0;
+      }
+      .post-body {
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+      .post-body strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .post-image-placeholder {
+        width: 100%;
+        height: 180px;
+        background: var(--surface-soft);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: var(--text-placeholder);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .post-actions {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        padding-top: 4px;
+        border-top: 1px solid var(--border);
+      }
+      .post-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 13px;
+        color: var(--text-soft);
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 4px 0;
+        transition: color 0.15s;
+      }
+      .post-action:hover {
+        color: var(--accent);
+        background: none;
+        border: none;
+      }
+      .post-action-icon {
+        font-size: 15px;
+      }
+      .feed-section-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-soft);
+        margin: 0 0 4px;
+      }
       </style>
   </head>
   <body>
@@ -647,72 +769,48 @@
     <!-- Sidebar -->
     <nav id="sidebar" class="sidebar">
       <div class="sidebar-header">
-        <span>UltimeGames</span>
+        <span>Zorexium</span>
         <button class="sidebar-close" onclick="closeSidebar()">&#10005;</button>
       </div>
       <div class="sidebar-bubbles">
-        <span>All</span>
-        <span>New</span>
-        <span>Multiplayer</span>
-        <span>Puzzle</span>
-        <span>Arcade</span>
-        <span>Board</span>
-        <span>Strategy</span>
+        <span>Trending</span>
+        <span>For You</span>
+        <span>News</span>
+        <span>Tech</span>
+        <span>Politics</span>
+        <span>Entertainment</span>
         <span>Sports</span>
-        <span>Action</span>
-        <span>Card</span>
-        <span>Word</span>
-        <span>Racing</span>
-        <span>Simulation</span>
-        <span>Adventure</span>
-        <span>Educational</span>
-        <span>Trivia</span>
-        <span>Music</span>
-        <span>Fighting</span>
-        <span>Shooting</span>
-        <span>Platformer</span>
-        <span>Casual</span>
-        <span>Horror</span>
-        <span>Idle</span>
-        <span>Merge</span>
-        <span>Tower Defense</span>
-        <span>Dress Up</span>
-        <span>Cooking</span>
-        <span>2 Player</span>
-        <span>3D</span>
-        <span>RPG</span>
-        <span>Stickman</span>
-        <span>Zombie</span>
-        <span>Chess</span>
+        <span>Science</span>
+        <span>Business</span>
+        <span>Health</span>
+        <span>World</span>
+        <span>Opinion</span>
+        <span>Culture</span>
+        <span>Travel</span>
+        <span>Food</span>
+        <span>Finance</span>
+        <span>Environment</span>
+        <span>Education</span>
+        <span>Lifestyle</span>
       </div>
 
       <div class="sidebar-divider"></div>
 
-      <p class="sidebar-section-label">My Games</p>
+      <p class="sidebar-section-label">My Feed</p>
       <ul class="sidebar-nav">
-        <li><a href="recently-played.html"><span class="nav-icon">🕹️</span>Recently Played Games</a></li>
-        <li><a href="liked-games.html"><span class="nav-icon">❤️</span>Liked Games</a></li>
-        <li><a href="recommended-games.html"><span class="nav-icon">⭐</span>Recommended Games</a></li>
+        <li><a href="#"><span class="nav-icon">🏠</span>Home</a></li>
+        <li><a href="#"><span class="nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="#"><span class="nav-icon">🔖</span>Saved Posts</a></li>
+        <li><a href="#"><span class="nav-icon">👤</span>Profile</a></li>
       </ul>
 
       <div class="sidebar-divider"></div>
 
       <p class="sidebar-section-label">Discover</p>
       <ul class="sidebar-nav">
-        <li><a href="videos.html"><span class="nav-icon">▶️</span>Videos</a></li>
         <li><a href="newsroom.html"><span class="nav-icon">📰</span>Newsroom</a></li>
-        <li><a href="upload-game.html"><span class="nav-icon">📤</span>Upload Your Game</a></li>
-      </ul>
-
-      <div class="sidebar-divider"></div>
-
-      <p class="sidebar-section-label">Developers</p>
-      <ul class="sidebar-nav">
-        <li><a href="game-publishers.html"><span class="nav-icon">🏢</span>Game Publishers</a></li>
-        <li><a href="game-studios.html"><span class="nav-icon">🎬</span>Browse Game Studios</a></li>
-        <li><a href="game-developers.html"><span class="nav-icon">💻</span>Game Developers</a></li>
-        <li><a href="y8-browser.html"><span class="nav-icon">🌐</span>Y8 Browser</a></li>
-        <li><a href="flash-games.html"><span class="nav-icon">⚡</span>For Flash Games</a></li>
+        <li><a href="videos.html"><span class="nav-icon">▶️</span>Videos</a></li>
+        <li><a href="#"><span class="nav-icon">📡</span>Live</a></li>
       </ul>
 
       <div class="sidebar-divider"></div>
@@ -730,15 +828,14 @@
     <!-- Header -->
     <header>
       <div class="header-left">
-        <button class="menu header-icon-btn" type="button" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</button>
-        <button class="header-icon-btn" type="button" aria-label="Upload a game" title="Upload game" onclick="navigateToUploadGame()">&#43;</button>
+        <button class="header-icon-btn" type="button" aria-label="Write a post" title="New post">&#43;</button>
       </div>
       <div class="header-center">
         <span class="brand">
           <img
             class="brand-logo"
-            src="https://github.com/user-attachments/assets/de7a8fb3-3c15-496c-9032-052638e48d0d"
-            alt="Zorexium Games logo"
+            src="https://github.com/user-attachments/assets/8f82f840-59fb-4dd2-857d-499d9e79266d"
+            alt="Zorexium logo"
           />
         </span>
       </div>
@@ -751,17 +848,17 @@
 
     <!-- Expandable search bar -->
     <div id="search-bar" class="search-bar-wrap">
-      <input class="search search-bar-input" type="search" placeholder="search games" aria-label="Search games" />
+      <input class="search search-bar-input" type="search" placeholder="search posts, news, people…" aria-label="Search" />
     </div>
 
     <!-- News bar -->
     <div class="news-bar" role="region" aria-label="News">
-      <span class="news-bar-label">&#128240; News</span>
+      <span class="news-bar-label">&#128240; Breaking</span>
       <div class="news-ticker" aria-live="polite">
-        <span><span aria-hidden="true">&#127381;</span> New games added weekly — check out our latest releases!</span>
-        <span><span aria-hidden="true">&#9889;</span> Featured: Summer gaming event now live</span>
-        <span><span aria-hidden="true">&#128293;</span> Trending: Subway Surfers hits 1M plays this month</span>
-        <span><span aria-hidden="true">&#127942;</span> Update: Improved performance for mobile players</span>
+        <span><span aria-hidden="true">&#127381;</span> Global summit reaches landmark climate agreement</span>
+        <span><span aria-hidden="true">&#9889;</span> Tech giants announce major AI safety coalition</span>
+        <span><span aria-hidden="true">&#128293;</span> Markets surge to record high amid positive economic data</span>
+        <span><span aria-hidden="true">&#127942;</span> Scientists discover new treatment for rare disease</span>
       </div>
     </div>
 
@@ -771,19 +868,19 @@
       <div class="social-grid">
         <div class="social-card">
           <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">X</span> X (Twitter)</div>
-          <div class="social-card-body">New games every week! Follow us for the latest drops and gaming news. <span aria-hidden="true">&#127377;</span></div>
+          <div class="social-card-body">Breaking news, hot takes, and real-time updates. Follow @Zorexium for the latest. &#127381;</div>
         </div>
         <div class="social-card">
           <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#128248;</span> Instagram</div>
-          <div class="social-card-body">Check out our behind-the-scenes content and fan highlights! <span aria-hidden="true">&#127381;</span></div>
+          <div class="social-card-body">Behind-the-scenes, photo essays, and visual stories from around the world. &#127758;</div>
         </div>
         <div class="social-card">
           <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#127909;</span> YouTube</div>
-          <div class="social-card-body">Watch gameplay videos, tutorials, and top-10 lists on our channel. <span aria-hidden="true">&#127918;</span></div>
+          <div class="social-card-body">In-depth explainers, interviews, and documentary shorts on our channel. &#127909;</div>
         </div>
         <div class="social-card">
           <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#127922;</span> Discord</div>
-          <div class="social-card-body">Join our community! Chat with other players and get exclusive tips. <span aria-hidden="true">&#128172;</span></div>
+          <div class="social-card-body">Join the Zorexium community — discuss news, share opinions, connect. &#128172;</div>
         </div>
       </div>
     </section>
@@ -849,39 +946,24 @@
     <!-- Full-width tabs bar -->
     <div class="tabs-bar">
       <div class="tabs">
-        <span>All</span>
-        <span>New</span>
-        <span>Multiplayer</span>
-        <span>Puzzle</span>
-        <span>Arcade</span>
-        <span>Board</span>
-        <span>Strategy</span>
+        <span>For You</span>
+        <span>Trending</span>
+        <span>News</span>
+        <span>Tech</span>
+        <span>Politics</span>
+        <span>Entertainment</span>
         <span>Sports</span>
-        <span>Action</span>
-        <span>Card</span>
-        <span>Word</span>
-        <span>Racing</span>
-        <span>Simulation</span>
-        <span>Adventure</span>
-        <span>Educational</span>
-        <span>Trivia</span>
-        <span>Music</span>
-        <span>Fighting</span>
-        <span>Shooting</span>
-        <span>Platformer</span>
-        <span>Casual</span>
-        <span>Horror</span>
-        <span>Idle</span>
-        <span>Merge</span>
-        <span>Tower Defense</span>
-        <span>Dress Up</span>
-        <span>Cooking</span>
-        <span>2 Player</span>
-        <span>3D</span>
-        <span>RPG</span>
-        <span>Stickman</span>
-        <span>Zombie</span>
-        <span>Chess</span>
+        <span>Science</span>
+        <span>Business</span>
+        <span>Health</span>
+        <span>World</span>
+        <span>Opinion</span>
+        <span>Culture</span>
+        <span>Environment</span>
+        <span>Finance</span>
+        <span>Travel</span>
+        <span>Food</span>
+        <span>Lifestyle</span>
       </div>
     </div>
 
@@ -895,403 +977,210 @@
 
       <main>
 
-        <h2>Continue playing</h2>
-        <div class="game-grid">
-          <div class="game-card">Basketball Stars</div>
-          <div class="game-card">Subway Surfers</div>
-        </div>
+        <p class="feed-section-label">Trending posts</p>
 
-        <!-- Mid ad banner -->
-        <div class="ad-banner">Advertisement</div>
+        <div class="post-feed">
 
-        <h2>All games</h2>
-        <div class="game-grid">
-          <div class="game-card">Subway Surfers</div>
-          <div class="game-card">Hills of Steel</div>
-          <div class="game-card">Tiny Fishing</div>
-          <div class="game-card">Longcat</div>
-          <div class="game-card">Snow Rider 3D</div>
-          <div class="game-card">Level Devil</div>
-          <div class="game-card">Duo Vikings 3</div>
-          <div class="game-card">Smash Karts</div>
-          <div class="game-card">Temple Of Boom</div>
-          <div class="game-card">Iron Snout</div>
-          <div class="game-card">Stickman Kingdom Clash</div>
-          <div class="game-card">OvO Classic</div>
-          <div class="game-card">Connector</div>
-          <div class="game-card">Road Fury</div>
-          <div class="game-card">Stickman Escape</div>
-          <div class="game-card">Fruit Ninja</div>
-          <div class="game-card">Wave Dash: Geometry Arrow</div>
-          <div class="game-card">Raft Wars Multiplayer</div>
-          <div class="game-card">Vero Life - Dress Up &amp; Decor</div>
-          <div class="game-card">Monster Tracks</div>
-          <div class="game-card">MR RACER - Car Racing</div>
-          <div class="game-card">Apple Worm</div>
-          <div class="game-card">Streetfight King of the Gang</div>
-          <div class="game-card">Tiles Master</div>
-          <div class="game-card">Gym Stack</div>
-          <div class="game-card">Arcane Archer</div>
-          <div class="game-card">Daily Dadish</div>
-          <div class="game-card">Gas Station</div>
-          <div class="game-card">Crazy Bikes</div>
-          <div class="game-card">House of Hazards</div>
-          <div class="game-card">Drift King</div>
-          <div class="game-card">Boom Slingers ReBoom</div>
-          <div class="game-card">Foggy Fox</div>
-          <div class="game-card">Fragen</div>
-          <div class="game-card">Dadish 3</div>
-          <div class="game-card">Sandtris</div>
-          <div class="game-card">Golf Zero</div>
-          <div class="game-card">Portal Pusher</div>
-          <div class="game-card">Basketball FRVR</div>
-          <div class="game-card">Sniper Shot: Bullet Time</div>
-          <div class="game-card">Rio Rex</div>
-          <div class="game-card">Cozy Room Design</div>
-          <div class="game-card">Jump Only</div>
-          <div class="game-card">Noob: Zombie Prison Escape</div>
-          <div class="game-card">Tower Mania</div>
-          <div class="game-card">OvO Dimensions</div>
-          <div class="game-card">Tank Duel</div>
-          <div class="game-card">Wood Blocks 3D</div>
-          <div class="game-card">Drive Mad</div>
-          <div class="game-card">Ragdoll Massacre</div>
-          <div class="game-card">Slice Master 3D</div>
-          <div class="game-card">8x8 Match Tiles</div>
-          <div class="game-card">Zombie Bounce</div>
-          <div class="game-card">Fruit Chef</div>
-          <div class="game-card">Steam Trucker</div>
-          <div class="game-card">Duck Life</div>
-          <div class="game-card">Yeah Bunny 2</div>
-          <div class="game-card">Droid-O</div>
-          <div class="game-card">Tile Jumper 3D</div>
-          <div class="game-card">Stack Bounce</div>
-          <div class="game-card">Duo Vikings</div>
-          <div class="game-card">It&#39;s Story Time!</div>
-          <div class="game-card">Into the Pit</div>
-          <div class="game-card">Dino Bros</div>
-          <div class="game-card">3D Block Gladiator: Sword Draw</div>
-          <div class="game-card">Backyard Zombie Defense</div>
-          <div class="game-card">Crush It!</div>
-          <div class="game-card">Stick Defenders</div>
-          <div class="game-card">Swingo</div>
-          <div class="game-card">Dark Light Swap</div>
-          <div class="game-card">Elite Chess</div>
-          <div class="game-card">Merge Cyber Racers</div>
-          <div class="game-card">Who Is?</div>
-          <div class="game-card">Dwerg</div>
-          <div class="game-card">Cricket Hero</div>
-          <div class="game-card">Aqua Blocks</div>
-          <div class="game-card">Sling Kong</div>
-          <div class="game-card">Adventure Jumper</div>
-          <div class="game-card">A Grim Love Tale</div>
-          <div class="game-card">Paint Strike</div>
-          <div class="game-card">Dadish 2</div>
-          <div class="game-card">Basketball Stars</div>
-          <div class="game-card">Blacktop Police Chase</div>
-          <div class="game-card">Tile Puzzle</div>
-          <div class="game-card">Space Waves</div>
-          <div class="game-card">Tower Merge</div>
-          <div class="game-card">Pro Shooter: Missions</div>
-          <div class="game-card">Blumgi Slime</div>
-          <div class="game-card">Short Ride</div>
-          <div class="game-card">Kawaii Dress-Up</div>
-          <div class="game-card">Dreadhead Parkour</div>
-          <div class="game-card">Space Survivor</div>
-          <div class="game-card">Coin Machine Game</div>
-          <div class="game-card">67 Game</div>
-          <div class="game-card">Sky Racer</div>
-          <div class="game-card">Draw the Bridge</div>
-          <div class="game-card">Daily Emoji Hunt</div>
-          <div class="game-card">Chess Multiplayer</div>
-          <div class="game-card">Escaping the Prison</div>
-          <div class="game-card">Emerald and Amber</div>
-          <div class="game-card">We Skate</div>
-          <div class="game-card">Football Stars</div>
-          <div class="game-card">Jumpossess</div>
-          <div class="game-card">Mummy&#39;s Path Deluxe</div>
-          <div class="game-card">Ragdoll Smash</div>
-          <div class="game-card">Raft Wars</div>
-          <div class="game-card">Hit the Fan</div>
-          <div class="game-card">Diva Hair Salon</div>
-          <div class="game-card">Daily Word Search</div>
-          <div class="game-card">Track Racing Rage</div>
-          <div class="game-card">Stock Car Hero</div>
-          <div class="game-card">Crossy Road</div>
-          <div class="game-card">UVSU Demo</div>
-          <div class="game-card">Shuriken Slash</div>
-          <div class="game-card">Kingdom Solitaire</div>
-          <div class="game-card">Blumgi Bloom</div>
-          <div class="game-card">Wiggle Out</div>
-          <div class="game-card">Rooftop Snipers 2</div>
-          <div class="game-card">Golfinity</div>
-          <div class="game-card">SandBlocks</div>
-          <div class="game-card">Farming 10x10</div>
-          <div class="game-card">Quivershot</div>
-          <div class="game-card">Yeah Bunny</div>
-          <div class="game-card">Escape Road 2</div>
-          <div class="game-card">A Grim Chase</div>
-          <div class="game-card">Bearsus</div>
-          <div class="game-card">Pirate Poker</div>
-          <div class="game-card">Duo Survival 2</div>
-          <div class="game-card">The Last Light of Lyra</div>
-          <div class="game-card">Knife Smash</div>
-          <div class="game-card">Rabbit Samurai 2</div>
-          <div class="game-card">Urban Racer</div>
-          <div class="game-card">Chess Grandmaster</div>
-          <div class="game-card">Temple Run 2</div>
-          <div class="game-card">Jumping Clones</div>
-          <div class="game-card">The Walking Merge</div>
-          <div class="game-card">Bow Mania</div>
-          <div class="game-card">FullSpeed Racing</div>
-          <div class="game-card">Big Tall Small</div>
-          <div class="game-card">Rescue the Fish</div>
-          <div class="game-card">Archers Random</div>
-          <div class="game-card">Quack Quest</div>
-          <div class="game-card">Square Jump</div>
-          <div class="game-card">Joe Jumper</div>
-          <div class="game-card">Street Ball Jam</div>
-          <div class="game-card">Earth&#39;s Greatest Defender</div>
-          <div class="game-card">Detective Loupe Puzzle 2</div>
-          <div class="game-card">Pin the UFO</div>
-          <div class="game-card">Chicky Farm</div>
-          <div class="game-card">Addiction Mini</div>
-          <div class="game-card">Grass Knight</div>
-          <div class="game-card">Master Hit</div>
-          <div class="game-card">Stacktris</div>
-          <div class="game-card">Light Line</div>
-          <div class="game-card">Hide Ball: Brain Teaser</div>
-          <div class="game-card">Life in the Static</div>
-          <div class="game-card">Stickman Parkour 2: Lucky Block</div>
-          <div class="game-card">Chicken Wars 2</div>
-          <div class="game-card">Blumgi Merge</div>
-          <div class="game-card">Super Billy Boy</div>
-          <div class="game-card">Tiny Town Racing</div>
-          <div class="game-card">Cat Bird Adventure</div>
-          <div class="game-card">Temple Run</div>
-          <div class="game-card">Snake Pivot</div>
-          <div class="game-card">Domino Adventure</div>
-          <div class="game-card">One Way Shooter</div>
-          <div class="game-card">Papercraft Wars</div>
-          <div class="game-card">Stair Slash</div>
-          <div class="game-card">Jelly Jam by Sam</div>
-          <div class="game-card">Bird Sort Quest</div>
-          <div class="game-card">Bacon May Die</div>
-          <div class="game-card">Giraffe Volley</div>
-          <div class="game-card">Zombie Derby: Pixel Survival</div>
-          <div class="game-card">A Grim Granny</div>
-          <div class="game-card">Fluffy Out</div>
-          <div class="game-card">Fury Ops</div>
-          <div class="game-card">Fill the Heart</div>
-          <div class="game-card">Rhomb</div>
-          <div class="game-card">Moon Waltz</div>
-          <div class="game-card">Free Kick Screamers</div>
-          <div class="game-card">Break the Glass</div>
-          <div class="game-card">Royal Tower Defense</div>
-          <div class="game-card">8 Ball Billiards Classic</div>
-          <div class="game-card">Beauty Room</div>
-          <div class="game-card">Bubbly Lab</div>
-          <div class="game-card">Max and Mink</div>
-          <div class="game-card">Sqube Darkness</div>
-          <div class="game-card">Subway Surfers Match</div>
-          <div class="game-card">Drop Wizard Tower</div>
-          <div class="game-card">Fruitmates: Adventure</div>
-          <div class="game-card">Racing Limits</div>
-          <div class="game-card">Tile Journey</div>
-          <div class="game-card">Speed King</div>
-          <div class="game-card">Stunt Bike Extreme</div>
-          <div class="game-card">Flipchamps Dual Strike</div>
-          <div class="game-card">Stunt Car Extreme</div>
-          <div class="game-card">2048 Balls Number Puzzle</div>
-          <div class="game-card">Blocky Puzzle</div>
-          <div class="game-card">Flip Bros</div>
-          <div class="game-card">Mini Golf World</div>
-          <div class="game-card">Unicycle Legend</div>
-          <div class="game-card">Ledge Throw</div>
-          <div class="game-card">Power Wash Cleanup</div>
-          <div class="game-card">Dyna Boy</div>
-          <div class="game-card">Wild Bullets</div>
-          <div class="game-card">Digging Master</div>
-          <div class="game-card">Jumping Shell</div>
-          <div class="game-card">Stickman Parkour Skyland</div>
-          <div class="game-card">Stickman Weapon Master</div>
-          <div class="game-card">PixLinks</div>
-          <div class="game-card">Timber Guy</div>
-          <div class="game-card">Merge Zoo</div>
-          <div class="game-card">Limited Survive</div>
-          <div class="game-card">Neon Car Maze</div>
-          <div class="game-card">Bouncy Woods</div>
-          <div class="game-card">Awesome Tanks</div>
-          <div class="game-card">Kitty Jump Hunt</div>
-          <div class="game-card">Road of Fury 4</div>
-          <div class="game-card">Glitch</div>
-          <div class="game-card">Platform Countdown</div>
-          <div class="game-card">Mekabolt</div>
-          <div class="game-card">FireBlob</div>
-          <div class="game-card">One Line Shield</div>
-          <div class="game-card">Speed Stars</div>
-          <div class="game-card">Clash Of Armour</div>
-          <div class="game-card">Speed Pool King</div>
-          <div class="game-card">Supernova</div>
-          <div class="game-card">Blob Drop</div>
-          <div class="game-card">Zombie Hunter: Survival</div>
-          <div class="game-card">Rotate</div>
-          <div class="game-card">Free Rider Jumps</div>
-          <div class="game-card">Gomu Goman</div>
-          <div class="game-card">Stickman Climb</div>
-          <div class="game-card">Glitch Dash</div>
-          <div class="game-card">Ping Pong Go</div>
-          <div class="game-card">Mine Shooter 2: Noob vs Mobs</div>
-          <div class="game-card">Shenzhen Mahjong</div>
-          <div class="game-card">Fantasy Sandbox</div>
-          <div class="game-card">Bunny Goes Boom</div>
-          <div class="game-card">Hunter Hitman</div>
-          <div class="game-card">Merge &amp; Fight</div>
-          <div class="game-card">Lava Land</div>
-          <div class="game-card">Fowlst</div>
-          <div class="game-card">Blumgi Racers</div>
-          <div class="game-card">Big Shot Boxing</div>
-          <div class="game-card">Fish Eat Fish</div>
-          <div class="game-card">Egg Hunt Mania</div>
-          <div class="game-card">Tropical Merge</div>
-          <div class="game-card">Fruit Slot Machine</div>
-          <div class="game-card">Bacon War</div>
-          <div class="game-card">Tightrope Theatre</div>
-          <div class="game-card">Lollipop World: Match 3</div>
-          <div class="game-card">Crazy Cars</div>
-          <div class="game-card">Count War</div>
-          <div class="game-card">Thief Puzzle</div>
-          <div class="game-card">Jump With Justin 2</div>
-          <div class="game-card">Rowdy Wrestling</div>
-          <div class="game-card">Ragdoll Arrows</div>
-          <div class="game-card">Last Warriors</div>
-          <div class="game-card">Magic Bridge</div>
-          <div class="game-card">Basket Champs</div>
-          <div class="game-card">Wild West Shooter: Duels</div>
-          <div class="game-card">Geometry Dash Lite</div>
-          <div class="game-card">FireBlob Winter</div>
-          <div class="game-card">Super Bike the Champion</div>
-          <div class="game-card">Evo Game</div>
-          <div class="game-card">Idle Lumber Inc</div>
-          <div class="game-card">Color Pin</div>
-          <div class="game-card">Splotch!</div>
-          <div class="game-card">Murder</div>
-          <div class="game-card">Pulse Ball</div>
-          <div class="game-card">Dana: Relics for Sale</div>
-          <div class="game-card">Grapple Grip</div>
-          <div class="game-card">Block Shooter Arena</div>
-          <div class="game-card">Time Clones</div>
-          <div class="game-card">Jewel Magic</div>
-          <div class="game-card">Just Tanks</div>
-          <div class="game-card">Foosball Cup World</div>
-          <div class="game-card">Larry World</div>
-          <div class="game-card">Getaway Shootout</div>
-          <div class="game-card">Retro Highway</div>
-          <div class="game-card">Lost Yeti</div>
-          <div class="game-card">Blumgi Paintball</div>
-          <div class="game-card">Royal Card Clash</div>
-          <div class="game-card">Super Onion Boy 2</div>
-          <div class="game-card">Honey Sweeper</div>
-          <div class="game-card">Splash Dunk Game</div>
-          <div class="game-card">Rally Drift Racing</div>
-          <div class="game-card">Clash of Skulls</div>
-          <div class="game-card">Onet Master</div>
-          <div class="game-card">Fear Response</div>
-          <div class="game-card">Merge and Double</div>
-          <div class="game-card">Boxing Physics 2</div>
-          <div class="game-card">Master Prankster</div>
-          <div class="game-card">Kitty Drop Fruits</div>
-          <div class="game-card">9 Ball Pool</div>
-          <div class="game-card">Super Liquid Soccer</div>
-          <div class="game-card">Cave Blast</div>
-          <div class="game-card">Finn&#39;s Fantastic Food Machine</div>
-          <div class="game-card">Bubble Shooter</div>
-          <div class="game-card">Pool Club</div>
-          <div class="game-card">PolyTrack</div>
-          <div class="game-card">Xtreme Furball</div>
-          <div class="game-card">Short Life</div>
-          <div class="game-card">Farm Block Puzzle</div>
-          <div class="game-card">We Become What We Behold</div>
-          <div class="game-card">Monster Merge</div>
-          <div class="game-card">Slime War</div>
-          <div class="game-card">Bounce Ball</div>
-          <div class="game-card">Monster Hero</div>
-          <div class="game-card">MineFun.io</div>
-          <div class="game-card">Zombie Derby: Blocky Roads</div>
-          <div class="game-card">Retro Rex: City Smash</div>
-          <div class="game-card">Blob Swap</div>
-          <div class="game-card">Tiny Towers</div>
-          <div class="game-card">Drifting Mania</div>
-          <div class="game-card">Sandbox City</div>
-          <div class="game-card">Slime Laboratory 2</div>
-          <div class="game-card">Eyes Drop</div>
-          <div class="game-card">Unpark Me</div>
-          <div class="game-card">Tiny Dangerous Dungeons</div>
-          <div class="game-card">Pick a Lock</div>
-          <div class="game-card">Thumb Fighter</div>
-          <div class="game-card">Roller</div>
-          <div class="game-card">Night Drive</div>
-          <div class="game-card">Perfect Piano</div>
-          <div class="game-card">Flappy Bird</div>
-          <div class="game-card">Fish Drop</div>
-          <div class="game-card">Zumba Quest</div>
-          <div class="game-card">Fixing Time</div>
-          <div class="game-card">Color Merge Lines</div>
-          <div class="game-card">Rooftop Snipers</div>
-          <div class="game-card">Recoil</div>
-          <div class="game-card">Hop Chop</div>
-          <div class="game-card">Blumgi Ball</div>
-          <div class="game-card">Mekorama</div>
-          <div class="game-card">Stickman Fighter Mega</div>
-          <div class="game-card">Mech Bots Arena</div>
-          <div class="game-card">Invaders.io</div>
-          <div class="game-card">Crazy Balls</div>
-          <div class="game-card">Horror Tale</div>
-          <div class="game-card">Card Hog</div>
-          <div class="game-card">Stupidella Click</div>
-          <div class="game-card">Boost Buddies</div>
-          <div class="game-card">Blumgi Dragon</div>
-          <div class="game-card">Laser Blade 3000</div>
-          <div class="game-card">Adventure Miner</div>
-          <div class="game-card">Go Escape</div>
-          <div class="game-card">Chess Classic</div>
-          <div class="game-card">Mine Zombie Shooter</div>
-          <div class="game-card">Unscrew Master</div>
-          <div class="game-card">Cozyland: Hidden Objects Game</div>
-          <div class="game-card">Fruits of Fury</div>
-          <div class="game-card">Stupidella Horror 2</div>
-          <div class="game-card">A Pretty Odd Bunny</div>
-          <div class="game-card">Moto X3M</div>
-          <div class="game-card">Blumgi Rocket</div>
-          <div class="game-card">Zombies ate my Castle</div>
-          <div class="game-card">Bottle Flip Home Alone</div>
-          <div class="game-card">Zuma Boom</div>
+          <!-- Post 1 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#e02020;">MR</div>
+              <div class="post-meta">
+                <span class="post-username">Maria Reyes</span>
+                <span class="post-handle">@mariareyes &middot; 2 min ago</span>
+              </div>
+              <span class="post-platform-badge">X</span>
+            </div>
+            <div class="post-body">
+              The new climate deal signed at the global summit is <strong>historic</strong>. 197 nations agreeing on binding carbon targets by 2035 — nobody thought this would happen so soon. This is what cooperation looks like. 🌍
+            </div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 4.2k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 318</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 1.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Post 2 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#2563eb;">TC</div>
+              <div class="post-meta">
+                <span class="post-username">Tech Chronicle</span>
+                <span class="post-handle">@techchronicle &middot; 14 min ago</span>
+              </div>
+              <span class="post-platform-badge">News</span>
+            </div>
+            <div class="post-body">
+              <strong>Breaking:</strong> Seven of the world's largest AI labs have signed a landmark safety agreement, committing to independent audits and emergency shutdown protocols before deploying any frontier model. Details inside 👇
+            </div>
+            <div class="post-image-placeholder" aria-label="Article preview image">📡 Image · Tech Chronicle</div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 9.7k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 872</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 3.4k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Post 3 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#16a34a;">JP</div>
+              <div class="post-meta">
+                <span class="post-username">James Park</span>
+                <span class="post-handle">@jamespark_nyc &middot; 31 min ago</span>
+              </div>
+              <span class="post-platform-badge">Instagram</span>
+            </div>
+            <div class="post-body">
+              Just got back from three weeks in Patagonia. No phone signal, no news feeds, just mountains and silence. Here's what I learned about disconnecting in a hyper-connected world 🏔️
+            </div>
+            <div class="post-image-placeholder" aria-label="Travel photo">🏔️ Image · Patagonia</div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 14.3k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 540</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 2.8k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Ad mid-feed -->
+          <div class="ad-banner">Advertisement</div>
+
+          <!-- Post 4 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#7c3aed;">SN</div>
+              <div class="post-meta">
+                <span class="post-username">Science Now</span>
+                <span class="post-handle">@sciencenow &middot; 48 min ago</span>
+              </div>
+              <span class="post-platform-badge">News</span>
+            </div>
+            <div class="post-body">
+              Researchers at Cambridge have identified a compound that halts the progression of Alzheimer's in early-stage trials with a <strong>94% effectiveness rate</strong>. The team says human trials could begin within 18 months. This could be a game-changer. 🧬
+            </div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 22.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 1.4k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 8.9k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Post 5 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#d97706;">AL</div>
+              <div class="post-meta">
+                <span class="post-username">Aisha Larson</span>
+                <span class="post-handle">@aishalarson &middot; 1 hr ago</span>
+              </div>
+              <span class="post-platform-badge">X</span>
+            </div>
+            <div class="post-body">
+              Hot take: the reason most people feel overwhelmed by the news cycle is that platforms are designed to maximise outrage, not understanding. We need slower, deeper media — not more of it. Agree or disagree?
+            </div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 6.5k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 2.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 1.7k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Post 6 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#0891b2;">FD</div>
+              <div class="post-meta">
+                <span class="post-username">Finance Daily</span>
+                <span class="post-handle">@financedaily &middot; 2 hr ago</span>
+              </div>
+              <span class="post-platform-badge">News</span>
+            </div>
+            <div class="post-body">
+              The S&amp;P 500 closed at an <strong>all-time high</strong> today, driven by better-than-expected jobs data and falling inflation numbers. Analysts are cautiously optimistic heading into Q3 earnings season. 📈
+            </div>
+            <div class="post-image-placeholder" aria-label="Market chart">📊 Chart · Finance Daily</div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 3.8k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 445</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 920</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Post 7 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#db2777;">NK</div>
+              <div class="post-meta">
+                <span class="post-username">Nia Kamara</span>
+                <span class="post-handle">@niakamara &middot; 3 hr ago</span>
+              </div>
+              <span class="post-platform-badge">Instagram</span>
+            </div>
+            <div class="post-body">
+              Spent the morning volunteering at the community garden. Grew 40 kg of fresh produce this month alone, all donated to the local food bank. Small actions, real impact. 🌱
+            </div>
+            <div class="post-image-placeholder" aria-label="Community garden photo">🌱 Image · Community Garden</div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 11.2k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 387</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 2.3k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
+          <!-- Post 8 -->
+          <article class="post-card">
+            <div class="post-header">
+              <div class="post-avatar" style="background:#059669;">WR</div>
+              <div class="post-meta">
+                <span class="post-username">World Report</span>
+                <span class="post-handle">@worldreport &middot; 4 hr ago</span>
+              </div>
+              <span class="post-platform-badge">News</span>
+            </div>
+            <div class="post-body">
+              <strong>Exclusive interview:</strong> The EU's new digital commissioner on data sovereignty, platform regulation, and why she thinks the next decade will define the internet's future for a generation. Full piece below ⬇️
+            </div>
+            <div class="post-actions">
+              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 5.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 692</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 1.5k</button>
+              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+            </div>
+          </article>
+
         </div>
 
         <!-- Pre-about ad banner -->
         <div class="ad-banner">Advertisement</div>
 
         <section class="about-section">
-          <h2>About UltimeGames</h2>
-          <h3>Free Online Games</h3>
-          <p>UltimeGames is your go-to hub for free online games you can launch instantly &mdash; no installs, no sign-ups, and no intrusive ads. Whether you&#39;re looking for a quick solo session or want to play alongside friends, UltimeGames makes it effortless to dive in from any device, anywhere. Every title in our library runs flawlessly on desktop, tablet, and mobile, so you can enjoy your favorites at home, at school, or on the move.</p>
+          <h2>About Zorexium</h2>
+          <h3>Your Global Social News Hub</h3>
+          <p>Zorexium is a social media and news platform that brings together real-time posts, breaking news, and community conversations from around the world — all in one clean, distraction-free feed. Whether you're looking for the latest headlines, thoughtful opinion pieces, or authentic stories from everyday people, Zorexium surfaces what matters most to you.</p>
 
-          <h3>Explore by Genre</h3>
-          <p>Unsure where to start? Browse our homepage or dive into our most visited categories. From heart-pounding action to relaxing puzzle sessions, there&#39;s something that fits every mood and play style. Explore these categories to uncover your next obsession:</p>
+          <h3>Explore by Topic</h3>
+          <p>Dive into the topics you care about and discover content that goes beyond the headline. From global politics and scientific breakthroughs to culture, travel, and lifestyle, there's always something worth reading:</p>
           <div class="genre-list">
-            Arcade games<br>
-            Racing games<br>
-            Card games<br>
-            Puzzle games<br>
-            Sports games<br>
-            Board games
+            World News &amp; Politics<br>
+            Technology &amp; Science<br>
+            Business &amp; Finance<br>
+            Entertainment &amp; Culture<br>
+            Health &amp; Lifestyle<br>
+            Environment &amp; Climate
           </div>
 
-          <h3>What is UltimeGames?</h3>
-          <p>UltimeGames curates a growing selection of premium HTML5 games spanning every genre you can think of. From intense action and blazing-fast racing to brain-twisting puzzles and deep strategy, our catalog has something for every type of player. Whether you have five minutes to spare or an entire afternoon free, you&#39;ll always find the right game for the moment &mdash; and jump straight in with no downloads or accounts required.</p>
+          <h3>What is Zorexium?</h3>
+          <p>Zorexium is a platform built around genuine human connection and quality information. We aggregate and surface social media posts, long-form articles, and community discussions so you never miss what's important. Our feed is designed to be thoughtful — prioritising depth and context over outrage and noise.</p>
 
-          <p>These games are brought to you by UltimeGames.</p>
-          <p>By visiting UltimeGames, you agree to the terms described in our Privacy Center. Cookies are used to enhance your experience, analyze site usage, and serve tailored content. Learn more on our About page or reach out via our Contact page with any questions.</p>
+          <p>By visiting Zorexium, you agree to the terms described in our Privacy Center. Cookies are used to enhance your experience and personalise your feed. Learn more on our About page or reach out via our Contact page with any questions.</p>
         </section>
 
       </main>
@@ -1315,10 +1204,6 @@
       }
       function toggleSearchBar() {
         document.getElementById('search-bar').classList.toggle('open');
-      }
-      function navigateToUploadGame() {
-        /* Navigate to the upload game page */
-        window.location.href = 'upload-game.html';
       }
 
       const authModal = document.getElementById('auth-modal');
