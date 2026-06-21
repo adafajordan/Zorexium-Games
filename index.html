@@ -731,7 +731,7 @@
     <header>
       <div class="header-left">
         <button class="menu header-icon-btn" type="button" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</button>
-        <button class="header-icon-btn" type="button" aria-label="Add game" title="Add" onclick="openAddGameDialog()">&#43;</button>
+        <button class="header-icon-btn" type="button" aria-label="Upload a game" title="Upload game" onclick="navigateToUploadGame()">&#43;</button>
       </div>
       <div class="header-center">
         <span class="brand">
@@ -758,10 +758,10 @@
     <div class="news-bar" role="region" aria-label="News">
       <span class="news-bar-label">&#128240; News</span>
       <div class="news-ticker" aria-live="polite">
-        <span>&#127381; New games added weekly — check out our latest releases!</span>
-        <span>&#9889; Featured: Summer gaming event now live</span>
-        <span>&#128293; Trending: Subway Surfers hits 1M plays this month</span>
-        <span>&#127942; Update: Improved performance for mobile players</span>
+        <span><span aria-hidden="true">&#127381;</span> New games added weekly — check out our latest releases!</span>
+        <span><span aria-hidden="true">&#9889;</span> Featured: Summer gaming event now live</span>
+        <span><span aria-hidden="true">&#128293;</span> Trending: Subway Surfers hits 1M plays this month</span>
+        <span><span aria-hidden="true">&#127942;</span> Update: Improved performance for mobile players</span>
       </div>
     </div>
 
@@ -770,20 +770,20 @@
       <p class="social-section-title">Follow us</p>
       <div class="social-grid">
         <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon">&#120143;</span> X (Twitter)</div>
-          <div class="social-card-body">New games every week! Follow us for the latest drops and gaming news. &#127377;</div>
+          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">X</span> X (Twitter)</div>
+          <div class="social-card-body">New games every week! Follow us for the latest drops and gaming news. <span aria-hidden="true">&#127377;</span></div>
         </div>
         <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon">&#128248;</span> Instagram</div>
-          <div class="social-card-body">Check out our behind-the-scenes content and fan highlights! &#127381;</div>
+          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#128248;</span> Instagram</div>
+          <div class="social-card-body">Check out our behind-the-scenes content and fan highlights! <span aria-hidden="true">&#127381;</span></div>
         </div>
         <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon">&#127909;</span> YouTube</div>
-          <div class="social-card-body">Watch gameplay videos, tutorials, and top-10 lists on our channel. &#127918;</div>
+          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#127909;</span> YouTube</div>
+          <div class="social-card-body">Watch gameplay videos, tutorials, and top-10 lists on our channel. <span aria-hidden="true">&#127918;</span></div>
         </div>
         <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon">&#127922;</span> Discord</div>
-          <div class="social-card-body">Join our community! Chat with other players and get exclusive tips. &#128172;</div>
+          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#127922;</span> Discord</div>
+          <div class="social-card-body">Join our community! Chat with other players and get exclusive tips. <span aria-hidden="true">&#128172;</span></div>
         </div>
       </div>
     </section>
@@ -1316,7 +1316,7 @@
       function toggleSearchBar() {
         document.getElementById('search-bar').classList.toggle('open');
       }
-      function openAddGameDialog() {
+      function navigateToUploadGame() {
         /* Navigate to the upload game page */
         window.location.href = 'upload-game.html';
       }
