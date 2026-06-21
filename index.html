@@ -27,7 +27,7 @@
         --border-strong: #cccccc;
         --focus: #e02020;
         --accent: #cc2222;
-        --sticky-footer-height: 52px;
+        --sticky-footer-height: 62px;
         --sticky-footer-padding-x: 6px;
         --post-card-padding: 16px;
       }
@@ -182,6 +182,16 @@
         background: var(--surface-soft);
         border-color: transparent;
         color: var(--accent);
+      }
+      .header-icon-btn-plus {
+        font-size: 28px;
+        font-weight: 700;
+        padding: 2px 8px;
+      }
+      .header-icon-btn-lg svg {
+        width: 22px;
+        height: 22px;
+        stroke-width: 2.5;
       }
       .brand {
         display: inline-flex;
@@ -715,8 +725,8 @@
         align-items: center;
         justify-content: center;
         color: var(--text-soft);
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
         background: none;
         border: none;
         cursor: pointer;
@@ -727,11 +737,11 @@
         color: var(--accent);
       }
       .sticky-footer-item svg {
-        width: 19px;
-        height: 19px;
+        width: 24px;
+        height: 24px;
         stroke: currentColor;
         fill: none;
-        stroke-width: 2;
+        stroke-width: 2.5;
         stroke-linecap: round;
         stroke-linejoin: round;
       }
@@ -819,7 +829,7 @@
     <!-- Header -->
     <header>
       <div class="header-left">
-        <button class="header-icon-btn" type="button" aria-label="Write a post" title="New post" onclick="openNewPost()">&#43;</button>
+        <button class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write a post" title="New post" onclick="handlePlusClick()">&#43;</button>
       </div>
       <div class="header-center">
         <span class="brand">
@@ -831,9 +841,9 @@
         </span>
       </div>
       <div class="header-right">
-        <button class="header-icon-btn" type="button" aria-label="Search games" title="Search" onclick="toggleSearchBar()"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-        <button id="login-button" class="auth-trigger" type="button">login</button>
-        <button id="register-button" class="auth-trigger" type="button">register</button>
+        <button id="header-profile-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Profile" title="Profile"><svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+        <button id="header-notifications-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Notifications" title="Notifications"><svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+        <button class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Search games" title="Search" onclick="toggleSearchBar()"><svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       </div>
     </header>
 
@@ -1195,12 +1205,16 @@
       const authTabs = document.querySelectorAll('.auth-tab');
       const loginForm = document.getElementById('login-form');
       const registerForm = document.getElementById('register-form');
-      const loginButton = document.getElementById('login-button');
-      const registerButton = document.getElementById('register-button');
       const authCloseButton = document.getElementById('auth-close');
       const stickyFooterSearchButton = document.getElementById('sticky-footer-search');
+      const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
+      const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
+      const headerProfileBtn = document.getElementById('header-profile-btn');
+      const headerNotificationsBtn = document.getElementById('header-notifications-btn');
       const searchBar = document.getElementById('search-bar');
       const searchInput = searchBar ? searchBar.querySelector('.search-bar-input') : null;
+
+      var isLoggedIn = false;
 
       function setAuthStatus(message, type) {
         authStatus.textContent = message || '';
@@ -1235,12 +1249,14 @@
         setAuthStatus('');
       }
 
-      loginButton.addEventListener('click', function() {
-        openAuthModal('login');
-      });
-      registerButton.addEventListener('click', function() {
-        openAuthModal('register');
-      });
+      function handlePlusClick() {
+        if (!isLoggedIn) {
+          openAuthModal('login');
+        } else {
+          openNewPost();
+        }
+      }
+
       stickyFooterSearchButton.addEventListener('click', function() {
         // Uses the existing expandable search bar near the top of the page.
         if (searchBar) {
@@ -1249,6 +1265,18 @@
             searchInput.focus();
           }
         }
+      });
+      stickyFooterProfileButton.addEventListener('click', function() {
+        if (!isLoggedIn) openAuthModal('login');
+      });
+      stickyFooterNotificationsButton.addEventListener('click', function() {
+        if (!isLoggedIn) openAuthModal('login');
+      });
+      headerProfileBtn.addEventListener('click', function() {
+        if (!isLoggedIn) openAuthModal('login');
+      });
+      headerNotificationsBtn.addEventListener('click', function() {
+        if (!isLoggedIn) openAuthModal('login');
       });
       authCloseButton.addEventListener('click', closeAuthModal);
 
