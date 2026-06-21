@@ -1199,6 +1199,8 @@
       const registerButton = document.getElementById('register-button');
       const authCloseButton = document.getElementById('auth-close');
       const stickyFooterSearchButton = document.getElementById('sticky-footer-search');
+      const searchBar = document.getElementById('search-bar');
+      const searchInput = searchBar ? searchBar.querySelector('.search-bar-input') : null;
 
       function setAuthStatus(message, type) {
         authStatus.textContent = message || '';
@@ -1241,8 +1243,6 @@
       });
       stickyFooterSearchButton.addEventListener('click', function() {
         // Uses the existing expandable search bar near the top of the page.
-        const searchBar = document.getElementById('search-bar');
-        const searchInput = searchBar ? searchBar.querySelector('.search-bar-input') : null;
         if (searchBar) {
           searchBar.classList.toggle('open');
           if (searchBar.classList.contains('open') && searchInput) {
