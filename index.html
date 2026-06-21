@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Zorexium" />
+    <link rel="manifest" href="manifest.json" />
     <title>Zorexium</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -21,8 +27,6 @@
         --border-strong: #cccccc;
         --focus: #e02020;
         --accent: #cc2222;
-        /* Vertical focal point for header logo crop */
-        --logo-crop-y: 52%;
       }
       * {
         box-sizing: border-box;
@@ -203,14 +207,21 @@
         flex-shrink: 0;
       }
       .brand-logo {
-        width: 190px;
-        height: 74px;
-        object-fit: cover;
-        object-position: center var(--logo-crop-y);
+        width: auto;
+        height: 44px;
+        max-width: 200px;
+        object-fit: contain;
         display: block;
-        border-radius: 8px;
       }
-      .search {
+      @media (max-width: 900px) {
+        .game-grid { grid-template-columns: repeat(4, 1fr); }
+        .ad-side { display: none; }
+        .brand-logo { height: 38px; }
+      }
+      @media (max-width: 600px) {
+        .game-grid { grid-template-columns: repeat(3, 1fr); }
+        .brand-logo { height: 34px; }
+      }
         flex: 1;
         min-width: 120px;
         padding: 8px 10px;
@@ -328,15 +339,6 @@
         grid-template-columns: repeat(6, 1fr);
         gap: 8px;
         margin-bottom: 24px;
-      }
-      @media (max-width: 900px) {
-        .game-grid { grid-template-columns: repeat(4, 1fr); }
-        .ad-side { display: none; }
-        .brand-logo { width: 160px; height: 62px; }
-      }
-      @media (max-width: 600px) {
-        .game-grid { grid-template-columns: repeat(3, 1fr); }
-        .brand-logo { width: 128px; height: 50px; }
       }
       .game-card {
         background: var(--surface);
@@ -749,7 +751,21 @@
         border: none;
       }
       .post-action-icon {
-        font-size: 15px;
+        width: 15px;
+        height: 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .post-action-icon svg {
+        width: 15px;
+        height: 15px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       .feed-section-label {
         font-size: 11px;
@@ -758,6 +774,43 @@
         text-transform: uppercase;
         color: var(--text-soft);
         margin: 0 0 4px;
+      }
+      /* ── Nav icon SVG ────────────────────────── */
+      .nav-icon {
+        width: 18px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: currentColor;
+      }
+      .nav-icon svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* ── New post modal ──────────────────────── */
+      .new-post-textarea {
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        background: #ffffff;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .new-post-textarea:focus {
+        outline: 2px solid var(--focus);
+        border-color: var(--focus);
       }
       </style>
   </head>
@@ -798,30 +851,30 @@
 
       <p class="sidebar-section-label">My Feed</p>
       <ul class="sidebar-nav">
-        <li><a href="#"><span class="nav-icon">🏠</span>Home</a></li>
-        <li><a href="#"><span class="nav-icon">🔔</span>Notifications</a></li>
-        <li><a href="#"><span class="nav-icon">🔖</span>Saved Posts</a></li>
-        <li><a href="#"><span class="nav-icon">👤</span>Profile</a></li>
+        <li><a href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Home</a></li>
+        <li><a href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>Notifications</a></li>
+        <li><a href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>Saved Posts</a></li>
+        <li><a href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Profile</a></li>
       </ul>
 
       <div class="sidebar-divider"></div>
 
       <p class="sidebar-section-label">Discover</p>
       <ul class="sidebar-nav">
-        <li><a href="newsroom.html"><span class="nav-icon">📰</span>Newsroom</a></li>
-        <li><a href="videos.html"><span class="nav-icon">▶️</span>Videos</a></li>
-        <li><a href="#"><span class="nav-icon">📡</span>Live</a></li>
+        <li><a href="newsroom.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg></span>Newsroom</a></li>
+        <li><a href="videos.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></span>Videos</a></li>
+        <li><a href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5.07 4.93a10 10 0 0 1 13.86 0M7.22 7.22a7 7 0 0 1 9.56 0M9.5 9.5a4 4 0 0 1 5 0"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg></span>Live</a></li>
       </ul>
 
       <div class="sidebar-divider"></div>
 
       <p class="sidebar-section-label">Info</p>
       <ul class="sidebar-nav">
-        <li><a href="about-us.html"><span class="nav-icon">ℹ️</span>About Us</a></li>
-        <li><a href="contact-us.html"><span class="nav-icon">✉️</span>Contact Us</a></li>
-        <li><a href="privacy-policy.html"><span class="nav-icon">🔒</span>Privacy Policy</a></li>
-        <li><a href="cookies-settings.html"><span class="nav-icon">🍪</span>Cookies Settings</a></li>
-        <li><a href="terms-of-use.html"><span class="nav-icon">📋</span>Terms of Use</a></li>
+        <li><a href="about-us.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>About Us</a></li>
+        <li><a href="contact-us.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>Contact Us</a></li>
+        <li><a href="privacy-policy.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Privacy Policy</a></li>
+        <li><a href="cookies-settings.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M12 2v2M4.93 4.93l1.41 1.41M2 12h2M4.93 19.07l1.41-1.41M12 20v2M19.07 19.07l-1.41-1.41M22 12h-2"/></svg></span>Cookies Settings</a></li>
+        <li><a href="terms-of-use.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>Terms of Use</a></li>
       </ul>
     </nav>
 
@@ -840,7 +893,7 @@
         </span>
       </div>
       <div class="header-right">
-        <button class="header-icon-btn" type="button" aria-label="Search games" title="Search" onclick="toggleSearchBar()">&#128269;</button>
+        <button class="header-icon-btn" type="button" aria-label="Search games" title="Search" onclick="toggleSearchBar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
         <button id="login-button" class="auth-trigger" type="button">login</button>
         <button id="register-button" class="auth-trigger" type="button">register</button>
       </div>
@@ -853,37 +906,14 @@
 
     <!-- News bar -->
     <div class="news-bar" role="region" aria-label="News">
-      <span class="news-bar-label">&#128240; Breaking</span>
+      <span class="news-bar-label">Breaking</span>
       <div class="news-ticker" aria-live="polite">
-        <span><span aria-hidden="true">&#127381;</span> Global summit reaches landmark climate agreement</span>
-        <span><span aria-hidden="true">&#9889;</span> Tech giants announce major AI safety coalition</span>
-        <span><span aria-hidden="true">&#128293;</span> Markets surge to record high amid positive economic data</span>
-        <span><span aria-hidden="true">&#127942;</span> Scientists discover new treatment for rare disease</span>
+        <span>Global summit reaches landmark climate agreement</span>
+        <span>Tech giants announce major AI safety coalition</span>
+        <span>Markets surge to record high amid positive economic data</span>
+        <span>Scientists discover new treatment for rare disease</span>
       </div>
     </div>
-
-    <!-- Social media posts section -->
-    <section class="social-section" aria-label="Social media">
-      <p class="social-section-title">Follow us</p>
-      <div class="social-grid">
-        <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">X</span> X (Twitter)</div>
-          <div class="social-card-body">Breaking news, hot takes, and real-time updates. Follow @Zorexium for the latest. &#127381;</div>
-        </div>
-        <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#128248;</span> Instagram</div>
-          <div class="social-card-body">Behind-the-scenes, photo essays, and visual stories from around the world. &#127758;</div>
-        </div>
-        <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#127909;</span> YouTube</div>
-          <div class="social-card-body">In-depth explainers, interviews, and documentary shorts on our channel. &#127909;</div>
-        </div>
-        <div class="social-card">
-          <div class="social-card-platform"><span class="social-card-platform-icon" aria-hidden="true">&#127922;</span> Discord</div>
-          <div class="social-card-body">Join the Zorexium community — discuss news, share opinions, connect. &#128172;</div>
-        </div>
-      </div>
-    </section>
 
     <div id="auth-modal" class="auth-modal" aria-hidden="true">
       <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -995,10 +1025,10 @@
               The new climate deal signed at the global summit is <strong>historic</strong>. 197 nations agreeing on binding carbon targets by 2035 — nobody thought this would happen so soon. This is what cooperation looks like. 🌍
             </div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 4.2k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 318</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 1.1k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 4.2k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 318</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 1.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1017,10 +1047,10 @@
             </div>
             <div class="post-image-placeholder" aria-label="Article preview image">📡 Image · Tech Chronicle</div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 9.7k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 872</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 3.4k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 9.7k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 872</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 3.4k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1039,10 +1069,10 @@
             </div>
             <div class="post-image-placeholder" aria-label="Travel photo">🏔️ Image · Patagonia</div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 14.3k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 540</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 2.8k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 14.3k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 540</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 2.8k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1063,10 +1093,10 @@
               Researchers at Cambridge have identified a compound that halts the progression of Alzheimer's in early-stage trials with a <strong>94% effectiveness rate</strong>. The team says human trials could begin within 18 months. This could be a game-changer. 🧬
             </div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 22.1k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 1.4k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 8.9k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 22.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 1.4k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 8.9k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1084,10 +1114,10 @@
               The reason most people feel overwhelmed by the news cycle is that platforms are designed to maximize outrage, not understanding. We need slower, deeper media — not more of it. Agree or disagree?
             </div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 6.5k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 2.1k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 1.7k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 6.5k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 2.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 1.7k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1106,10 +1136,10 @@
             </div>
             <div class="post-image-placeholder" aria-label="Market chart">📊 Chart · Finance Daily</div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 3.8k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 445</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 920</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 3.8k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 445</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 920</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1128,10 +1158,10 @@
             </div>
             <div class="post-image-placeholder" aria-label="Community garden photo">🌱 Image · Community Garden</div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 11.2k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 387</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 2.3k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 11.2k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 387</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 2.3k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
@@ -1149,39 +1179,14 @@
               <strong>Exclusive interview:</strong> The EU's new digital commissioner on data sovereignty, platform regulation, and why she thinks the next decade will define the internet's future for a generation. Full piece below ⬇️
             </div>
             <div class="post-actions">
-              <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 5.1k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">💬</span> 692</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔁</span> 1.5k</button>
-              <button class="post-action" type="button"><span class="post-action-icon">🔖</span></button>
+              <button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 5.1k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 692</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 1.5k</button>
+              <button class="post-action" type="button"><span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
 
         </div>
-
-        <!-- Pre-about ad banner -->
-        <div class="ad-banner">Advertisement</div>
-
-        <section class="about-section">
-          <h2>About Zorexium</h2>
-          <h3>Your Global Social News Hub</h3>
-          <p>Zorexium is a social media and news platform that brings together real-time posts, breaking news, and community conversations from around the world — all in one clean, distraction-free feed. Whether you're looking for the latest headlines, thoughtful opinion pieces, or authentic stories from everyday people, Zorexium surfaces what matters most to you.</p>
-
-          <h3>Explore by Topic</h3>
-          <p>Dive into the topics you care about and discover content that goes beyond the headline. From global politics and scientific breakthroughs to culture, travel, and lifestyle, there's always something worth reading:</p>
-          <div class="genre-list">
-            World News &amp; Politics<br>
-            Technology &amp; Science<br>
-            Business &amp; Finance<br>
-            Entertainment &amp; Culture<br>
-            Health &amp; Lifestyle<br>
-            Environment &amp; Climate
-          </div>
-
-          <h3>What is Zorexium?</h3>
-          <p>Zorexium is a platform built around genuine human connection and quality information. We aggregate and surface social media posts, long-form articles, and community discussions so you never miss what's important. Our feed is designed to be thoughtful — prioritizing depth and context over outrage and noise.</p>
-
-          <p>By visiting Zorexium, you agree to the terms described in our Privacy Center. Cookies are used to enhance your experience and personalize your feed. Learn more on our About page or reach out via our Contact page with any questions.</p>
-        </section>
 
       </main>
 
@@ -1192,6 +1197,21 @@
 
     <!-- Bottom ad banner -->
     <div class="ad-banner">Advertisement</div>
+
+    <!-- New Post modal -->
+    <div id="new-post-modal" class="auth-modal" aria-hidden="true">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
+        <button id="new-post-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="new-post-title" class="auth-title">Create Post</h2>
+        <form id="new-post-form" novalidate>
+          <div class="auth-field">
+            <textarea id="new-post-text" class="new-post-textarea" placeholder="What's on your mind?" rows="4" required></textarea>
+          </div>
+          <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
+        </form>
+        <p id="new-post-status" class="auth-status" aria-live="polite"></p>
+      </div>
+    </div>
 
     <script>
       function toggleSidebar() {
@@ -1206,9 +1226,34 @@
         document.getElementById('search-bar').classList.toggle('open');
       }
       function openNewPost() {
-        /* Open the auth/login modal so users sign in before posting */
-        openAuthModal('register');
+        const modal = document.getElementById('new-post-modal');
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('new-post-text').focus();
       }
+      function closeNewPostModal() {
+        const modal = document.getElementById('new-post-modal');
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.getElementById('new-post-status').textContent = '';
+        document.getElementById('new-post-form').reset();
+      }
+      document.getElementById('new-post-close').addEventListener('click', closeNewPostModal);
+      document.getElementById('new-post-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeNewPostModal();
+      });
+      document.getElementById('new-post-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const text = document.getElementById('new-post-text').value.trim();
+        if (!text) {
+          document.getElementById('new-post-status').textContent = 'Please write something before posting.';
+          document.getElementById('new-post-status').className = 'auth-status error';
+          return;
+        }
+        document.getElementById('new-post-status').textContent = 'Post submitted (demo mode).';
+        document.getElementById('new-post-status').className = 'auth-status success';
+        setTimeout(closeNewPostModal, 1200);
+      });
 
       /* Tab bar — active state toggle */
       document.querySelectorAll('.tabs span').forEach(function(tab) {
@@ -1235,20 +1280,16 @@
       });
 
       /* Post action buttons — toggle liked state and increment/decrement count */
-      document.querySelectorAll('.post-action').forEach(function(btn) {
+      document.querySelectorAll('.post-action[data-action="like"]').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          const icon = btn.querySelector('.post-action-icon');
-          if (!icon) return;
-          if (icon.textContent === '❤️') {
-            const liked = btn.getAttribute('data-liked') === 'true';
-            const countText = btn.textContent.replace('❤️', '').trim();
-            const count = parseFloat(countText);
-            if (!isNaN(count)) {
-              const next = liked ? count - 0.1 : count + 0.1;
-              btn.setAttribute('data-liked', String(!liked));
-              btn.innerHTML = '<span class="post-action-icon">❤️</span> ' + next.toFixed(1) + 'k';
-              btn.style.color = liked ? '' : 'var(--accent)';
-            }
+          const liked = btn.getAttribute('data-liked') === 'true';
+          const countText = btn.textContent.trim();
+          const count = parseFloat(countText);
+          if (!isNaN(count)) {
+            const next = liked ? count - 0.1 : count + 0.1;
+            btn.setAttribute('data-liked', String(!liked));
+            btn.innerHTML = '<span class="post-action-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> ' + next.toFixed(1) + 'k';
+            btn.style.color = liked ? '' : 'var(--accent)';
           }
         });
       });
@@ -1317,8 +1358,9 @@
       });
 
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && authModal.classList.contains('open')) {
-          closeAuthModal();
+        if (e.key === 'Escape') {
+          if (authModal.classList.contains('open')) closeAuthModal();
+          if (document.getElementById('new-post-modal').classList.contains('open')) closeNewPostModal();
         }
       });
 
