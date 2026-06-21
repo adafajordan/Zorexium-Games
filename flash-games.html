@@ -264,5 +264,6 @@
       loginForm.addEventListener('submit', function(e){ e.preventDefault(); if(!loginForm.checkValidity()){ loginForm.reportValidity(); setAuthStatus('Please enter a valid email and password.','error'); return; } setAuthStatus('Demo mode: login submitted.','success'); });
       registerForm.addEventListener('submit', function(e){ e.preventDefault(); if(!registerForm.checkValidity()){ registerForm.reportValidity(); setAuthStatus('Please complete all required fields.','error'); return; } var p=document.getElementById('register-password').value; var c=document.getElementById('register-confirm-password').value; if(p!==c){ setAuthStatus('Passwords do not match.','error'); return; } registerForm.reset(); switchAuthView('login'); setAuthStatus('Demo mode: signup submitted.','success'); });
     </script>
+    <script src="app.js"></script>
   </body>
 </html>
