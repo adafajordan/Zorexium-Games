@@ -36,6 +36,7 @@
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: #fff;
         color: var(--text);
+        padding-bottom: 58px;
       }
 
       /* ── Sidebar ─────────────────────────────── */
@@ -568,16 +569,18 @@
       .post-feed {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 0;
         max-width: none;
         width: 100%;
         margin: 0;
+        border-top: 1px solid var(--border);
       }
       .post-card {
-        background: #ffffff;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 16px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -617,17 +620,6 @@
       .post-handle {
         font-size: 12px;
         color: var(--text-soft);
-      }
-      .post-platform-badge {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        padding: 3px 10px;
-        color: var(--text-soft);
-        flex-shrink: 0;
       }
       .post-body {
         font-size: 14px;
@@ -700,6 +692,40 @@
         text-transform: uppercase;
         color: var(--text-soft);
         margin: 0 0 4px;
+      }
+      .sticky-footer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 90;
+        height: 52px;
+        background: #ffffff;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 6px;
+      }
+      .sticky-footer-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-soft);
+        width: 36px;
+        height: 36px;
+      }
+      .sticky-footer-item:hover {
+        color: var(--accent);
+      }
+      .sticky-footer-item svg {
+        width: 19px;
+        height: 19px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       /* ── Nav icon SVG ────────────────────────── */
       .nav-icon {
@@ -896,7 +922,6 @@
                 <span class="post-username">Maria Reyes</span>
                 <span class="post-handle">@mariareyes &middot; 2 min ago</span>
               </div>
-              <span class="post-platform-badge">X</span>
             </div>
             <div class="post-body">
               The new climate deal signed at the global summit is <strong>historic</strong>. 197 nations agreeing on binding carbon targets by 2035 — nobody thought this would happen so soon. This is what cooperation looks like. 🌍
@@ -917,7 +942,6 @@
                 <span class="post-username">Tech Chronicle</span>
                 <span class="post-handle">@techchronicle &middot; 14 min ago</span>
               </div>
-              <span class="post-platform-badge">News</span>
             </div>
             <div class="post-body">
               <strong>Breaking:</strong> Seven of the world's largest AI labs have signed a landmark safety agreement, committing to independent audits and emergency shutdown protocols before deploying any frontier model. Details inside 👇
@@ -939,7 +963,6 @@
                 <span class="post-username">James Park</span>
                 <span class="post-handle">@jamespark_nyc &middot; 31 min ago</span>
               </div>
-              <span class="post-platform-badge">Instagram</span>
             </div>
             <div class="post-body">
               Just got back from three weeks in Patagonia. No phone signal, no news feeds, just mountains and silence. Here's what I learned about disconnecting in a hyper-connected world 🏔️
@@ -964,7 +987,6 @@
                 <span class="post-username">Science Now</span>
                 <span class="post-handle">@sciencenow &middot; 48 min ago</span>
               </div>
-              <span class="post-platform-badge">News</span>
             </div>
             <div class="post-body">
               Researchers at Cambridge have identified a compound that halts the progression of Alzheimer's in early-stage trials with a <strong>94% effectiveness rate</strong>. The team says human trials could begin within 18 months. This could be a game-changer. 🧬
@@ -985,7 +1007,6 @@
                 <span class="post-username">Aisha Larson</span>
                 <span class="post-handle">@aishalarson &middot; 1 hr ago</span>
               </div>
-              <span class="post-platform-badge">X</span>
             </div>
             <div class="post-body">
               The reason most people feel overwhelmed by the news cycle is that platforms are designed to maximize outrage, not understanding. We need slower, deeper media — not more of it. Agree or disagree?
@@ -1006,7 +1027,6 @@
                 <span class="post-username">Finance Daily</span>
                 <span class="post-handle">@financedaily &middot; 2 hr ago</span>
               </div>
-              <span class="post-platform-badge">News</span>
             </div>
             <div class="post-body">
               The S&amp;P 500 closed at an <strong>all-time high</strong> today, driven by better-than-expected jobs data and falling inflation numbers. Analysts are cautiously optimistic heading into Q3 earnings season. 📈
@@ -1028,7 +1048,6 @@
                 <span class="post-username">Nia Kamara</span>
                 <span class="post-handle">@niakamara &middot; 3 hr ago</span>
               </div>
-              <span class="post-platform-badge">Instagram</span>
             </div>
             <div class="post-body">
               Spent the morning volunteering at the community garden. Grew 40 kg of fresh produce this month alone, all donated to the local food bank. Small actions, real impact. 🌱
@@ -1050,7 +1069,6 @@
                 <span class="post-username">World Report</span>
                 <span class="post-handle">@worldreport &middot; 4 hr ago</span>
               </div>
-              <span class="post-platform-badge">News</span>
             </div>
             <div class="post-body">
               <strong>Exclusive interview:</strong> The EU's new digital commissioner on data sovereignty, platform regulation, and why she thinks the next decade will define the internet's future for a generation. Full piece below ⬇️
@@ -1071,6 +1089,24 @@
 
     <!-- Bottom ad banner -->
     <div class="ad-banner">Advertisement</div>
+
+    <footer class="sticky-footer" aria-label="Quick navigation">
+      <a class="sticky-footer-item" href="#" aria-label="Home">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </a>
+      <button class="sticky-footer-item" type="button" aria-label="Search" onclick="toggleSearchBar()">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <a class="sticky-footer-item" href="#" aria-label="Profile">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </a>
+      <a class="sticky-footer-item" href="#" aria-label="Notifications">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </a>
+      <a class="sticky-footer-item" href="#" aria-label="Marketplace">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 7h18l-1.5 13a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2z"/><path d="M8 7a4 4 0 0 1 8 0"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/></svg>
+      </a>
+    </footer>
 
     <!-- New Post modal -->
     <div id="new-post-modal" class="auth-modal" aria-hidden="true">
