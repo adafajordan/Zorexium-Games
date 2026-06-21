@@ -828,7 +828,7 @@
     <!-- Header -->
     <header>
       <div class="header-left">
-        <button class="header-icon-btn" type="button" aria-label="Write a post" title="New post">&#43;</button>
+        <button class="header-icon-btn" type="button" aria-label="Write a post" title="New post" onclick="openNewPost()">&#43;</button>
       </div>
       <div class="header-center">
         <span class="brand">
@@ -1081,7 +1081,7 @@
               <span class="post-platform-badge">X</span>
             </div>
             <div class="post-body">
-              Hot take: the reason most people feel overwhelmed by the news cycle is that platforms are designed to maximise outrage, not understanding. We need slower, deeper media — not more of it. Agree or disagree?
+              The reason most people feel overwhelmed by the news cycle is that platforms are designed to maximize outrage, not understanding. We need slower, deeper media — not more of it. Agree or disagree?
             </div>
             <div class="post-actions">
               <button class="post-action" type="button"><span class="post-action-icon">❤️</span> 6.5k</button>
@@ -1178,9 +1178,9 @@
           </div>
 
           <h3>What is Zorexium?</h3>
-          <p>Zorexium is a platform built around genuine human connection and quality information. We aggregate and surface social media posts, long-form articles, and community discussions so you never miss what's important. Our feed is designed to be thoughtful — prioritising depth and context over outrage and noise.</p>
+          <p>Zorexium is a platform built around genuine human connection and quality information. We aggregate and surface social media posts, long-form articles, and community discussions so you never miss what's important. Our feed is designed to be thoughtful — prioritizing depth and context over outrage and noise.</p>
 
-          <p>By visiting Zorexium, you agree to the terms described in our Privacy Center. Cookies are used to enhance your experience and personalise your feed. Learn more on our About page or reach out via our Contact page with any questions.</p>
+          <p>By visiting Zorexium, you agree to the terms described in our Privacy Center. Cookies are used to enhance your experience and personalize your feed. Learn more on our About page or reach out via our Contact page with any questions.</p>
         </section>
 
       </main>
@@ -1205,6 +1205,53 @@
       function toggleSearchBar() {
         document.getElementById('search-bar').classList.toggle('open');
       }
+      function openNewPost() {
+        /* Open the auth/login modal so users sign in before posting */
+        openAuthModal('register');
+      }
+
+      /* Tab bar — active state toggle */
+      document.querySelectorAll('.tabs span').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.tabs span').forEach(function(t) {
+            t.style.background = '';
+            t.style.borderColor = '';
+          });
+          tab.style.background = '#f0e8e8';
+          tab.style.borderColor = '#d08080';
+        });
+      });
+
+      /* Sidebar category bubbles — active state toggle */
+      document.querySelectorAll('.sidebar-bubbles span').forEach(function(bubble) {
+        bubble.addEventListener('click', function() {
+          document.querySelectorAll('.sidebar-bubbles span').forEach(function(b) {
+            b.style.background = '';
+            b.style.borderColor = '';
+          });
+          bubble.style.background = '#f0e8e8';
+          bubble.style.borderColor = '#d08080';
+        });
+      });
+
+      /* Post action buttons — toggle liked state and increment/decrement count */
+      document.querySelectorAll('.post-action').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          const icon = btn.querySelector('.post-action-icon');
+          if (!icon) return;
+          if (icon.textContent === '❤️') {
+            const liked = btn.getAttribute('data-liked') === 'true';
+            const countText = btn.textContent.replace('❤️', '').trim();
+            const count = parseFloat(countText);
+            if (!isNaN(count)) {
+              const next = liked ? count - 0.1 : count + 0.1;
+              btn.setAttribute('data-liked', String(!liked));
+              btn.innerHTML = '<span class="post-action-icon">❤️</span> ' + next.toFixed(1) + 'k';
+              btn.style.color = liked ? '' : 'var(--accent)';
+            }
+          }
+        });
+      });
 
       const authModal = document.getElementById('auth-modal');
       const authTitle = document.getElementById('auth-title');
@@ -1305,24 +1352,8 @@
         setAuthStatus('Demo mode: signup form submitted successfully.', 'success');
       });
 
-      // Accessibility: make category bubbles and game cards keyboard-navigable
+      // Accessibility: make category bubbles keyboard-navigable
       document.querySelectorAll('.tabs span, .sidebar-bubbles span').forEach(function(el) {
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-        el.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
-        });
-      });
-      document.querySelectorAll('.game-card').forEach(function(el) {
-        const gameTitle = el.textContent.trim();
-        if (gameTitle) {
-          el.setAttribute('data-card-label', 'play');
-          el.setAttribute('data-game-title', gameTitle);
-          el.setAttribute('aria-label', 'Open ' + gameTitle);
-        } else {
-          el.setAttribute('data-card-label', 'play');
-        }
-        el.textContent = '';
         el.setAttribute('role', 'button');
         el.setAttribute('tabindex', '0');
         el.addEventListener('keydown', function(e) {
