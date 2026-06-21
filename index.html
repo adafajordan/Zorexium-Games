@@ -1214,7 +1214,7 @@
       const searchBar = document.getElementById('search-bar');
       const searchInput = searchBar ? searchBar.querySelector('.search-bar-input') : null;
 
-      var isLoggedIn = false;
+      let isLoggedIn = false;
 
       function setAuthStatus(message, type) {
         authStatus.textContent = message || '';
@@ -1307,6 +1307,8 @@
           return;
         }
         setAuthStatus('Demo mode: login form submitted successfully.', 'success');
+        isLoggedIn = true;
+        setTimeout(closeAuthModal, 1200);
       });
 
       registerForm.addEventListener('submit', function(e) {
@@ -1325,8 +1327,10 @@
         }
 
         registerForm.reset();
+        isLoggedIn = true;
         switchAuthView('login');
         setAuthStatus('Demo mode: signup form submitted successfully.', 'success');
+        setTimeout(closeAuthModal, 1200);
       });
 
     </script>
