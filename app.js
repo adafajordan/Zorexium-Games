@@ -16,6 +16,7 @@
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
+  const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');
@@ -44,7 +45,15 @@
   const profileBirthdayItem = document.getElementById('profile-birthday-item');
   const profileBirthday = document.getElementById('profile-birthday');
   const profilePostTotal = document.getElementById('profile-post-total');
-  const profileMediaTotal = document.getElementById('profile-media-total');
+  const profileFollowersTotal = document.getElementById('profile-followers-total');
+  const profileFollowingTotal = document.getElementById('profile-following-total');
+  const profileEditModal = document.getElementById('profile-edit-modal');
+  const profileEditCloseButton = document.getElementById('profile-edit-close');
+  const profileEditCancelButton = document.getElementById('profile-edit-cancel');
+  const profileEditForm = document.getElementById('profile-edit-form');
+  const profileEditNameInput = document.getElementById('profile-edit-name');
+  const profileEditBioInput = document.getElementById('profile-edit-bio');
+  const profileEditStatus = document.getElementById('profile-edit-status');
   const profileTabSummary = document.getElementById('profile-tab-summary');
   const profileTabButtons = Array.from(document.querySelectorAll('.profile-tab'));
   const profileTabPanels = Array.from(document.querySelectorAll('.profile-tab-panel'));
@@ -88,6 +97,12 @@
     });
   }
 
+  function normalizeProfileMetric(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.floor(numeric));
+  }
+
   function transactionDone(transaction) {
     return new Promise(function (resolve, reject) {
       transaction.oncomplete = function () {
@@ -100,6 +115,38 @@
         reject(transaction.error || new Error('IndexedDB transaction aborted.'));
       };
     });
+  }
+
+  function setProfileEditStatus(message, type) {
+    if (!profileEditStatus) return;
+    profileEditStatus.textContent = message || '';
+    profileEditStatus.className = 'auth-status';
+    if (type) {
+      profileEditStatus.classList.add(type);
+    }
+  }
+
+  function openProfileEditModal() {
+    if (!profileEditModal || !profileEditForm || !profileEditNameInput || !profileEditBioInput || !currentUser) {
+      return;
+    }
+    const savedBio = String(currentUser.profileBio || '').trim();
+    profileEditNameInput.value = String(currentUser.name || '').trim();
+    profileEditBioInput.value = savedBio === LEGACY_PROFILE_BIO_MESSAGE ? '' : savedBio;
+    setProfileEditStatus('');
+    profileEditModal.classList.add('open');
+    profileEditModal.setAttribute('aria-hidden', 'false');
+    setTimeout(function () {
+      profileEditNameInput.focus();
+      profileEditNameInput.select();
+    }, 0);
+  }
+
+  function closeProfileEditModal() {
+    if (!profileEditModal) return;
+    profileEditModal.classList.remove('open');
+    profileEditModal.setAttribute('aria-hidden', 'true');
+    setProfileEditStatus('');
   }
 
   function ensureCryptoSupport() {
@@ -1246,7 +1293,7 @@
   async function renderAccountDashboard() {
     if (!dashboardRoot) return;
     dashboardRoot.innerHTML = '';
-    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileBirthday || !profileBirthdayItem || !profilePostTotal || !profileMediaTotal) {
+    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileBirthday || !profileBirthdayItem || !profilePostTotal || !profileFollowersTotal || !profileFollowingTotal) {
       return;
     }
 
@@ -1257,21 +1304,14 @@
     }).sort(function (left, right) {
       return right.createdAt - left.createdAt;
     }) : [];
-    let pictureCount = 0;
-    let videoCount = 0;
-    userPosts.forEach(function (post) {
-      const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
-      pictureCount += imageIds.length;
-      if (post.videoMediaId) {
-        videoCount += 1;
-      }
-    });
-    const mediaCount = pictureCount + videoCount;
     document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
     const profileThemeColor = getAvatarColor(currentUser ? currentUser.username : 'guest');
-    const bioValue = currentUser ? String(currentUser.profileBio || '').trim() : '';
+    const bioValueRaw = currentUser ? String(currentUser.profileBio || '').trim() : '';
+    const bioValue = bioValueRaw === LEGACY_PROFILE_BIO_MESSAGE ? '' : bioValueRaw;
     const birthdayValue = currentUser ? String(currentUser.profileBirthday || '').trim() : '';
     const profileEmailValue = currentUser ? String(currentUser.profileEmail || '').trim().toLowerCase() : '';
+    const followerCount = normalizeProfileMetric(currentUser ? currentUser.profileFollowers : 0);
+    const followingCount = normalizeProfileMetric(currentUser ? currentUser.profileFollowing : 0);
     const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
 
     if (profileBanner) {
@@ -1294,7 +1334,8 @@
       profileBirthdayItem.hidden = !birthdayValue;
     }
     profilePostTotal.textContent = String(userPosts.length);
-    profileMediaTotal.textContent = String(mediaCount);
+    profileFollowersTotal.textContent = String(followerCount);
+    profileFollowingTotal.textContent = String(followingCount);
 
     if (profileEditButton) {
       profileEditButton.textContent = currentUser ? 'Edit profile' : 'Log in';
@@ -1303,39 +1344,7 @@
           openAuthModal('login');
           return;
         }
-        const nextBio = window.prompt('Enter your bio (leave blank to clear):', String(currentUser.profileBio || ''));
-        if (nextBio === null) {
-          return;
-        }
-        const nextProfileEmail = window.prompt('Enter your profile email (leave blank to clear):', String(currentUser.profileEmail || ''));
-        if (nextProfileEmail === null) {
-          return;
-        }
-        const normalizedProfileEmail = String(nextProfileEmail || '').trim().toLowerCase();
-        if (normalizedProfileEmail && !EMAIL_ADDRESS_PATTERN.test(normalizedProfileEmail)) {
-          window.alert('Please enter a valid email address for your profile.');
-          return;
-        }
-        const nextBirthday = window.prompt('Enter your birthday (optional, YYYY-MM-DD):', String(currentUser.profileBirthday || ''));
-        if (nextBirthday === null) {
-          return;
-        }
-        if (!isValidBirthdayValue(nextBirthday)) {
-          window.alert('Please enter a valid birthday date in YYYY-MM-DD format.');
-          return;
-        }
-        const updatedUser = Object.assign({}, currentUser, {
-          profileBio: String(nextBio || '').trim(),
-          profileEmail: normalizedProfileEmail,
-          profileBirthday: String(nextBirthday || '').trim()
-        });
-        try {
-          await putRecord(ACCOUNTS_STORE, updatedUser);
-          currentUser = updatedUser;
-          await refreshUserFacingViews();
-        } catch (error) {
-          window.alert(error && error.message ? error.message : 'Unable to save your profile right now. Please try again later.');
-        }
+        openProfileEditModal();
       };
     }
 
@@ -1482,6 +1491,8 @@
             profileBio: '',
             profileEmail: '',
             profileBirthday: '',
+            profileFollowers: 0,
+            profileFollowing: 0,
             passwordSalt: passwordSalt,
             passwordVerifier: passwordVerifier,
             createdAt: Date.now()
@@ -1638,6 +1649,58 @@
         setDashboardTab(button.getAttribute('data-tab') || 'posts');
       });
     });
+    if (profileEditCloseButton) {
+      profileEditCloseButton.addEventListener('click', closeProfileEditModal);
+    }
+    if (profileEditCancelButton) {
+      profileEditCancelButton.addEventListener('click', closeProfileEditModal);
+    }
+    if (profileEditModal) {
+      profileEditModal.addEventListener('click', function (event) {
+        if (event.target === profileEditModal) {
+          closeProfileEditModal();
+        }
+      });
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && profileEditModal && profileEditModal.classList.contains('open')) {
+        closeProfileEditModal();
+      }
+    });
+    if (profileEditForm) {
+      profileEditForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!currentUser) {
+          closeProfileEditModal();
+          return;
+        }
+        const nextName = String(profileEditNameInput ? profileEditNameInput.value : '').trim();
+        const nextBio = String(profileEditBioInput ? profileEditBioInput.value : '').trim();
+        if (nextName.length < 2) {
+          setProfileEditStatus('Please enter your full name.', 'error');
+          if (profileEditNameInput) {
+            profileEditNameInput.focus();
+          }
+          return;
+        }
+        const updatedUser = Object.assign({}, currentUser, {
+          name: nextName,
+          profileBio: nextBio,
+          profileFollowers: normalizeProfileMetric(currentUser.profileFollowers),
+          profileFollowing: normalizeProfileMetric(currentUser.profileFollowing)
+        });
+        try {
+          await putRecord(ACCOUNTS_STORE, updatedUser);
+          currentUser = await getUserById(updatedUser.id) || updatedUser;
+          setProfileEditStatus('Profile updated.', 'success');
+          await refreshUserFacingViews();
+          closeProfileEditModal();
+        } catch (error) {
+          setProfileEditStatus(error && error.message ? error.message : 'Unable to save your profile right now. Please try again later.', 'error');
+        }
+      }, true);
+    }
   }
 
   async function initSharedHandlers() {
