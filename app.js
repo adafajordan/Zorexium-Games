@@ -270,6 +270,20 @@
     }
   }
 
+  function setInterfaceStatus(message, type) {
+    if (newPostStatus) {
+      setNewPostStatus(message, type);
+      return;
+    }
+    if (authStatus && authModal && authModal.classList.contains('open')) {
+      setAuthStatus(message, type);
+      return;
+    }
+    if (message) {
+      window.alert(message);
+    }
+  }
+
   function escapeHtml(value) {
     return String(value || '').replace(/[&<>"']/g, function (character) {
       return ({
@@ -582,10 +596,11 @@
     return button;
   }
 
-  function createDeletePostButton(postId) {
+  function createDeletePostButton(postId, summary) {
     const button = document.createElement('button');
     button.className = 'post-action post-action-danger';
     button.type = 'button';
+    button.setAttribute('aria-label', 'Delete post: ' + String(summary || 'your post'));
     button.innerHTML = '<span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="post-action-count">Delete</span>';
     button.addEventListener('click', async function () {
       if (!currentUser) {
@@ -636,12 +651,22 @@
     };
   }
 
-  function requestElementFullscreen(element) {
+  async function requestElementFullscreen(element) {
     if (!element) return;
     const requestFullscreen = element.requestFullscreen || element.webkitRequestFullscreen || element.msRequestFullscreen;
     if (typeof requestFullscreen === 'function') {
-      requestFullscreen.call(element);
+      try {
+        const result = requestFullscreen.call(element);
+        if (result && typeof result.catch === 'function') {
+          await result;
+        }
+      } catch (error) {
+        setInterfaceStatus('Fullscreen mode could not be opened.', 'error');
+        throw error;
+      }
+      return;
     }
+    setInterfaceStatus('Fullscreen mode is not supported in this browser.', 'error');
   }
 
   function openMediaViewer(type, src, label) {
@@ -759,7 +784,8 @@
         fullscreenButton.className = 'post-media-toolbar-button';
         fullscreenButton.textContent = 'Fullscreen';
         fullscreenButton.addEventListener('click', function () {
-          requestElementFullscreen(video);
+          requestElementFullscreen(video).catch(function () {
+          });
         });
         actions.appendChild(fullscreenButton);
 
@@ -864,7 +890,7 @@
       actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
       actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
       if (currentUser && currentUser.id === post.userId) {
-        actions.appendChild(createDeletePostButton(post.id));
+        actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
       }
       article.appendChild(actions);
 
@@ -987,7 +1013,8 @@
     });
     const latestPostTimestamp = userPosts.length ? userPosts[0].createdAt : null;
     const recentPostsMarkup = userPosts.length ? userPosts.slice(0, 5).map(function (post) {
-      return '<li class="dashboard-post-item"><div><p class="dashboard-post-copy">' + escapeHtml(summarizePost(post)) + '</p><p class="dashboard-post-meta">' + escapeHtml(formatRelativeTime(post.createdAt)) + '</p></div><button class="dashboard-delete-post" type="button" data-delete-post-id="' + escapeHtml(post.id) + '">Delete</button></li>';
+      const summary = summarizePost(post);
+      return '<li class="dashboard-post-item"><div><p class="dashboard-post-copy">' + escapeHtml(summary) + '</p><p class="dashboard-post-meta">' + escapeHtml(formatRelativeTime(post.createdAt)) + '</p></div><button class="dashboard-delete-post" type="button" aria-label="Delete post: ' + escapeHtml(summary) + '" data-delete-post-id="' + escapeHtml(post.id) + '">Delete</button></li>';
     }).join('') : '<li class="dashboard-post-item dashboard-post-item-empty"><div><p class="dashboard-post-copy">You have not published any posts yet.</p><p class="dashboard-post-meta">Use the plus button on the home feed to share your first update.</p></div></li>';
 
     dashboardRoot.innerHTML = ''
@@ -1286,7 +1313,8 @@
     if (mediaViewerFullscreenButton) {
       mediaViewerFullscreenButton.addEventListener('click', function () {
         const target = mediaViewerContent ? mediaViewerContent.querySelector('.media-viewer-media') || mediaViewerModal : mediaViewerModal;
-        requestElementFullscreen(target);
+        requestElementFullscreen(target).catch(function () {
+        });
       });
     }
     document.addEventListener('keydown', function (event) {
