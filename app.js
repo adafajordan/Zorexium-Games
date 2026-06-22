@@ -6,9 +6,14 @@
   const SESSION_STORE = 'session';
   const MEDIA_STORE = 'media';
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
+  const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
+  const MIN_MEDIA_SCALE = 1;
+  const MAX_MEDIA_SCALE = 4;
+  const MEDIA_ZOOM_INCREMENT = 0.25;
+  const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
 
   const authModal = document.getElementById('auth-modal');
@@ -26,10 +31,26 @@
   const headerNotificationsButton = document.getElementById('header-notifications-btn');
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
+  const dashboardRoot = document.getElementById('account-dashboard-root');
+  const mediaViewerModal = document.getElementById('media-viewer-modal');
+  const mediaViewerContent = document.getElementById('media-viewer-content');
+  const mediaViewerTitle = document.getElementById('media-viewer-title');
+  const mediaViewerZoomInButton = document.getElementById('media-viewer-zoom-in');
+  const mediaViewerZoomOutButton = document.getElementById('media-viewer-zoom-out');
+  const mediaViewerFitButton = document.getElementById('media-viewer-fit');
+  const mediaViewerFullscreenButton = document.getElementById('media-viewer-fullscreen');
+  const mediaViewerCloseButton = document.getElementById('media-viewer-close');
 
   let currentUser = null;
   let appDbPromise = null;
   let generatedMediaUrls = [];
+  let lastMediaWheelZoomAt = 0;
+  let mediaViewerState = {
+    scale: 1,
+    type: null,
+    src: '',
+    label: ''
+  };
 
   function requestToPromise(request) {
     return new Promise(function (resolve, reject) {
@@ -254,6 +275,84 @@
     }
   }
 
+  function setInterfaceStatus(message, type) {
+    if (newPostStatus) {
+      setNewPostStatus(message, type);
+      return;
+    }
+    if (authStatus && authModal && authModal.classList.contains('open')) {
+      setAuthStatus(message, type);
+      return;
+    }
+    if (message) {
+      window.alert(message);
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, function (character) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[character];
+    });
+  }
+
+  function formatLongDate(timestamp) {
+    if (!timestamp) return '—';
+    return new Date(timestamp).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  function formatCompactSize(bytes) {
+    const value = Number(bytes || 0);
+    if (value <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const unitIndex = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+    const scaled = value / Math.pow(1024, unitIndex);
+    return scaled.toFixed(scaled >= 10 || unitIndex === 0 ? 0 : 1) + ' ' + units[unitIndex];
+  }
+
+  function getCurrentPageName() {
+    const pathname = String(window.location.pathname || '');
+    const segments = pathname.split('/').filter(Boolean);
+    return segments.length ? segments[segments.length - 1] : 'index.html';
+  }
+
+  function isDashboardPage() {
+    return getCurrentPageName() === ACCOUNT_DASHBOARD_PATH;
+  }
+
+  function summarizePost(post) {
+    if (post.text) {
+      const normalized = post.text.trim().replace(/\s+/g, ' ');
+      return normalized.length > 140 ? normalized.slice(0, 137) + '…' : normalized;
+    }
+    const imageCount = Array.isArray(post.imageMediaIds) ? post.imageMediaIds.length : 0;
+    if (imageCount && post.videoMediaId) {
+      return imageCount + ' image' + (imageCount === 1 ? '' : 's') + ' and 1 video';
+    }
+    if (imageCount) {
+      return imageCount + ' image' + (imageCount === 1 ? '' : 's');
+    }
+    if (post.videoMediaId) {
+      return '1 video upload';
+    }
+    return 'Untitled post';
+  }
+
+  function isSafeMediaUrl(url) {
+    return /^blob:/i.test(String(url || ''));
+  }
+
   function switchAuthView(view) {
     if (!loginForm || !registerForm) return;
     const isLogin = view === 'login';
@@ -394,19 +493,48 @@
     document.body.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
   }
 
+  function syncDashboardTriggers() {
+    document.querySelectorAll('.post-avatar, .post-username').forEach(function (node) {
+      if (currentUser) {
+        node.setAttribute('role', 'button');
+        node.setAttribute('tabindex', '0');
+        node.setAttribute('aria-label', 'Open your account dashboard');
+        node.style.cursor = 'pointer';
+      } else {
+        node.removeAttribute('role');
+        node.removeAttribute('tabindex');
+        node.removeAttribute('aria-label');
+        node.style.cursor = '';
+      }
+    });
+  }
+
+  async function refreshUserFacingViews() {
+    updateAuthControls();
+    syncDashboardTriggers();
+    const jobs = [];
+    if (postFeed) {
+      jobs.push(renderSavedPosts());
+    }
+    if (dashboardRoot) {
+      jobs.push(renderAccountDashboard());
+    }
+    await Promise.all(jobs);
+  }
+
   async function syncCurrentUserFromSession() {
     const session = await getCurrentSession();
     currentUser = session ? await getUserById(session.userId) : null;
     if (!currentUser && session) {
       await clearCurrentSession();
     }
-    updateAuthControls();
+    await refreshUserFacingViews();
   }
 
   async function logout() {
     currentUser = null;
     await clearCurrentSession();
-    updateAuthControls();
+    await refreshUserFacingViews();
     closeAuthModal();
   }
 
@@ -477,6 +605,121 @@
     return button;
   }
 
+  function createDeletePostButton(postId, summary) {
+    const button = document.createElement('button');
+    button.className = 'post-action post-action-danger';
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Delete post: ' + String(summary || 'your post'));
+    button.innerHTML = '<span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="post-action-count">Delete</span>';
+    button.addEventListener('click', async function () {
+      if (!currentUser) {
+        openAuthModal('login');
+        return;
+      }
+      if (!window.confirm('Delete this post? This cannot be undone.')) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        await deletePost(postId);
+        setNewPostStatus('Post deleted successfully.', 'success');
+      } catch (error) {
+        setNewPostStatus(error && error.message ? error.message : 'Unable to delete this post.', 'error');
+        button.disabled = false;
+      }
+    });
+    return button;
+  }
+
+  function setMediaViewerScale(scale) {
+    if (!mediaViewerContent) return;
+    const nextScale = Math.min(MAX_MEDIA_SCALE, Math.max(MIN_MEDIA_SCALE, scale));
+    mediaViewerState.scale = nextScale;
+    const mediaElement = mediaViewerContent.querySelector('.media-viewer-media');
+    if (!mediaElement || mediaViewerState.type !== 'image') {
+      return;
+    }
+    mediaElement.style.transform = 'scale(' + nextScale + ')';
+    mediaElement.style.transformOrigin = 'center center';
+  }
+
+  function closeMediaViewer() {
+    if (!mediaViewerModal || !mediaViewerContent) return;
+    const video = mediaViewerContent.querySelector('video');
+    if (video) {
+      video.pause();
+    }
+    mediaViewerContent.innerHTML = '';
+    mediaViewerModal.classList.remove('open');
+    mediaViewerModal.setAttribute('aria-hidden', 'true');
+    mediaViewerState = {
+      scale: 1,
+      type: null,
+      src: '',
+      label: ''
+    };
+  }
+
+  async function requestElementFullscreen(element) {
+    if (!element) return;
+    const requestFullscreen = element.requestFullscreen || element.webkitRequestFullscreen;
+    if (typeof requestFullscreen === 'function') {
+      try {
+        const result = requestFullscreen.call(element);
+        if (result && typeof result.catch === 'function') {
+          await result;
+        }
+      } catch (error) {
+        setInterfaceStatus('Fullscreen mode could not be opened.', 'error');
+        throw error;
+      }
+      return;
+    }
+    setInterfaceStatus('Fullscreen mode is not supported in this browser.', 'error');
+  }
+
+  function openMediaViewer(type, src, label) {
+    if (!mediaViewerModal || !mediaViewerContent) return;
+    mediaViewerState = {
+      scale: 1,
+      type: type,
+      src: src,
+      label: label || 'Media viewer'
+    };
+    if (!isSafeMediaUrl(src)) {
+      setInterfaceStatus('This media could not be opened safely.', 'error');
+      return;
+    }
+    mediaViewerContent.innerHTML = '';
+    if (mediaViewerTitle) {
+      mediaViewerTitle.textContent = mediaViewerState.label;
+    }
+    const mediaElement = document.createElement(type === 'video' ? 'video' : 'img');
+    mediaElement.className = 'media-viewer-media';
+    mediaElement.src = src;
+    if (type === 'video') {
+      mediaElement.controls = true;
+      mediaElement.preload = 'metadata';
+      mediaElement.setAttribute('playsinline', 'true');
+      mediaElement.setAttribute('aria-label', mediaViewerState.label);
+    } else {
+      mediaElement.alt = mediaViewerState.label;
+    }
+    mediaViewerContent.appendChild(mediaElement);
+    mediaViewerModal.classList.add('open');
+    mediaViewerModal.setAttribute('aria-hidden', 'false');
+    setMediaViewerScale(1);
+    if (mediaViewerZoomInButton) {
+      mediaViewerZoomInButton.disabled = type !== 'image';
+    }
+    if (mediaViewerZoomOutButton) {
+      mediaViewerZoomOutButton.disabled = type !== 'image';
+    }
+    if (mediaViewerFitButton) {
+      mediaViewerFitButton.disabled = type !== 'image';
+    }
+  }
+
   async function buildMediaFragment(post) {
     const fragment = document.createDocumentFragment();
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
@@ -501,7 +744,17 @@
         image.src = mediaUrl;
         image.alt = altBase + ' (image ' + (index + 1) + ' of ' + imageIds.length + ')';
         image.loading = 'lazy';
-        item.appendChild(image);
+
+        const trigger = document.createElement('button');
+        trigger.className = 'post-media-button';
+        trigger.type = 'button';
+        trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
+        trigger.addEventListener('click', function () {
+          openMediaViewer('image', mediaUrl, image.alt);
+        });
+
+        trigger.appendChild(image);
+        item.appendChild(trigger);
         grid.appendChild(item);
       }
 
@@ -516,17 +769,67 @@
         const mediaUrl = URL.createObjectURL(mediaRecord.blob);
         generatedMediaUrls.push(mediaUrl);
 
+        const wrapper = document.createElement('div');
+        wrapper.className = 'post-video-shell';
+
         const video = document.createElement('video');
         video.className = 'post-video';
         video.src = mediaUrl;
         video.setAttribute('aria-label', altBase + ' (video)');
         video.controls = true;
         video.preload = 'metadata';
-        fragment.appendChild(video);
+        wrapper.appendChild(video);
+
+        const actions = document.createElement('div');
+        actions.className = 'post-media-toolbar';
+
+        const expandButton = document.createElement('button');
+        expandButton.type = 'button';
+        expandButton.className = 'post-media-toolbar-button';
+        expandButton.textContent = 'View larger';
+        expandButton.addEventListener('click', function () {
+          openMediaViewer('video', mediaUrl, altBase + ' (video)');
+        });
+        actions.appendChild(expandButton);
+
+        const fullscreenButton = document.createElement('button');
+        fullscreenButton.type = 'button';
+        fullscreenButton.className = 'post-media-toolbar-button';
+        fullscreenButton.textContent = 'Fullscreen';
+        fullscreenButton.addEventListener('click', function () {
+          requestElementFullscreen(video).catch(function () {
+          });
+        });
+        actions.appendChild(fullscreenButton);
+
+        wrapper.appendChild(actions);
+        fragment.appendChild(wrapper);
       }
     }
 
     return fragment;
+  }
+
+  async function deletePost(postId) {
+    const post = await getRecord(POSTS_STORE, postId);
+    if (!post) {
+      return;
+    }
+    if (!currentUser || post.userId !== currentUser.id) {
+      throw new Error('You can only delete posts from your own account. Please verify you are logged in as the post owner.');
+    }
+    const mediaIds = [];
+    if (Array.isArray(post.imageMediaIds)) {
+      mediaIds.push(...post.imageMediaIds);
+    }
+    if (post.videoMediaId) {
+      mediaIds.push(post.videoMediaId);
+    }
+    await Promise.all(mediaIds.map(function (id) {
+      return deleteRecord(MEDIA_STORE, id);
+    }));
+    await deleteRecord(POSTS_STORE, postId);
+    await refreshUserFacingViews();
   }
 
   async function renderSavedPosts() {
@@ -599,10 +902,14 @@
       actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false));
       actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
       actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
+      if (currentUser && currentUser.id === post.userId) {
+        actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
+      }
       article.appendChild(actions);
 
       postFeed.insertBefore(article, anchor);
     }
+    syncDashboardTriggers();
   }
 
   function getSelectedImages() {
@@ -673,6 +980,119 @@
     });
   }
 
+  async function renderAccountDashboard() {
+    if (!dashboardRoot) return;
+    if (!currentUser) {
+      dashboardRoot.innerHTML = '<section class="dashboard-panel dashboard-empty-state"><h1>Account dashboard</h1><p>Log in to view your profile, activity, uploads, and saved account details.</p><div class="dashboard-empty-actions"><button id="dashboard-login-action" type="button">Log in</button><button id="dashboard-register-action" type="button">Create account</button></div></section>';
+      const loginAction = document.getElementById('dashboard-login-action');
+      const registerAction = document.getElementById('dashboard-register-action');
+      if (loginAction) {
+        loginAction.addEventListener('click', function () {
+          openAuthModal('login');
+        });
+      }
+      if (registerAction) {
+        registerAction.addEventListener('click', function () {
+          openAuthModal('register');
+        });
+      }
+      return;
+    }
+
+    const [posts, mediaRecords] = await Promise.all([readPosts(), getAllRecords(MEDIA_STORE)]);
+    const userPosts = posts.filter(function (post) {
+      return post.userId === currentUser.id;
+    }).sort(function (left, right) {
+      return right.createdAt - left.createdAt;
+    });
+    const mediaMap = new Map(mediaRecords.map(function (record) {
+      return [record.id, record];
+    }));
+    let pictureCount = 0;
+    let videoCount = 0;
+    let storageBytes = 0;
+    userPosts.forEach(function (post) {
+      const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
+      pictureCount += imageIds.length;
+      imageIds.forEach(function (id) {
+        const mediaRecord = mediaMap.get(id);
+        storageBytes += Number(mediaRecord && mediaRecord.size ? mediaRecord.size : 0);
+      });
+      if (post.videoMediaId) {
+        videoCount += 1;
+        const mediaRecord = mediaMap.get(post.videoMediaId);
+        storageBytes += Number(mediaRecord && mediaRecord.size ? mediaRecord.size : 0);
+      }
+    });
+    const latestPostTimestamp = userPosts.length ? userPosts[0].createdAt : null;
+    const recentPostsMarkup = userPosts.length ? userPosts.slice(0, 5).map(function (post) {
+      const summary = summarizePost(post);
+      const escapedSummary = escapeHtml(summary);
+      const deleteLabel = escapeHtml('Delete post: ' + summary);
+      return [
+        '<li class="dashboard-post-item">',
+        '<div><p class="dashboard-post-copy">' + escapedSummary + '</p><p class="dashboard-post-meta">' + escapeHtml(formatRelativeTime(post.createdAt)) + '</p></div>',
+        '<button class="dashboard-delete-post" type="button" aria-label="' + deleteLabel + '" data-delete-post-id="' + escapeHtml(post.id) + '">Delete</button>',
+        '</li>'
+      ].join('');
+    }).join('') : '<li class="dashboard-post-item dashboard-post-item-empty"><div><p class="dashboard-post-copy">You have not published any posts yet.</p><p class="dashboard-post-meta">Use the plus button on the home feed to share your first update.</p></div></li>';
+
+    dashboardRoot.innerHTML = ''
+      + '<section class="dashboard-panel dashboard-hero">'
+      + '<div class="dashboard-avatar" style="background:' + escapeHtml(getAvatarColor(currentUser.username)) + ';">' + escapeHtml(getInitials(currentUser.name, currentUser.username)) + '</div>'
+      + '<div class="dashboard-hero-copy"><p class="dashboard-eyebrow">Signed in account</p><h1>' + escapeHtml(currentUser.name) + '</h1><p class="dashboard-handle">' + escapeHtml(formatHandle(currentUser.username)) + '</p><p class="dashboard-email">' + escapeHtml(currentUser.email) + '</p></div>'
+      + '<div class="dashboard-hero-meta"><div><span class="dashboard-meta-label">Member since</span><strong>' + escapeHtml(formatLongDate(currentUser.createdAt)) + '</strong></div><div><span class="dashboard-meta-label">Latest post</span><strong>' + escapeHtml(latestPostTimestamp ? formatLongDate(latestPostTimestamp) : 'No posts yet') + '</strong></div></div>'
+      + '</section>'
+      + '<section class="dashboard-stats">'
+      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Posts</span><strong>' + userPosts.length + '</strong></article>'
+      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Pictures</span><strong>' + pictureCount + '</strong></article>'
+      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Videos</span><strong>' + videoCount + '</strong></article>'
+      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Media storage</span><strong>' + escapeHtml(formatCompactSize(storageBytes)) + '</strong></article>'
+      + '</section>'
+      + '<section class="dashboard-grid">'
+      + '<article class="dashboard-panel"><h2>Account details</h2><dl class="dashboard-details"><div><dt>Name</dt><dd>' + escapeHtml(currentUser.name) + '</dd></div><div><dt>Username</dt><dd>' + escapeHtml(currentUser.username) + '</dd></div><div><dt>Email</dt><dd>' + escapeHtml(currentUser.email) + '</dd></div><div><dt>Session</dt><dd>' + escapeHtml(document.body.getAttribute('data-authenticated') === 'true' ? 'Active in this browser' : 'Signed out') + '</dd></div></dl></article>'
+      + '<article class="dashboard-panel"><h2>Quick actions</h2><div class="dashboard-actions"><a class="dashboard-link-button" href="index.html">Open home feed</a><a class="dashboard-link-button" href="newsroom.html">Visit newsroom</a><button id="dashboard-logout-action" type="button">Log out</button></div></article>'
+      + '</section>'
+      + '<section class="dashboard-panel"><h2>Recent posts</h2><ul class="dashboard-post-list">' + recentPostsMarkup + '</ul></section>';
+
+    Array.from(dashboardRoot.querySelectorAll('.dashboard-delete-post')).forEach(function (button) {
+      button.addEventListener('click', async function () {
+        const postId = button.getAttribute('data-delete-post-id');
+        if (!postId) return;
+        if (!window.confirm('Delete this post? This cannot be undone.')) {
+          return;
+        }
+        button.disabled = true;
+        try {
+          await deletePost(postId);
+        } catch (error) {
+          button.disabled = false;
+        }
+      });
+    });
+
+    const logoutAction = document.getElementById('dashboard-logout-action');
+    if (logoutAction) {
+      logoutAction.addEventListener('click', function () {
+        logout().catch(function () {
+        });
+      });
+    }
+  }
+
+  function navigateToDashboard() {
+    if (!currentUser) {
+      openAuthModal('login');
+      return;
+    }
+    if (isDashboardPage()) {
+      renderAccountDashboard().catch(function () {
+      });
+      return;
+    }
+    window.location.href = ACCOUNT_DASHBOARD_PATH;
+  }
+
   function attachAuthenticatedClickGuard(button, onAuthenticatedClick) {
     if (!button) return;
     button.addEventListener('click', function (event) {
@@ -718,7 +1138,7 @@
 
           currentUser = account;
           await setCurrentSession(account.id, remember);
-          updateAuthControls();
+          await refreshUserFacingViews();
           setAuthStatus('Logged in successfully.', 'success');
           setTimeout(closeAuthModal, 800);
         } catch (error) {
@@ -800,7 +1220,7 @@
           await putRecord(ACCOUNTS_STORE, account);
           currentUser = account;
           await setCurrentSession(account.id, true);
-          updateAuthControls();
+          await refreshUserFacingViews();
           registerForm.reset();
           setAuthStatus('Account created and logged in successfully.', 'success');
           setTimeout(closeAuthModal, 800);
@@ -837,7 +1257,7 @@
         await validatePostMedia(images, video);
         setNewPostStatus('Publishing post…', 'success');
         await savePost(text, images, video);
-        await renderSavedPosts();
+        await refreshUserFacingViews();
         setNewPostStatus('Post published successfully.', 'success');
         setTimeout(closeNewPostModal, 800);
       } catch (error) {
@@ -859,8 +1279,79 @@
 
     [headerProfileButton, headerNotificationsButton, stickyFooterProfileButton, stickyFooterNotificationsButton].forEach(function (button) {
       attachAuthenticatedClickGuard(button, function () {
+        if (button === headerProfileButton || button === stickyFooterProfileButton) {
+          navigateToDashboard();
+        }
       });
     });
+  }
+
+  function attachDashboardTriggerHandlers() {
+    document.addEventListener('click', function (event) {
+      const trigger = event.target.closest('.post-avatar, .post-username');
+      if (!trigger) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      navigateToDashboard();
+    }, true);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const trigger = event.target && event.target.closest ? event.target.closest('.post-avatar, .post-username') : null;
+      if (!trigger) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      navigateToDashboard();
+    }, true);
+  }
+
+  function attachMediaViewerHandlers() {
+    if (!mediaViewerModal) return;
+    if (mediaViewerCloseButton) {
+      mediaViewerCloseButton.addEventListener('click', closeMediaViewer);
+    }
+    mediaViewerModal.addEventListener('click', function (event) {
+      if (event.target === mediaViewerModal) {
+        closeMediaViewer();
+      }
+    });
+    if (mediaViewerZoomInButton) {
+      mediaViewerZoomInButton.addEventListener('click', function () {
+        setMediaViewerScale(mediaViewerState.scale + MEDIA_ZOOM_INCREMENT);
+      });
+    }
+    if (mediaViewerZoomOutButton) {
+      mediaViewerZoomOutButton.addEventListener('click', function () {
+        setMediaViewerScale(mediaViewerState.scale - MEDIA_ZOOM_INCREMENT);
+      });
+    }
+    if (mediaViewerFitButton) {
+      mediaViewerFitButton.addEventListener('click', function () {
+        setMediaViewerScale(1);
+      });
+    }
+    if (mediaViewerFullscreenButton) {
+      mediaViewerFullscreenButton.addEventListener('click', function () {
+        const target = mediaViewerContent ? mediaViewerContent.querySelector('.media-viewer-media') || mediaViewerModal : mediaViewerModal;
+        requestElementFullscreen(target).catch(function () {
+        });
+      });
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && mediaViewerModal.classList.contains('open')) {
+        closeMediaViewer();
+      }
+    });
+    mediaViewerModal.addEventListener('wheel', function (event) {
+      if (mediaViewerState.type !== 'image') return;
+      const now = Date.now();
+      if (now - lastMediaWheelZoomAt < MEDIA_WHEEL_THROTTLE_MS) {
+        return;
+      }
+      lastMediaWheelZoomAt = now;
+      event.preventDefault();
+      setMediaViewerScale(mediaViewerState.scale + (event.deltaY < 0 ? MEDIA_ZOOM_INCREMENT : -MEDIA_ZOOM_INCREMENT));
+    }, { passive: false });
   }
 
   function initAuthTabs() {
@@ -877,6 +1368,8 @@
     attachAuthSubmitHandlers();
     attachNewPostHandler();
     attachAuthGuards();
+    attachDashboardTriggerHandlers();
+    attachMediaViewerHandlers();
     await syncCurrentUserFromSession();
   }
 
@@ -896,11 +1389,7 @@
     }
   };
 
-  initSharedHandlers().then(function () {
-    if (postFeed) {
-      return renderSavedPosts();
-    }
-  }).catch(function (error) {
+  initSharedHandlers().catch(function (error) {
     if (authStatus) {
       setAuthStatus(error && error.message ? error.message : 'Unable to initialize account features.', 'error');
     }
