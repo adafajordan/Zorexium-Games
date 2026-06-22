@@ -351,7 +351,10 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return false;
     const parsedDate = new Date(birthday + 'T00:00:00Z');
     if (Number.isNaN(parsedDate.getTime())) return false;
-    return parsedDate.toISOString().slice(0, 10) === birthday;
+    if (parsedDate.toISOString().slice(0, 10) !== birthday) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return parsedDate.getTime() <= today.getTime();
   }
 
   function formatCompactSize(bytes) {
@@ -1331,7 +1334,7 @@
           currentUser = updatedUser;
           await refreshUserFacingViews();
         } catch (error) {
-          window.alert(error && error.message ? error.message : 'Unable to save your profile right now.');
+          window.alert(error && error.message ? error.message : 'Unable to save your profile right now. Please try again later.');
         }
       };
     }
