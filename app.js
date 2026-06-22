@@ -430,6 +430,14 @@
     return String(name || '').trim().split(/\s+/)[0] || '';
   }
 
+  function getSafeMailtoHref(email) {
+    const value = String(email || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      return '#';
+    }
+    return 'mailto:' + encodeURIComponent(value);
+  }
+
   function formatHandle(username) {
     return '@' + String(username || '').trim().replace(/\s+/g, '').toLowerCase();
   }
@@ -1230,6 +1238,7 @@
       month: 'long',
       year: 'numeric'
     })) : 'Create an account to get started';
+    const displayFirstName = currentUser ? (String(currentUser.name || '').trim().split(/\s+/)[0] || currentUser.username) : '';
     document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
 
     profileAvatar.style.background = getAvatarColor(currentUser ? currentUser.username : 'guest');
@@ -1238,10 +1247,10 @@
     profileName.textContent = currentUser ? currentUser.name : 'Your account';
     profileHandle.textContent = currentUser ? formatHandle(currentUser.username) : '@yourprofile';
     profileBio.textContent = currentUser
-      ? ('Welcome back, ' + (firstName(currentUser.name) || currentUser.username) + '. Your posts, replies, articles, and media all update here automatically.')
+      ? ('Welcome back, ' + displayFirstName + '. Your posts, replies, articles, and media all update here automatically.')
       : 'Sign in to make this dashboard yours and keep your account activity in one place.';
     profileContactLink.textContent = currentUser ? currentUser.email : 'Log in to sync your profile';
-    profileContactLink.href = currentUser ? ('mailto:' + currentUser.email) : '#';
+    profileContactLink.href = currentUser ? getSafeMailtoHref(currentUser.email) : '#';
     profileJoinedDate.textContent = joinedLabel;
     profilePostTotal.textContent = String(userPosts.length);
     profileMediaTotal.textContent = String(mediaCount);
