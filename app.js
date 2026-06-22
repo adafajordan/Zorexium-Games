@@ -33,13 +33,16 @@
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
   const dashboardRoot = document.getElementById('account-dashboard-root');
+  const profileBanner = document.getElementById('profile-banner');
   const profileAvatar = document.getElementById('profile-avatar');
   const profileEditButton = document.getElementById('profile-edit-btn');
   const profileName = document.getElementById('profile-name');
   const profileHandle = document.getElementById('profile-handle');
   const profileBio = document.getElementById('profile-bio');
+  const profileContactItem = document.getElementById('profile-contact-item');
   const profileContactLink = document.getElementById('profile-contact-link');
-  const profileJoinedDate = document.getElementById('profile-joined-date');
+  const profileBirthdayItem = document.getElementById('profile-birthday-item');
+  const profileBirthday = document.getElementById('profile-birthday');
   const profilePostTotal = document.getElementById('profile-post-total');
   const profileMediaTotal = document.getElementById('profile-media-total');
   const profileTabSummary = document.getElementById('profile-tab-summary');
@@ -64,7 +67,8 @@
     replies: [],
     articles: [],
     media: [],
-    likes: []
+    likes: [],
+    marketplace: []
   };
   let mediaViewerState = {
     scale: 1,
@@ -341,6 +345,18 @@
     });
   }
 
+  function isValidBirthdayValue(value) {
+    const birthday = String(value || '').trim();
+    if (!birthday) return true;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return false;
+    const parsedDate = new Date(birthday + 'T00:00:00Z');
+    if (Number.isNaN(parsedDate.getTime())) return false;
+    if (parsedDate.toISOString().slice(0, 10) !== birthday) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return parsedDate.getTime() <= today.getTime();
+  }
+
   function formatCompactSize(bytes) {
     const value = Number(bytes || 0);
     if (value <= 0) return '0 B';
@@ -560,6 +576,8 @@
         return count === 1 ? 'media post' : 'media posts';
       case 'likes':
         return count === 1 ? 'liked post' : 'liked posts';
+      case 'marketplace':
+        return count === 1 ? 'marketplace listing' : 'marketplace listings';
       default:
         return count === 1 ? 'post' : 'posts';
     }
@@ -651,6 +669,11 @@
           title: 'No liked posts yet',
           description: 'Posts you like will appear here once you start building out this part of your dashboard.'
         };
+      case 'marketplace':
+        return {
+          title: 'No marketplace listings yet',
+          description: 'Marketplace listings tied to your account will appear here once they are available.'
+        };
       default:
         return {
           title: 'No posts yet',
@@ -671,7 +694,8 @@
       media: userPosts.filter(function (post) {
         return hasPostMedia(post);
       }),
-      likes: []
+      likes: [],
+      marketplace: []
     };
   }
 
@@ -1222,7 +1246,7 @@
   async function renderAccountDashboard() {
     if (!dashboardRoot) return;
     dashboardRoot.innerHTML = '';
-    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileJoinedDate || !profilePostTotal || !profileMediaTotal) {
+    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileBirthday || !profileBirthdayItem || !profilePostTotal || !profileMediaTotal) {
       return;
     }
 
@@ -1243,28 +1267,74 @@
       }
     });
     const mediaCount = pictureCount + videoCount;
-    const joinedLabel = currentUser ? formatJoinedDate(currentUser.createdAt) : 'Create an account to get started';
     document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
+    const profileThemeColor = getAvatarColor(currentUser ? currentUser.username : 'guest');
+    const bioValue = currentUser ? String(currentUser.profileBio || '').trim() : '';
+    const birthdayValue = currentUser ? String(currentUser.profileBirthday || '').trim() : '';
+    const profileEmailValue = currentUser ? String(currentUser.profileEmail || '').trim().toLowerCase() : '';
+    const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
 
-    profileAvatar.style.background = getAvatarColor(currentUser ? currentUser.username : 'guest');
+    if (profileBanner) {
+      profileBanner.style.background = profileThemeColor;
+    }
+    profileAvatar.style.background = profileThemeColor;
     profileAvatar.textContent = currentUser ? getInitials(currentUser.name, currentUser.username) : 'YA';
     profileAvatar.setAttribute('aria-label', currentUser ? (currentUser.name + ' avatar') : 'Your account avatar');
     profileName.textContent = currentUser ? currentUser.name : 'Your account';
     profileHandle.textContent = currentUser ? formatHandle(currentUser.username) : '@yourprofile';
-    profileBio.textContent = currentUser
-      ? ('Welcome back, ' + (firstName(currentUser.name) || currentUser.username) + '. Your posts, replies, articles, and media all update here automatically.')
-      : 'Sign in to make this dashboard yours and keep your account activity in one place.';
-    profileContactLink.textContent = currentUser ? currentUser.email : 'Log in to sync your profile';
-    profileContactLink.href = currentUser ? getSafeMailtoHref(currentUser.email) : '#';
-    profileJoinedDate.textContent = joinedLabel;
+    profileBio.textContent = bioValue;
+    profileBio.hidden = !bioValue;
+    profileContactLink.textContent = hasProfileEmail ? profileEmailValue : '';
+    profileContactLink.href = hasProfileEmail ? getSafeMailtoHref(profileEmailValue) : '#';
+    profileBirthday.textContent = birthdayValue;
+    if (profileContactItem) {
+      profileContactItem.hidden = !hasProfileEmail;
+    }
+    if (profileBirthdayItem) {
+      profileBirthdayItem.hidden = !birthdayValue;
+    }
     profilePostTotal.textContent = String(userPosts.length);
     profileMediaTotal.textContent = String(mediaCount);
 
     if (profileEditButton) {
       profileEditButton.textContent = currentUser ? 'Edit profile' : 'Log in';
-      profileEditButton.onclick = function () {
+      profileEditButton.onclick = async function () {
         if (!currentUser) {
           openAuthModal('login');
+          return;
+        }
+        const nextBio = window.prompt('Enter your bio (leave blank to clear):', String(currentUser.profileBio || ''));
+        if (nextBio === null) {
+          return;
+        }
+        const nextProfileEmail = window.prompt('Enter your profile email (leave blank to clear):', String(currentUser.profileEmail || ''));
+        if (nextProfileEmail === null) {
+          return;
+        }
+        const normalizedProfileEmail = String(nextProfileEmail || '').trim().toLowerCase();
+        if (normalizedProfileEmail && !EMAIL_ADDRESS_PATTERN.test(normalizedProfileEmail)) {
+          window.alert('Please enter a valid email address for your profile.');
+          return;
+        }
+        const nextBirthday = window.prompt('Enter your birthday (optional, YYYY-MM-DD):', String(currentUser.profileBirthday || ''));
+        if (nextBirthday === null) {
+          return;
+        }
+        if (!isValidBirthdayValue(nextBirthday)) {
+          window.alert('Please enter a valid birthday date in YYYY-MM-DD format.');
+          return;
+        }
+        const updatedUser = Object.assign({}, currentUser, {
+          profileBio: String(nextBio || '').trim(),
+          profileEmail: normalizedProfileEmail,
+          profileBirthday: String(nextBirthday || '').trim()
+        });
+        try {
+          await putRecord(ACCOUNTS_STORE, updatedUser);
+          currentUser = updatedUser;
+          await refreshUserFacingViews();
+        } catch (error) {
+          window.alert(error && error.message ? error.message : 'Unable to save your profile right now. Please try again later.');
         }
       };
     }
@@ -1409,6 +1479,9 @@
             username: username,
             usernameKey: usernameKey,
             email: email,
+            profileBio: '',
+            profileEmail: '',
+            profileBirthday: '',
             passwordSalt: passwordSalt,
             passwordVerifier: passwordVerifier,
             createdAt: Date.now()
