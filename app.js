@@ -543,11 +543,7 @@
       if (mediaWrapper) postContainer.appendChild(mediaWrapper.cloneNode(true));
       const actionsClone = article.querySelector('.post-actions');
       if (actionsClone) {
-        const cloned = actionsClone.cloneNode(true);
-        cloned.querySelectorAll('[data-liked]').forEach(function (btn) {
-          btn.setAttribute('data-liked', 'false');
-        });
-        postContainer.appendChild(cloned);
+        postContainer.appendChild(actionsClone.cloneNode(true));
       }
     }
     if (commentsSection) {
@@ -629,7 +625,7 @@
     }, true);
 
     document.addEventListener('click', function (event) {
-      if (event.target.closest('.post-actions, .post-comment-box, button, a, input, textarea')) {
+      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, [data-action], .post-detail-modal')) {
         return;
       }
       const article = event.target.closest && event.target.closest('[data-post-id]');
@@ -1170,7 +1166,7 @@
     actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
     actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false, 'repost'));
     actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false, 'save'));
-    if (currentUser && user && currentUser.id === (post.isRepost ? null : post.userId) && !post.isRepost && !post.isStaticMirror) {
+    if (currentUser && user && currentUser.id === post.userId && !post.isRepost && !post.isStaticMirror) {
       actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
     }
     article.appendChild(actions);
