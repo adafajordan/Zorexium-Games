@@ -658,6 +658,27 @@
         stroke-linejoin: round;
       }
 
+      /* ── Search bar ──────────────────────────── */
+      .search-bar-wrap {
+        display: none;
+        padding: 8px 16px;
+        background: #fff;
+        border-bottom: 1px solid var(--border);
+      }
+      .search-bar-wrap.open { display: block; }
+      .search-bar-input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+      }
+
+      /* ── Hidden dynamic root ─────────────────── */
+      #account-dashboard-root { display: none; }
+
       @media (max-width: 700px) {
         .profile-banner { height: 130px; }
         .profile-avatar { width: 72px; height: 72px; font-size: 28px; }
@@ -726,8 +747,8 @@
     </header>
 
     <!-- Expandable search bar -->
-    <div id="search-bar" style="display:none; padding:8px 16px; background:#fff; border-bottom:1px solid var(--border);">
-      <input style="width:100%; border:1px solid var(--border); border-radius:6px; padding:8px 10px; background:var(--surface); color:var(--text); font-family:inherit;" type="search" placeholder="search posts, news, people…" aria-label="Search" />
+    <div id="search-bar" class="search-bar-wrap">
+      <input class="search-bar-input" type="search" placeholder="search posts, news, people…" aria-label="Search" />
     </div>
 
     <!-- Auth modal -->
@@ -925,7 +946,7 @@
       </div>
 
       <!-- Dynamic dashboard root (hidden; used by app.js for logged-in user data) -->
-      <div id="account-dashboard-root" style="display:none;" aria-live="polite"></div>
+      <div id="account-dashboard-root" aria-live="polite"></div>
 
     </div>
 
@@ -959,8 +980,8 @@
       }
       function toggleSearchBar() {
         const bar = document.getElementById('search-bar');
-        bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
-        if (bar.style.display !== 'none') bar.querySelector('input').focus();
+        bar.classList.toggle('open');
+        if (bar.classList.contains('open')) bar.querySelector('input').focus();
       }
 
       /* Profile tabs */
