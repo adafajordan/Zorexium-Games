@@ -706,10 +706,10 @@
        display: block;
        background: var(--surface-soft);
        object-fit: contain;
-       height: min(260px, 42vw);
+       height: clamp(180px, 42vw, 260px);
       }
       .post-media-grid.single .post-media-item img {
-        height: min(320px, 55vw);
+        height: clamp(220px, 55vw, 320px);
       }
       .post-video-shell {
         width: min(100%, 560px);

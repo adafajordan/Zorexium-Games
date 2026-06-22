@@ -344,6 +344,10 @@
     return 'Untitled post';
   }
 
+  function isSafeMediaUrl(url) {
+    return /^blob:/i.test(String(url || ''));
+  }
+
   function switchAuthView(view) {
     if (!loginForm || !registerForm) return;
     const isLogin = view === 'login';
@@ -653,7 +657,7 @@
 
   async function requestElementFullscreen(element) {
     if (!element) return;
-    const requestFullscreen = element.requestFullscreen || element.webkitRequestFullscreen || element.msRequestFullscreen;
+    const requestFullscreen = element.requestFullscreen || element.webkitRequestFullscreen;
     if (typeof requestFullscreen === 'function') {
       try {
         const result = requestFullscreen.call(element);
@@ -677,6 +681,10 @@
       src: src,
       label: label || 'Media viewer'
     };
+    if (!isSafeMediaUrl(src)) {
+      setInterfaceStatus('This media could not be opened safely.', 'error');
+      return;
+    }
     mediaViewerContent.innerHTML = '';
     if (mediaViewerTitle) {
       mediaViewerTitle.textContent = mediaViewerState.label;
@@ -735,7 +743,7 @@
         const trigger = document.createElement('button');
         trigger.className = 'post-media-button';
         trigger.type = 'button';
-        trigger.setAttribute('aria-label', 'Open picture in fullscreen viewer');
+        trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
         trigger.addEventListener('click', function () {
           openMediaViewer('image', mediaUrl, image.alt);
         });
@@ -807,7 +815,7 @@
     }
     const mediaIds = [];
     if (Array.isArray(post.imageMediaIds)) {
-      mediaIds.push.apply(mediaIds, post.imageMediaIds);
+      mediaIds.push(...post.imageMediaIds);
     }
     if (post.videoMediaId) {
       mediaIds.push(post.videoMediaId);
@@ -1014,7 +1022,14 @@
     const latestPostTimestamp = userPosts.length ? userPosts[0].createdAt : null;
     const recentPostsMarkup = userPosts.length ? userPosts.slice(0, 5).map(function (post) {
       const summary = summarizePost(post);
-      return '<li class="dashboard-post-item"><div><p class="dashboard-post-copy">' + escapeHtml(summary) + '</p><p class="dashboard-post-meta">' + escapeHtml(formatRelativeTime(post.createdAt)) + '</p></div><button class="dashboard-delete-post" type="button" aria-label="Delete post: ' + escapeHtml(summary) + '" data-delete-post-id="' + escapeHtml(post.id) + '">Delete</button></li>';
+      const escapedSummary = escapeHtml(summary);
+      const deleteLabel = escapeHtml('Delete post: ' + summary);
+      return [
+        '<li class="dashboard-post-item">',
+        '<div><p class="dashboard-post-copy">' + escapedSummary + '</p><p class="dashboard-post-meta">' + escapeHtml(formatRelativeTime(post.createdAt)) + '</p></div>',
+        '<button class="dashboard-delete-post" type="button" aria-label="' + deleteLabel + '" data-delete-post-id="' + escapeHtml(post.id) + '">Delete</button>',
+        '</li>'
+      ].join('');
     }).join('') : '<li class="dashboard-post-item dashboard-post-item-empty"><div><p class="dashboard-post-copy">You have not published any posts yet.</p><p class="dashboard-post-meta">Use the plus button on the home feed to share your first update.</p></div></li>';
 
     dashboardRoot.innerHTML = ''
