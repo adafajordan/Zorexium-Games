@@ -10,6 +10,10 @@
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
+  const MIN_MEDIA_SCALE = 1;
+  const MAX_MEDIA_SCALE = 4;
+  const MEDIA_ZOOM_INCREMENT = 0.25;
+  const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
 
   const authModal = document.getElementById('auth-modal');
@@ -40,6 +44,7 @@
   let currentUser = null;
   let appDbPromise = null;
   let generatedMediaUrls = [];
+  let lastMediaWheelZoomAt = 0;
   let mediaViewerState = {
     scale: 1,
     type: null,
@@ -333,10 +338,10 @@
     }
     const imageCount = Array.isArray(post.imageMediaIds) ? post.imageMediaIds.length : 0;
     if (imageCount && post.videoMediaId) {
-      return imageCount + ' picture' + (imageCount === 1 ? '' : 's') + ' and 1 video';
+      return imageCount + ' image' + (imageCount === 1 ? '' : 's') + ' and 1 video';
     }
     if (imageCount) {
-      return imageCount + ' picture' + (imageCount === 1 ? '' : 's');
+      return imageCount + ' image' + (imageCount === 1 ? '' : 's');
     }
     if (post.videoMediaId) {
       return '1 video upload';
@@ -628,7 +633,7 @@
 
   function setMediaViewerScale(scale) {
     if (!mediaViewerContent) return;
-    const nextScale = Math.min(4, Math.max(1, scale));
+    const nextScale = Math.min(MAX_MEDIA_SCALE, Math.max(MIN_MEDIA_SCALE, scale));
     mediaViewerState.scale = nextScale;
     const mediaElement = mediaViewerContent.querySelector('.media-viewer-media');
     if (!mediaElement || mediaViewerState.type !== 'image') {
@@ -811,7 +816,7 @@
       return;
     }
     if (!currentUser || post.userId !== currentUser.id) {
-      throw new Error('You can only delete your own posts.');
+      throw new Error('You can only delete posts from your own account. Please verify you are logged in as the post owner.');
     }
     const mediaIds = [];
     if (Array.isArray(post.imageMediaIds)) {
@@ -1312,12 +1317,12 @@
     });
     if (mediaViewerZoomInButton) {
       mediaViewerZoomInButton.addEventListener('click', function () {
-        setMediaViewerScale(mediaViewerState.scale + 0.25);
+        setMediaViewerScale(mediaViewerState.scale + MEDIA_ZOOM_INCREMENT);
       });
     }
     if (mediaViewerZoomOutButton) {
       mediaViewerZoomOutButton.addEventListener('click', function () {
-        setMediaViewerScale(mediaViewerState.scale - 0.25);
+        setMediaViewerScale(mediaViewerState.scale - MEDIA_ZOOM_INCREMENT);
       });
     }
     if (mediaViewerFitButton) {
@@ -1339,8 +1344,13 @@
     });
     mediaViewerModal.addEventListener('wheel', function (event) {
       if (mediaViewerState.type !== 'image') return;
+      const now = Date.now();
+      if (now - lastMediaWheelZoomAt < MEDIA_WHEEL_THROTTLE_MS) {
+        return;
+      }
+      lastMediaWheelZoomAt = now;
       event.preventDefault();
-      setMediaViewerScale(mediaViewerState.scale + (event.deltaY < 0 ? 0.2 : -0.2));
+      setMediaViewerScale(mediaViewerState.scale + (event.deltaY < 0 ? MEDIA_ZOOM_INCREMENT : -MEDIA_ZOOM_INCREMENT));
     }, { passive: false });
   }
 

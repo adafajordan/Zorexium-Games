@@ -30,6 +30,12 @@
         --sticky-footer-height: 62px;
         --sticky-footer-padding-x: 6px;
         --post-card-padding: 16px;
+        --post-media-height-min: 180px;
+        --post-media-height-ideal: 42vw;
+        --post-media-height-max: 260px;
+        --post-media-single-height-min: 220px;
+        --post-media-single-height-ideal: 55vw;
+        --post-media-single-height-max: 320px;
       }
       * {
         box-sizing: border-box;
@@ -706,10 +712,10 @@
        display: block;
        background: var(--surface-soft);
        object-fit: contain;
-       height: clamp(180px, 42vw, 260px);
+       height: clamp(var(--post-media-height-min), var(--post-media-height-ideal), var(--post-media-height-max));
       }
       .post-media-grid.single .post-media-item img {
-        height: clamp(220px, 55vw, 320px);
+        height: clamp(var(--post-media-single-height-min), var(--post-media-single-height-ideal), var(--post-media-single-height-max));
       }
       .post-video-shell {
         width: min(100%, 560px);
