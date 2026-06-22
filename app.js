@@ -332,6 +332,14 @@
     });
   }
 
+  function formatJoinedDate(timestamp) {
+    if (!timestamp) return 'Create an account to get started';
+    return 'Joined ' + new Date(timestamp).toLocaleDateString(undefined, {
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
   function formatCompactSize(bytes) {
     const value = Number(bytes || 0);
     if (value <= 0) return '0 B';
@@ -432,10 +440,10 @@
 
   function getSafeMailtoHref(email) {
     const value = String(email || '').trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i.test(value)) {
       return '#';
     }
-    return 'mailto:' + encodeURIComponent(value);
+    return 'mailto:' + value;
   }
 
   function formatHandle(username) {
@@ -654,7 +662,7 @@
     return {
       posts: userPosts.slice(),
       replies: userPosts.filter(function (post) {
-        return /^\s*@[\w.]+/i.test(String(post.text || ''));
+        return /^\s*@[\w]+(?:\.[\w]+)*/i.test(String(post.text || ''));
       }),
       articles: userPosts.filter(function (post) {
         return String(post.text || '').trim().length >= 180;
@@ -1234,10 +1242,7 @@
       }
     });
     const mediaCount = pictureCount + videoCount;
-    const joinedLabel = currentUser ? ('Joined ' + new Date(currentUser.createdAt).toLocaleDateString(undefined, {
-      month: 'long',
-      year: 'numeric'
-    })) : 'Create an account to get started';
+    const joinedLabel = currentUser ? formatJoinedDate(currentUser.createdAt) : 'Create an account to get started';
     const displayFirstName = currentUser ? (String(currentUser.name || '').trim().split(/\s+/)[0] || currentUser.username) : '';
     document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
 
