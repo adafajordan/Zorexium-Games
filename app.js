@@ -702,6 +702,11 @@
         const item = document.createElement('div');
         item.className = 'post-media-item';
 
+        const image = document.createElement('img');
+        image.src = mediaUrl;
+        image.alt = altBase + ' (image ' + (index + 1) + ' of ' + imageIds.length + ')';
+        image.loading = 'lazy';
+
         const trigger = document.createElement('button');
         trigger.className = 'post-media-button';
         trigger.type = 'button';
@@ -710,10 +715,6 @@
           openMediaViewer('image', mediaUrl, image.alt);
         });
 
-        const image = document.createElement('img');
-        image.src = mediaUrl;
-        image.alt = altBase + ' (image ' + (index + 1) + ' of ' + imageIds.length + ')';
-        image.loading = 'lazy';
         trigger.appendChild(image);
         item.appendChild(trigger);
         grid.appendChild(item);
