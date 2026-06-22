@@ -70,6 +70,7 @@
   let appDbPromise = null;
   let generatedMediaUrls = [];
   let lastMediaWheelZoomAt = 0;
+  let profileEditEscapeHandlerAttached = false;
   let activeDashboardTab = 'posts';
   let dashboardTabCollections = {
     posts: [],
@@ -1662,11 +1663,14 @@
         }
       });
     }
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && profileEditModal && profileEditModal.classList.contains('open')) {
-        closeProfileEditModal();
-      }
-    });
+    if (!profileEditEscapeHandlerAttached) {
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && profileEditModal && profileEditModal.classList.contains('open')) {
+          closeProfileEditModal();
+        }
+      });
+      profileEditEscapeHandlerAttached = true;
+    }
     if (profileEditForm) {
       profileEditForm.addEventListener('submit', async function (event) {
         event.preventDefault();
@@ -1687,12 +1691,12 @@
         const updatedUser = Object.assign({}, currentUser, {
           name: nextName,
           profileBio: nextBio,
-          profileFollowers: normalizeProfileMetric(currentUser.profileFollowers),
-          profileFollowing: normalizeProfileMetric(currentUser.profileFollowing)
+          profileFollowers: currentUser.profileFollowers,
+          profileFollowing: currentUser.profileFollowing
         });
         try {
           await putRecord(ACCOUNTS_STORE, updatedUser);
-          currentUser = await getUserById(updatedUser.id) || updatedUser;
+          currentUser = updatedUser;
           setProfileEditStatus('Profile updated.', 'success');
           await refreshUserFacingViews();
           closeProfileEditModal();
