@@ -15,6 +15,7 @@
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
+  const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');
@@ -440,7 +441,7 @@
 
   function getSafeMailtoHref(email) {
     const value = String(email || '').trim();
-    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i.test(value)) {
+    if (!EMAIL_ADDRESS_PATTERN.test(value)) {
       return '#';
     }
     return 'mailto:' + value;
@@ -662,7 +663,7 @@
     return {
       posts: userPosts.slice(),
       replies: userPosts.filter(function (post) {
-        return /^\s*@[\w]+(?:\.[\w]+)*/i.test(String(post.text || ''));
+        return /^\s*@[\w]+/i.test(String(post.text || ''));
       }),
       articles: userPosts.filter(function (post) {
         return String(post.text || '').trim().length >= 180;
@@ -1243,7 +1244,6 @@
     });
     const mediaCount = pictureCount + videoCount;
     const joinedLabel = currentUser ? formatJoinedDate(currentUser.createdAt) : 'Create an account to get started';
-    const displayFirstName = currentUser ? (String(currentUser.name || '').trim().split(/\s+/)[0] || currentUser.username) : '';
     document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
 
     profileAvatar.style.background = getAvatarColor(currentUser ? currentUser.username : 'guest');
@@ -1252,7 +1252,7 @@
     profileName.textContent = currentUser ? currentUser.name : 'Your account';
     profileHandle.textContent = currentUser ? formatHandle(currentUser.username) : '@yourprofile';
     profileBio.textContent = currentUser
-      ? ('Welcome back, ' + displayFirstName + '. Your posts, replies, articles, and media all update here automatically.')
+      ? ('Welcome back, ' + (firstName(currentUser.name) || currentUser.username) + '. Your posts, replies, articles, and media all update here automatically.')
       : 'Sign in to make this dashboard yours and keep your account activity in one place.';
     profileContactLink.textContent = currentUser ? currentUser.email : 'Log in to sync your profile';
     profileContactLink.href = currentUser ? getSafeMailtoHref(currentUser.email) : '#';
