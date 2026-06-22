@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zorexium — @Zorexium</title>
+    <title>Account dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -389,9 +389,25 @@
         gap: 10px;
       }
       .profile-verify-icon {
-        font-size: 20px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         flex-shrink: 0;
-        line-height: 1.3;
+        line-height: 1;
+      }
+      .profile-verify-icon svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       .profile-verify-copy {
         flex: 1;
@@ -480,6 +496,7 @@
         width: 100%;
         border-top: 1px solid var(--border);
       }
+      .profile-tab-panel[hidden] { display: none; }
       .post-card {
         background: none;
         border: none;
@@ -556,6 +573,40 @@
       }
       .post-body a:hover { text-decoration: underline; }
       .post-body .post-hashtag { color: var(--accent); }
+      .post-card-empty {
+        gap: 12px;
+      }
+      .post-empty-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .post-empty-title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .post-empty-description {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-soft);
+      }
+      .post-empty-action {
+        align-self: flex-start;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: none;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .post-empty-action:hover {
+        background: #b01c1c;
+      }
       .post-actions {
         display: flex;
         gap: 20px;
@@ -784,48 +835,42 @@
 
     <!-- Profile page -->
     <div class="profile-page">
-
-      <!-- "See new posts" notification -->
-      <button class="profile-new-posts-bar" type="button" id="see-new-posts-btn">
-        13 posts &middot; See new posts
-      </button>
-
       <!-- Banner -->
       <div class="profile-banner" aria-hidden="true"></div>
 
       <!-- Identity -->
       <div class="profile-identity">
         <div class="profile-avatar-wrap">
-          <div class="profile-avatar" aria-label="Zorexium avatar">Z</div>
+          <div class="profile-avatar" id="profile-avatar" aria-label="Your account avatar">YA</div>
           <button class="profile-edit-btn" type="button" id="profile-edit-btn">Edit profile</button>
         </div>
 
-        <h1 class="profile-name">Zorexium</h1>
-        <p class="profile-handle">@Zorexium</p>
-        <p class="profile-bio">Be good different</p>
+        <h1 class="profile-name" id="profile-name">Your account</h1>
+        <p class="profile-handle" id="profile-handle">@yourprofile</p>
+        <p class="profile-bio" id="profile-bio">Sign in to make this dashboard yours and keep your account activity in one place.</p>
 
         <div class="profile-meta">
           <span>
-            <svg aria-hidden="true" focusable="false" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-2px;" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-            <a href="https://zorexium.io" target="_blank" rel="noopener">zorexium.io</a>
+            <svg aria-hidden="true" focusable="false" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-2px;" viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            <a id="profile-contact-link" href="#">Log in to sync your profile</a>
           </span>
           <span>
             <svg aria-hidden="true" focusable="false" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-2px;" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Joined May 2026
+            <span id="profile-joined-date">Create an account to get started</span>
           </span>
         </div>
 
         <div class="profile-stats">
-          <span><strong>1</strong> Following</span>
-          <span><strong>3</strong> Followers</span>
+          <span><strong id="profile-post-total">0</strong> Posts</span>
+          <span><strong id="profile-media-total">0</strong> Media items</span>
         </div>
 
         <!-- Not verified upsell -->
         <div class="profile-verify-box">
-          <span class="profile-verify-icon">🔵</span>
+          <span class="profile-verify-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 7"/></svg></span>
           <div class="profile-verify-copy">
-            <p class="profile-verify-title">You aren't verified yet</p>
-            <p class="profile-verify-desc">Get verified for boosted replies, analytics, ad-free browsing, and more. Upgrade your profile now.</p>
+            <p class="profile-verify-title">Verification is still available for your account</p>
+            <p class="profile-verify-desc">Upgrade to unlock boosted replies, analytics, ad-free browsing, and more across your profile.</p>
             <a class="profile-verify-cta" href="#">Get verified</a>
           </div>
         </div>
@@ -833,116 +878,21 @@
 
       <!-- Tabs -->
       <div class="profile-tabs" role="tablist">
-        <button class="profile-tab active" type="button" role="tab" data-tab="posts">Posts</button>
-        <button class="profile-tab" type="button" role="tab" data-tab="replies">Replies</button>
-        <button class="profile-tab" type="button" role="tab" data-tab="highlights">Highlights</button>
-        <button class="profile-tab" type="button" role="tab" data-tab="articles">Articles</button>
-        <button class="profile-tab" type="button" role="tab" data-tab="media">Media</button>
-        <button class="profile-tab" type="button" role="tab" data-tab="likes">Likes</button>
+        <button class="profile-tab active" type="button" role="tab" aria-selected="true" aria-controls="profile-tab-panel-posts" data-tab="posts">Post</button>
+        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-replies" data-tab="replies">Replies</button>
+        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-articles" data-tab="articles">Articles</button>
+        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-media" data-tab="media">Media</button>
+        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-likes" data-tab="likes">Like</button>
       </div>
 
       <!-- Post feed -->
+      <div class="profile-post-count" id="profile-tab-summary"><strong>0</strong> posts</div>
       <div class="post-feed" id="profile-post-feed">
-
-        <!-- Pinned post -->
-        <article class="post-card">
-          <div class="post-pinned-label">
-            <svg aria-hidden="true" focusable="false" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;" viewBox="0 0 24 24"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
-            Pinned
-          </div>
-          <div class="post-header">
-            <div class="post-avatar">Z</div>
-            <div class="post-meta">
-              <span class="post-username">Zorexium</span>
-              <span class="post-handle">@Zorexium &middot; May 26</span>
-            </div>
-          </div>
-          <div class="post-body">
-            We're happy to announce that Zorexium has officially launched! Zorexium is an open-source peer-to-peer marketplace users can submit an array of hardware components from CPUs all the way to External Storage. List your hardware on Zorexium today.<br /><br />
-            <a href="https://zorexium.io" target="_blank" rel="noopener">https://zorexium.io</a>
-          </div>
-          <div class="post-actions">
-            <button class="post-action" type="button" data-action="like" data-count="0"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
-          </div>
-        </article>
-
-        <!-- You reposted -->
-        <article class="post-card">
-          <div class="post-repost-label">
-            <svg aria-hidden="true" focusable="false" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-            You reposted
-          </div>
-          <div class="post-header">
-            <div class="post-avatar">Z</div>
-            <div class="post-meta">
-              <span class="post-username">Zorexium</span>
-              <span class="post-handle">@Zorexium &middot; Jun 18</span>
-            </div>
-          </div>
-          <div class="post-body">
-            Someone just dropped a Dualshock on the marketplace for a steal.<br /><br />
-            💵 Price: $15 📦 Condition: Like New<br />
-            Skip the massive eBay fees and grab it before someone else does. 👇 <a href="https://zorexium.io/product-detail.html?id=6a344965abb66089bf926943" target="_blank" rel="noopener">https://zorexium.io/product-detail.html?id=6a344965abb66089bf926943</a><br /><br />
-            <span class="post-hashtag">#Zorexium</span> <span class="post-hashtag">#TechDeal</span>
-          </div>
-          <div class="post-actions">
-            <button class="post-action" type="button" data-action="like" data-count="0"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
-          </div>
-        </article>
-
-        <!-- Original post -->
-        <article class="post-card">
-          <div class="post-header">
-            <div class="post-avatar">Z</div>
-            <div class="post-meta">
-              <span class="post-username">Zorexium</span>
-              <span class="post-handle">@Zorexium &middot; Jun 18</span>
-            </div>
-          </div>
-          <div class="post-body">
-            Someone just dropped a Dualshock on the marketplace for a steal.<br /><br />
-            💵 Price: $15 📦 Condition: Like New<br />
-            Skip the massive eBay fees and grab it before someone else does. 👇 <a href="https://zorexium.io/product-detail.html?id=6a344965abb66089bf926943" target="_blank" rel="noopener">https://zorexium.io/product-detail.html?id=6a344965abb66089bf926943</a><br /><br />
-            <span class="post-hashtag">#Zorexium</span> <span class="post-hashtag">#TechDeal</span>
-          </div>
-          <div class="post-actions">
-            <button class="post-action" type="button" data-action="like" data-count="0"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
-          </div>
-        </article>
-
-        <!-- You reposted #2 -->
-        <article class="post-card">
-          <div class="post-repost-label">
-            <svg aria-hidden="true" focusable="false" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-            You reposted
-          </div>
-          <div class="post-header">
-            <div class="post-avatar">Z</div>
-            <div class="post-meta">
-              <span class="post-username">Zorexium</span>
-              <span class="post-handle">@Zorexium &middot; Jun 18</span>
-            </div>
-          </div>
-          <div class="post-body">
-            New hardware alert. 🛠️
-          </div>
-          <div class="post-actions">
-            <button class="post-action" type="button" data-action="like" data-count="0"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 0</button>
-            <button class="post-action" type="button"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
-          </div>
-        </article>
-
+        <div class="profile-tab-panel" id="profile-tab-panel-posts" data-panel="posts"></div>
+        <div class="profile-tab-panel" id="profile-tab-panel-replies" data-panel="replies" hidden></div>
+        <div class="profile-tab-panel" id="profile-tab-panel-articles" data-panel="articles" hidden></div>
+        <div class="profile-tab-panel" id="profile-tab-panel-media" data-panel="media" hidden></div>
+        <div class="profile-tab-panel" id="profile-tab-panel-likes" data-panel="likes" hidden></div>
       </div>
 
       <!-- Dynamic dashboard root (hidden; used by app.js for logged-in user data) -->
@@ -983,39 +933,6 @@
         bar.classList.toggle('open');
         if (bar.classList.contains('open')) bar.querySelector('input').focus();
       }
-
-      /* Profile tabs */
-      document.querySelectorAll('.profile-tab').forEach(function(tab) {
-        tab.addEventListener('click', function() {
-          document.querySelectorAll('.profile-tab').forEach(function(t) {
-            t.classList.remove('active');
-            t.setAttribute('aria-selected', 'false');
-          });
-          tab.classList.add('active');
-          tab.setAttribute('aria-selected', 'true');
-        });
-      });
-
-      /* "See new posts" dismissal */
-      document.getElementById('see-new-posts-btn').addEventListener('click', function() {
-        this.style.display = 'none';
-      });
-
-      /* Like button toggle */
-      document.querySelectorAll('.post-action[data-action="like"]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          const liked = btn.getAttribute('data-liked') === 'true';
-          const count = parseInt(btn.getAttribute('data-count') || '0', 10);
-          const next = liked ? Math.max(0, count - 1) : count + 1;
-          btn.setAttribute('data-liked', String(!liked));
-          btn.setAttribute('data-count', String(next));
-          var countNode = btn.lastChild;
-          if (countNode && countNode.nodeType === Node.TEXT_NODE) {
-            countNode.nodeValue = ' ' + next;
-          }
-          btn.style.color = liked ? '' : 'var(--accent)';
-        });
-      });
 
       /* Auth modal */
       const authModal = document.getElementById('auth-modal');

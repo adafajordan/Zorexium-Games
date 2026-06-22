@@ -15,6 +15,7 @@
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
+  const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');
@@ -32,6 +33,18 @@
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
   const dashboardRoot = document.getElementById('account-dashboard-root');
+  const profileAvatar = document.getElementById('profile-avatar');
+  const profileEditButton = document.getElementById('profile-edit-btn');
+  const profileName = document.getElementById('profile-name');
+  const profileHandle = document.getElementById('profile-handle');
+  const profileBio = document.getElementById('profile-bio');
+  const profileContactLink = document.getElementById('profile-contact-link');
+  const profileJoinedDate = document.getElementById('profile-joined-date');
+  const profilePostTotal = document.getElementById('profile-post-total');
+  const profileMediaTotal = document.getElementById('profile-media-total');
+  const profileTabSummary = document.getElementById('profile-tab-summary');
+  const profileTabButtons = Array.from(document.querySelectorAll('.profile-tab'));
+  const profileTabPanels = Array.from(document.querySelectorAll('.profile-tab-panel'));
   const mediaViewerModal = document.getElementById('media-viewer-modal');
   const mediaViewerContent = document.getElementById('media-viewer-content');
   const mediaViewerTitle = document.getElementById('media-viewer-title');
@@ -45,6 +58,14 @@
   let appDbPromise = null;
   let generatedMediaUrls = [];
   let lastMediaWheelZoomAt = 0;
+  let activeDashboardTab = 'posts';
+  let dashboardTabCollections = {
+    posts: [],
+    replies: [],
+    articles: [],
+    media: [],
+    likes: []
+  };
   let mediaViewerState = {
     scale: 1,
     type: null,
@@ -312,6 +333,14 @@
     });
   }
 
+  function formatJoinedDate(timestamp) {
+    if (!timestamp) return 'Create an account to get started';
+    return 'Joined ' + new Date(timestamp).toLocaleDateString(undefined, {
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
   function formatCompactSize(bytes) {
     const value = Number(bytes || 0);
     if (value <= 0) return '0 B';
@@ -408,6 +437,14 @@
 
   function firstName(name) {
     return String(name || '').trim().split(/\s+/)[0] || '';
+  }
+
+  function getSafeMailtoHref(email) {
+    const value = String(email || '').trim();
+    if (!EMAIL_ADDRESS_PATTERN.test(value)) {
+      return '#';
+    }
+    return 'mailto:' + value;
   }
 
   function formatHandle(username) {
@@ -509,17 +546,219 @@
     });
   }
 
+  function hasPostMedia(post) {
+    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId);
+  }
+
+  function getDashboardTabSummaryLabel(tabName, count) {
+    switch (tabName) {
+      case 'replies':
+        return count === 1 ? 'reply' : 'replies';
+      case 'articles':
+        return count === 1 ? 'article' : 'articles';
+      case 'media':
+        return count === 1 ? 'media post' : 'media posts';
+      case 'likes':
+        return count === 1 ? 'liked post' : 'liked posts';
+      default:
+        return count === 1 ? 'post' : 'posts';
+    }
+  }
+
+  function updateDashboardTabSummary() {
+    if (!profileTabSummary) return;
+    const items = dashboardTabCollections[activeDashboardTab] || [];
+    profileTabSummary.textContent = '';
+    const count = document.createElement('strong');
+    count.textContent = String(items.length);
+    profileTabSummary.appendChild(count);
+    profileTabSummary.appendChild(document.createTextNode(' ' + getDashboardTabSummaryLabel(activeDashboardTab, items.length)));
+  }
+
+  function setDashboardTab(tabName) {
+    const nextTab = dashboardTabCollections[tabName] ? tabName : 'posts';
+    activeDashboardTab = nextTab;
+    profileTabButtons.forEach(function (button) {
+      const selected = button.getAttribute('data-tab') === nextTab;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+    profileTabPanels.forEach(function (panel) {
+      panel.hidden = panel.getAttribute('data-panel') !== nextTab;
+    });
+    updateDashboardTabSummary();
+  }
+
+  function createDashboardEmptyCard(title, description, actionLabel) {
+    const article = document.createElement('article');
+    article.className = 'post-card post-card-empty';
+
+    const copy = document.createElement('div');
+    copy.className = 'post-empty-copy';
+
+    const heading = document.createElement('p');
+    heading.className = 'post-empty-title';
+    heading.textContent = title;
+    copy.appendChild(heading);
+
+    const body = document.createElement('p');
+    body.className = 'post-empty-description';
+    body.textContent = description;
+    copy.appendChild(body);
+
+    article.appendChild(copy);
+
+    if (actionLabel) {
+      const action = document.createElement('button');
+      action.className = 'post-empty-action';
+      action.type = 'button';
+      action.textContent = actionLabel;
+      action.addEventListener('click', function () {
+        openAuthModal('login');
+      });
+      article.appendChild(action);
+    }
+
+    return article;
+  }
+
+  function getDashboardEmptyState(tabName, isAuthenticated) {
+    if (!isAuthenticated) {
+      return {
+        title: 'Log in to load your dashboard',
+        description: 'Sign in or create an account to populate this tab with your profile activity and account content.',
+        actionLabel: 'Log in'
+      };
+    }
+    switch (tabName) {
+      case 'replies':
+        return {
+          title: 'No replies yet',
+          description: 'Reply-style posts that start with a handle will appear here.'
+        };
+      case 'articles':
+        return {
+          title: 'No articles yet',
+          description: 'Longer updates you publish will be grouped here automatically.'
+        };
+      case 'media':
+        return {
+          title: 'No media yet',
+          description: 'Photos and videos from your posts will show up here.'
+        };
+      case 'likes':
+        return {
+          title: 'No liked posts yet',
+          description: 'Posts you like will appear here once you start building out this part of your dashboard.'
+        };
+      default:
+        return {
+          title: 'No posts yet',
+          description: 'Your posts will appear here as soon as you share your first update.'
+        };
+    }
+  }
+
+  function buildDashboardTabCollections(userPosts) {
+    return {
+      posts: userPosts.slice(),
+      replies: userPosts.filter(function (post) {
+        return /^\s*@[\w]+/i.test(String(post.text || ''));
+      }),
+      articles: userPosts.filter(function (post) {
+        return String(post.text || '').trim().length >= 180;
+      }),
+      media: userPosts.filter(function (post) {
+        return hasPostMedia(post);
+      }),
+      likes: []
+    };
+  }
+
+  async function buildDashboardPostCard(post, user) {
+    const article = document.createElement('article');
+    article.className = 'post-card';
+
+    const header = document.createElement('div');
+    header.className = 'post-header';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'post-avatar';
+    avatar.style.background = getAvatarColor(user.username);
+    avatar.textContent = getInitials(user.name, user.username);
+    header.appendChild(avatar);
+
+    const meta = document.createElement('div');
+    meta.className = 'post-meta';
+
+    const username = document.createElement('span');
+    username.className = 'post-username';
+    username.textContent = user.name;
+    meta.appendChild(username);
+
+    const handle = document.createElement('span');
+    handle.className = 'post-handle';
+    handle.textContent = formatHandle(user.username) + ' · ' + formatRelativeTime(post.createdAt);
+    meta.appendChild(handle);
+
+    header.appendChild(meta);
+    article.appendChild(header);
+
+    if (post.text) {
+      const body = document.createElement('div');
+      body.className = 'post-body';
+      body.textContent = post.text;
+      article.appendChild(body);
+    }
+
+    const mediaFragment = await buildMediaFragment(post);
+    if (mediaFragment.childNodes.length) {
+      article.appendChild(mediaFragment);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'post-actions';
+    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true));
+    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false));
+    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
+    actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
+    if (currentUser && currentUser.id === post.userId) {
+      actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
+    }
+    article.appendChild(actions);
+
+    return article;
+  }
+
+  async function renderDashboardTabs(userPosts, user) {
+    dashboardTabCollections = buildDashboardTabCollections(userPosts);
+    for (let index = 0; index < profileTabPanels.length; index += 1) {
+      const panel = profileTabPanels[index];
+      const tabName = panel.getAttribute('data-panel') || 'posts';
+      panel.innerHTML = '';
+      const items = dashboardTabCollections[tabName] || [];
+      if (!items.length) {
+        const emptyState = getDashboardEmptyState(tabName, Boolean(user));
+        panel.appendChild(createDashboardEmptyCard(emptyState.title, emptyState.description, emptyState.actionLabel));
+        continue;
+      }
+      for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
+        panel.appendChild(await buildDashboardPostCard(items[itemIndex], user));
+      }
+    }
+    setDashboardTab(activeDashboardTab);
+    syncDashboardTriggers();
+  }
+
   async function refreshUserFacingViews() {
     updateAuthControls();
     syncDashboardTriggers();
-    const jobs = [];
-    if (postFeed) {
-      jobs.push(renderSavedPosts());
+    if (postFeed && !isDashboardPage()) {
+      await renderSavedPosts();
     }
     if (dashboardRoot) {
-      jobs.push(renderAccountDashboard());
+      await renderAccountDashboard();
     }
-    await Promise.all(jobs);
   }
 
   async function syncCurrentUserFromSession() {
@@ -982,102 +1221,60 @@
 
   async function renderAccountDashboard() {
     if (!dashboardRoot) return;
-    if (!currentUser) {
-      dashboardRoot.innerHTML = '<section class="dashboard-panel dashboard-empty-state"><h1>Account dashboard</h1><p>Log in to view your profile, activity, uploads, and saved account details.</p><div class="dashboard-empty-actions"><button id="dashboard-login-action" type="button">Log in</button><button id="dashboard-register-action" type="button">Create account</button></div></section>';
-      const loginAction = document.getElementById('dashboard-login-action');
-      const registerAction = document.getElementById('dashboard-register-action');
-      if (loginAction) {
-        loginAction.addEventListener('click', function () {
-          openAuthModal('login');
-        });
-      }
-      if (registerAction) {
-        registerAction.addEventListener('click', function () {
-          openAuthModal('register');
-        });
-      }
+    dashboardRoot.innerHTML = '';
+    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileJoinedDate || !profilePostTotal || !profileMediaTotal) {
       return;
     }
 
-    const [posts, mediaRecords] = await Promise.all([readPosts(), getAllRecords(MEDIA_STORE)]);
-    const userPosts = posts.filter(function (post) {
+    clearGeneratedMediaUrls();
+    const posts = await readPosts();
+    const userPosts = currentUser ? posts.filter(function (post) {
       return post.userId === currentUser.id;
     }).sort(function (left, right) {
       return right.createdAt - left.createdAt;
-    });
-    const mediaMap = new Map(mediaRecords.map(function (record) {
-      return [record.id, record];
-    }));
+    }) : [];
     let pictureCount = 0;
     let videoCount = 0;
-    let storageBytes = 0;
     userPosts.forEach(function (post) {
       const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
       pictureCount += imageIds.length;
-      imageIds.forEach(function (id) {
-        const mediaRecord = mediaMap.get(id);
-        storageBytes += Number(mediaRecord && mediaRecord.size ? mediaRecord.size : 0);
-      });
       if (post.videoMediaId) {
         videoCount += 1;
-        const mediaRecord = mediaMap.get(post.videoMediaId);
-        storageBytes += Number(mediaRecord && mediaRecord.size ? mediaRecord.size : 0);
       }
     });
-    const latestPostTimestamp = userPosts.length ? userPosts[0].createdAt : null;
-    const recentPostsMarkup = userPosts.length ? userPosts.slice(0, 5).map(function (post) {
-      const summary = summarizePost(post);
-      const escapedSummary = escapeHtml(summary);
-      const deleteLabel = escapeHtml('Delete post: ' + summary);
-      return [
-        '<li class="dashboard-post-item">',
-        '<div><p class="dashboard-post-copy">' + escapedSummary + '</p><p class="dashboard-post-meta">' + escapeHtml(formatRelativeTime(post.createdAt)) + '</p></div>',
-        '<button class="dashboard-delete-post" type="button" aria-label="' + deleteLabel + '" data-delete-post-id="' + escapeHtml(post.id) + '">Delete</button>',
-        '</li>'
-      ].join('');
-    }).join('') : '<li class="dashboard-post-item dashboard-post-item-empty"><div><p class="dashboard-post-copy">You have not published any posts yet.</p><p class="dashboard-post-meta">Use the plus button on the home feed to share your first update.</p></div></li>';
+    const mediaCount = pictureCount + videoCount;
+    const joinedLabel = currentUser ? formatJoinedDate(currentUser.createdAt) : 'Create an account to get started';
+    document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
 
-    dashboardRoot.innerHTML = ''
-      + '<section class="dashboard-panel dashboard-hero">'
-      + '<div class="dashboard-avatar" style="background:' + escapeHtml(getAvatarColor(currentUser.username)) + ';">' + escapeHtml(getInitials(currentUser.name, currentUser.username)) + '</div>'
-      + '<div class="dashboard-hero-copy"><p class="dashboard-eyebrow">Signed in account</p><h1>' + escapeHtml(currentUser.name) + '</h1><p class="dashboard-handle">' + escapeHtml(formatHandle(currentUser.username)) + '</p><p class="dashboard-email">' + escapeHtml(currentUser.email) + '</p></div>'
-      + '<div class="dashboard-hero-meta"><div><span class="dashboard-meta-label">Member since</span><strong>' + escapeHtml(formatLongDate(currentUser.createdAt)) + '</strong></div><div><span class="dashboard-meta-label">Latest post</span><strong>' + escapeHtml(latestPostTimestamp ? formatLongDate(latestPostTimestamp) : 'No posts yet') + '</strong></div></div>'
-      + '</section>'
-      + '<section class="dashboard-stats">'
-      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Posts</span><strong>' + userPosts.length + '</strong></article>'
-      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Pictures</span><strong>' + pictureCount + '</strong></article>'
-      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Videos</span><strong>' + videoCount + '</strong></article>'
-      + '<article class="dashboard-stat-card"><span class="dashboard-stat-label">Media storage</span><strong>' + escapeHtml(formatCompactSize(storageBytes)) + '</strong></article>'
-      + '</section>'
-      + '<section class="dashboard-grid">'
-      + '<article class="dashboard-panel"><h2>Account details</h2><dl class="dashboard-details"><div><dt>Name</dt><dd>' + escapeHtml(currentUser.name) + '</dd></div><div><dt>Username</dt><dd>' + escapeHtml(currentUser.username) + '</dd></div><div><dt>Email</dt><dd>' + escapeHtml(currentUser.email) + '</dd></div><div><dt>Session</dt><dd>' + escapeHtml(document.body.getAttribute('data-authenticated') === 'true' ? 'Active in this browser' : 'Signed out') + '</dd></div></dl></article>'
-      + '<article class="dashboard-panel"><h2>Quick actions</h2><div class="dashboard-actions"><a class="dashboard-link-button" href="index.html">Open home feed</a><a class="dashboard-link-button" href="newsroom.html">Visit newsroom</a><button id="dashboard-logout-action" type="button">Log out</button></div></article>'
-      + '</section>'
-      + '<section class="dashboard-panel"><h2>Recent posts</h2><ul class="dashboard-post-list">' + recentPostsMarkup + '</ul></section>';
+    profileAvatar.style.background = getAvatarColor(currentUser ? currentUser.username : 'guest');
+    profileAvatar.textContent = currentUser ? getInitials(currentUser.name, currentUser.username) : 'YA';
+    profileAvatar.setAttribute('aria-label', currentUser ? (currentUser.name + ' avatar') : 'Your account avatar');
+    profileName.textContent = currentUser ? currentUser.name : 'Your account';
+    profileHandle.textContent = currentUser ? formatHandle(currentUser.username) : '@yourprofile';
+    profileBio.textContent = currentUser
+      ? ('Welcome back, ' + (firstName(currentUser.name) || currentUser.username) + '. Your posts, replies, articles, and media all update here automatically.')
+      : 'Sign in to make this dashboard yours and keep your account activity in one place.';
+    profileContactLink.textContent = currentUser ? currentUser.email : 'Log in to sync your profile';
+    profileContactLink.href = currentUser ? getSafeMailtoHref(currentUser.email) : '#';
+    profileJoinedDate.textContent = joinedLabel;
+    profilePostTotal.textContent = String(userPosts.length);
+    profileMediaTotal.textContent = String(mediaCount);
 
-    Array.from(dashboardRoot.querySelectorAll('.dashboard-delete-post')).forEach(function (button) {
-      button.addEventListener('click', async function () {
-        const postId = button.getAttribute('data-delete-post-id');
-        if (!postId) return;
-        if (!window.confirm('Delete this post? This cannot be undone.')) {
-          return;
+    if (profileEditButton) {
+      profileEditButton.textContent = currentUser ? 'Edit profile' : 'Log in';
+      profileEditButton.onclick = function () {
+        if (!currentUser) {
+          openAuthModal('login');
         }
-        button.disabled = true;
-        try {
-          await deletePost(postId);
-        } catch (error) {
-          button.disabled = false;
-        }
-      });
-    });
-
-    const logoutAction = document.getElementById('dashboard-logout-action');
-    if (logoutAction) {
-      logoutAction.addEventListener('click', function () {
-        logout().catch(function () {
-        });
-      });
+      };
     }
+
+    profileContactLink.onclick = currentUser ? null : function (event) {
+      event.preventDefault();
+      openAuthModal('login');
+    };
+
+    await renderDashboardTabs(userPosts, currentUser);
   }
 
   function navigateToDashboard() {
@@ -1362,9 +1559,18 @@
     });
   }
 
+  function attachDashboardProfileHandlers() {
+    profileTabButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        setDashboardTab(button.getAttribute('data-tab') || 'posts');
+      });
+    });
+  }
+
   async function initSharedHandlers() {
     injectNameField();
     initAuthTabs();
+    attachDashboardProfileHandlers();
     attachAuthSubmitHandlers();
     attachNewPostHandler();
     attachAuthGuards();
