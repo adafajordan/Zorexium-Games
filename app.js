@@ -15,6 +15,7 @@
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
+  const MIN_PROFILE_NAME_LENGTH = 2;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
 
@@ -133,6 +134,7 @@
     }
     const savedBio = String(currentUser.profileBio || '').trim();
     profileEditNameInput.value = String(currentUser.name || '').trim();
+    profileEditNameInput.minLength = MIN_PROFILE_NAME_LENGTH;
     profileEditBioInput.value = savedBio === LEGACY_PROFILE_BIO_MESSAGE ? '' : savedBio;
     setProfileEditStatus('');
     profileEditModal.classList.add('open');
@@ -1681,7 +1683,7 @@
         }
         const nextName = String(profileEditNameInput ? profileEditNameInput.value : '').trim();
         const nextBio = String(profileEditBioInput ? profileEditBioInput.value : '').trim();
-        if (nextName.length < 2) {
+        if (nextName.length < MIN_PROFILE_NAME_LENGTH) {
           setProfileEditStatus('Please enter your full name.', 'error');
           if (profileEditNameInput) {
             profileEditNameInput.focus();
@@ -1690,9 +1692,7 @@
         }
         const updatedUser = Object.assign({}, currentUser, {
           name: nextName,
-          profileBio: nextBio,
-          profileFollowers: currentUser.profileFollowers,
-          profileFollowing: currentUser.profileFollowing
+          profileBio: nextBio
         });
         try {
           await putRecord(ACCOUNTS_STORE, updatedUser);
