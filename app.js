@@ -15,7 +15,7 @@
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const PASSWORD_ITERATIONS = 600000;
-  const MIN_PROFILE_NAME_LENGTH = 2;
+  const PROFILE_NAME_MIN_LENGTH = 2;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
 
@@ -139,15 +139,15 @@
     }
     const savedBio = normalizeProfileBio(currentUser.profileBio);
     profileEditNameInput.value = String(currentUser.name || '').trim();
-    profileEditNameInput.minLength = MIN_PROFILE_NAME_LENGTH;
+    profileEditNameInput.minLength = PROFILE_NAME_MIN_LENGTH;
     profileEditBioInput.value = savedBio;
     setProfileEditStatus('');
     profileEditModal.classList.add('open');
     profileEditModal.setAttribute('aria-hidden', 'false');
-    setTimeout(function () {
+    window.requestAnimationFrame(function () {
       profileEditNameInput.focus();
       profileEditNameInput.select();
-    }, 0);
+    });
   }
 
   function closeProfileEditModal() {
@@ -1687,8 +1687,8 @@
         }
         const nextName = String(profileEditNameInput ? profileEditNameInput.value : '').trim();
         const nextBio = String(profileEditBioInput ? profileEditBioInput.value : '').trim();
-        if (nextName.length < MIN_PROFILE_NAME_LENGTH) {
-          setProfileEditStatus('Name must be at least 2 characters long.', 'error');
+        if (nextName.length < PROFILE_NAME_MIN_LENGTH) {
+          setProfileEditStatus('Name must be at least ' + PROFILE_NAME_MIN_LENGTH + ' characters long.', 'error');
           if (profileEditNameInput) {
             profileEditNameInput.focus();
           }
@@ -1707,7 +1707,7 @@
         } catch (error) {
           setProfileEditStatus(error && error.message ? error.message : 'Unable to save your profile right now. Please try again later.', 'error');
         }
-      }, true);
+      });
     }
   }
 
