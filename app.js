@@ -1,10 +1,11 @@
 (function () {
   const DB_NAME = 'zorexium-app-db';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   const ACCOUNTS_STORE = 'accounts';
   const POSTS_STORE = 'posts';
   const SESSION_STORE = 'session';
   const MEDIA_STORE = 'media';
+  const COMMENTS_STORE = 'comments';
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const MAX_IMAGE_COUNT = 10;
@@ -79,6 +80,7 @@
     articles: [],
     media: [],
     likes: [],
+    saved: [],
     marketplace: []
   };
   let mediaViewerState = {
@@ -236,6 +238,9 @@
         if (!database.objectStoreNames.contains(MEDIA_STORE)) {
           database.createObjectStore(MEDIA_STORE, { keyPath: 'id' });
         }
+        if (!database.objectStoreNames.contains(COMMENTS_STORE)) {
+          database.createObjectStore(COMMENTS_STORE, { keyPath: 'id' });
+        }
       };
       request.onsuccess = function () {
         resolve(request.result);
@@ -307,6 +312,343 @@
 
   async function readPosts() {
     return getAllRecords(POSTS_STORE);
+  }
+
+  async function readComments(postId) {
+    const all = await getAllRecords(COMMENTS_STORE);
+    return all.filter(function (c) { return c.postId === postId; }).sort(function (a, b) { return a.createdAt - b.createdAt; });
+  }
+
+  async function addComment(postId, text) {
+    if (!currentUser) return;
+    await putRecord(COMMENTS_STORE, {
+      id: generateId('comment'),
+      postId: postId,
+      userId: currentUser.id,
+      text: String(text).trim(),
+      createdAt: Date.now()
+    });
+  }
+
+  async function toggleSavePost(postId, staticInfo) {
+    if (!currentUser) { openAuthModal('login'); return false; }
+    const saved = currentUser.savedPostIds ? currentUser.savedPostIds.slice() : [];
+    const isSaved = saved.indexOf(postId) !== -1;
+    if (isSaved) {
+      saved.splice(saved.indexOf(postId), 1);
+    } else {
+      if (staticInfo && !(await getRecord(POSTS_STORE, postId))) {
+        await putRecord(POSTS_STORE, {
+          id: postId,
+          userId: '_static',
+          text: staticInfo.text || '',
+          imageMediaIds: [],
+          videoMediaId: null,
+          isStaticMirror: true,
+          staticAuthorName: staticInfo.authorName || '',
+          staticAuthorHandle: staticInfo.authorHandle || '',
+          staticAvatarBg: staticInfo.avatarBg || '#888',
+          createdAt: Date.now()
+        });
+      }
+      saved.push(postId);
+    }
+    const updated = Object.assign({}, currentUser, { savedPostIds: saved });
+    await putRecord(ACCOUNTS_STORE, updated);
+    currentUser = updated;
+    if (isDashboardPage()) {
+      await renderAccountDashboard();
+    }
+    return !isSaved;
+  }
+
+  async function toggleRepostPost(postId, originalPost) {
+    if (!currentUser) { openAuthModal('login'); return false; }
+    const reposted = currentUser.repostedPostIds ? currentUser.repostedPostIds.slice() : [];
+    const isReposted = reposted.indexOf(postId) !== -1;
+    if (isReposted) {
+      const allPosts = await readPosts();
+      const repostRecord = allPosts.filter(function (p) {
+        return p.isRepost && p.repostOfPostId === postId && p.userId === currentUser.id;
+      })[0];
+      if (repostRecord) {
+        await deleteRecord(POSTS_STORE, repostRecord.id);
+      }
+      reposted.splice(reposted.indexOf(postId), 1);
+    } else {
+      await putRecord(POSTS_STORE, {
+        id: generateId('post'),
+        userId: currentUser.id,
+        text: originalPost.text || '',
+        imageMediaIds: originalPost.imageMediaIds || [],
+        videoMediaId: originalPost.videoMediaId || null,
+        isRepost: true,
+        repostOfPostId: postId,
+        repostAuthorName: originalPost.authorName || originalPost.staticAuthorName || '',
+        repostAuthorHandle: originalPost.authorHandle || originalPost.staticAuthorHandle || '',
+        repostAvatarBg: originalPost.avatarBg || originalPost.staticAvatarBg || '#888',
+        createdAt: Date.now()
+      });
+      reposted.push(postId);
+    }
+    const updated = Object.assign({}, currentUser, { repostedPostIds: reposted });
+    await putRecord(ACCOUNTS_STORE, updated);
+    currentUser = updated;
+    await refreshUserFacingViews();
+    return !isReposted;
+  }
+
+  function extractPostInfoFromArticle(article) {
+    const usernameEl = article.querySelector('.post-username');
+    const handleEl = article.querySelector('.post-handle');
+    const bodyEl = article.querySelector('.post-body');
+    const avatarEl = article.querySelector('.post-avatar');
+    var handle = handleEl ? handleEl.textContent.trim() : '';
+    handle = handle.split('\xB7')[0].trim().replace(/^@/, '');
+    return {
+      authorName: usernameEl ? usernameEl.textContent.trim() : '',
+      authorHandle: handle,
+      avatarBg: avatarEl ? (avatarEl.style.background || '#888') : '#888',
+      text: bodyEl ? bodyEl.textContent.trim() : '',
+      imageMediaIds: [],
+      videoMediaId: null
+    };
+  }
+
+  function syncPostActionStates() {
+    if (!currentUser) return;
+    const savedIds = currentUser.savedPostIds || [];
+    const repostedIds = currentUser.repostedPostIds || [];
+    document.querySelectorAll('[data-post-id]').forEach(function (article) {
+      const postId = article.dataset.postId;
+      if (!postId) return;
+      const saveBtn = article.querySelector('.post-action[data-action="save"]');
+      if (saveBtn) {
+        const isSaved = savedIds.indexOf(postId) !== -1;
+        saveBtn.style.color = isSaved ? 'var(--accent)' : '';
+        saveBtn.setAttribute('data-saved', String(isSaved));
+      }
+      const repostBtn = article.querySelector('.post-action[data-action="repost"]');
+      if (repostBtn) {
+        const isReposted = repostedIds.indexOf(postId) !== -1;
+        repostBtn.style.color = isReposted ? 'var(--accent)' : '';
+        repostBtn.setAttribute('data-reposted', String(isReposted));
+      }
+    });
+  }
+
+  function createCommentBox(postId) {
+    const box = document.createElement('div');
+    box.className = 'post-comment-box';
+    box.setAttribute('data-comment-box', postId);
+
+    const list = document.createElement('div');
+    list.className = 'post-comment-list';
+    box.appendChild(list);
+
+    const form = document.createElement('div');
+    form.className = 'post-comment-form';
+
+    const input = document.createElement('textarea');
+    input.className = 'post-comment-input';
+    input.placeholder = 'Write a comment…';
+    input.rows = 2;
+
+    const submit = document.createElement('button');
+    submit.className = 'post-comment-submit';
+    submit.type = 'button';
+    submit.textContent = 'Reply';
+
+    form.appendChild(input);
+    form.appendChild(submit);
+    box.appendChild(form);
+
+    function loadComments() {
+      readComments(postId).then(function (comments) {
+        return readAccounts().then(function (accounts) {
+          return { comments: comments, accounts: accounts };
+        });
+      }).then(function (data) {
+        list.innerHTML = '';
+        const accountMap = new Map(data.accounts.map(function (a) { return [a.id, a]; }));
+        data.comments.forEach(function (comment) {
+          var user = accountMap.get(comment.userId);
+          var item = document.createElement('div');
+          item.className = 'post-comment-item';
+          var avatar = document.createElement('div');
+          avatar.className = 'post-comment-avatar';
+          avatar.style.background = user ? getAvatarColor(user.username) : '#888';
+          avatar.textContent = user ? getInitials(user.name, user.username) : '?';
+          var content = document.createElement('div');
+          content.className = 'post-comment-content';
+          var author = document.createElement('span');
+          author.className = 'post-comment-author';
+          author.textContent = user ? user.name : 'Unknown';
+          var text = document.createElement('p');
+          text.className = 'post-comment-text';
+          text.textContent = comment.text;
+          content.appendChild(author);
+          content.appendChild(text);
+          item.appendChild(avatar);
+          item.appendChild(content);
+          list.appendChild(item);
+        });
+      }).catch(function () {});
+    }
+
+    loadComments();
+
+    submit.addEventListener('click', async function () {
+      if (!currentUser) { openAuthModal('login'); return; }
+      var text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      await addComment(postId, text);
+      loadComments();
+      var parentArticle = box.closest('[data-post-id]');
+      if (parentArticle) {
+        var commentBtns = parentArticle.querySelectorAll('.post-action[data-action="comment"]');
+        commentBtns.forEach(function (btn) {
+          var countNode = btn.querySelector('.post-action-count');
+          if (countNode) {
+            var current = parseInt(countNode.textContent.replace(/[^\d]/g, ''), 10) || 0;
+            countNode.textContent = String(current + 1);
+          }
+        });
+      }
+    });
+
+    return box;
+  }
+
+  function openPostDetailModal(postId, article) {
+    const modal = document.getElementById('post-detail-modal');
+    if (!modal) return;
+    const postContainer = modal.querySelector('.post-detail-post');
+    const commentsSection = modal.querySelector('.post-detail-comments-section');
+    if (postContainer) {
+      postContainer.innerHTML = '';
+      postContainer.setAttribute('data-post-id', postId);
+      const repostBanner = article.querySelector('.post-repost-banner');
+      const header = article.querySelector('.post-header');
+      const body = article.querySelector('.post-body');
+      const imagePlaceholder = article.querySelector('.post-image-placeholder');
+      const mediaGrid = article.querySelector('.post-media-grid');
+      const mediaWrapper = article.querySelector('.post-media-wrapper');
+      if (repostBanner) postContainer.appendChild(repostBanner.cloneNode(true));
+      if (header) postContainer.appendChild(header.cloneNode(true));
+      if (body) postContainer.appendChild(body.cloneNode(true));
+      if (imagePlaceholder) postContainer.appendChild(imagePlaceholder.cloneNode(true));
+      if (mediaGrid) postContainer.appendChild(mediaGrid.cloneNode(true));
+      if (mediaWrapper) postContainer.appendChild(mediaWrapper.cloneNode(true));
+      const actionsClone = article.querySelector('.post-actions');
+      if (actionsClone) {
+        const cloned = actionsClone.cloneNode(true);
+        cloned.querySelectorAll('[data-liked]').forEach(function (btn) {
+          btn.setAttribute('data-liked', 'false');
+        });
+        postContainer.appendChild(cloned);
+      }
+    }
+    if (commentsSection) {
+      commentsSection.innerHTML = '';
+      const heading = document.createElement('p');
+      heading.className = 'post-detail-comments-header';
+      heading.textContent = 'Comments';
+      commentsSection.appendChild(heading);
+      commentsSection.appendChild(createCommentBox(postId));
+    }
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    modal.scrollTop = 0;
+  }
+
+  function closePostDetailModal() {
+    const modal = document.getElementById('post-detail-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function attachPostInteractionHandlers() {
+    document.addEventListener('click', async function (event) {
+      const button = event.target.closest && event.target.closest('.post-action[data-action="comment"], .post-action[data-action="repost"], .post-action[data-action="save"]');
+      if (!button) return;
+      const article = button.closest('[data-post-id]');
+      if (!article) return;
+      const postId = article.dataset.postId;
+      const action = button.dataset.action;
+      event.stopPropagation();
+
+      if (action === 'comment') {
+        if (!currentUser) { openAuthModal('login'); return; }
+        const existing = article.querySelector('.post-comment-box[data-comment-box="' + postId + '"]');
+        if (existing) {
+          existing.remove();
+        } else {
+          const box = createCommentBox(postId);
+          article.appendChild(box);
+          const inp = box.querySelector('.post-comment-input');
+          if (inp) inp.focus();
+        }
+        return;
+      }
+
+      if (action === 'repost') {
+        if (!currentUser) { openAuthModal('login'); return; }
+        button.disabled = true;
+        const originalPost = extractPostInfoFromArticle(article);
+        originalPost.imageMediaIds = [];
+        originalPost.videoMediaId = null;
+        try {
+          const isNowReposted = await toggleRepostPost(postId, originalPost);
+          button.style.color = isNowReposted ? 'var(--accent)' : '';
+          button.setAttribute('data-reposted', String(isNowReposted));
+          const countNode = button.querySelector('.post-action-count');
+          if (countNode) {
+            const cur = parseInt(countNode.textContent.replace(/[^\d]/g, ''), 10) || 0;
+            countNode.textContent = String(isNowReposted ? cur + 1 : Math.max(0, cur - 1));
+          }
+        } catch (err) {}
+        button.disabled = false;
+        return;
+      }
+
+      if (action === 'save') {
+        if (!currentUser) { openAuthModal('login'); return; }
+        button.disabled = true;
+        const staticInfo = extractPostInfoFromArticle(article);
+        try {
+          const isNowSaved = await toggleSavePost(postId, staticInfo);
+          button.style.color = isNowSaved ? 'var(--accent)' : '';
+          button.setAttribute('data-saved', String(isNowSaved));
+        } catch (err) {}
+        button.disabled = false;
+        return;
+      }
+    }, true);
+
+    document.addEventListener('click', function (event) {
+      if (event.target.closest('.post-actions, .post-comment-box, button, a, input, textarea')) {
+        return;
+      }
+      const article = event.target.closest && event.target.closest('[data-post-id]');
+      if (!article) return;
+      openPostDetailModal(article.dataset.postId, article);
+    });
+
+    const detailModal = document.getElementById('post-detail-modal');
+    if (detailModal) {
+      const closeBtn = detailModal.querySelector('.post-detail-back');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closePostDetailModal);
+      }
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && detailModal.classList.contains('open')) {
+          closePostDetailModal();
+        }
+      });
+    }
   }
 
   async function getPersistentSession() {
@@ -631,6 +973,8 @@
         return count === 1 ? 'media post' : 'media posts';
       case 'likes':
         return count === 1 ? 'liked post' : 'liked posts';
+      case 'saved':
+        return count === 1 ? 'saved post' : 'saved posts';
       case 'marketplace':
         return count === 1 ? 'marketplace listing' : 'marketplace listings';
       default:
@@ -724,6 +1068,11 @@
           title: 'No liked posts yet',
           description: 'Posts you like will appear here once you start building out this part of your dashboard.'
         };
+      case 'saved':
+        return {
+          title: 'No saved posts yet',
+          description: 'Tap the bookmark icon on any post to save it here for later.'
+        };
       case 'marketplace':
         return {
           title: 'No marketplace listings yet',
@@ -737,7 +1086,12 @@
     }
   }
 
-  function buildDashboardTabCollections(userPosts) {
+  function buildDashboardTabCollections(userPosts, allPosts, user) {
+    const savedIds = user && user.savedPostIds ? user.savedPostIds : [];
+    const allPostsList = Array.isArray(allPosts) ? allPosts : [];
+    const savedPosts = allPostsList.filter(function (post) {
+      return savedIds.indexOf(post.id) !== -1;
+    });
     return {
       posts: userPosts.slice(),
       replies: userPosts.filter(function (post) {
@@ -750,6 +1104,7 @@
         return hasPostMedia(post);
       }),
       likes: [],
+      saved: savedPosts,
       marketplace: []
     };
   }
@@ -757,14 +1112,28 @@
   async function buildDashboardPostCard(post, user) {
     const article = document.createElement('article');
     article.className = 'post-card';
+    if (post.id) {
+      article.setAttribute('data-post-id', post.id);
+    }
+
+    if (post.isRepost) {
+      const banner = document.createElement('div');
+      banner.className = 'post-repost-banner';
+      banner.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span>' + escapeHtml((user ? user.name : '') || '') + ' reposted</span>';
+      article.appendChild(banner);
+    }
 
     const header = document.createElement('div');
     header.className = 'post-header';
 
+    const authorName = post.isRepost ? (post.repostAuthorName || 'Unknown') : (user ? user.name : (post.staticAuthorName || 'Unknown'));
+    const authorHandle = post.isRepost ? (post.repostAuthorHandle || 'user') : (user ? user.username : (post.staticAuthorHandle || 'user'));
+    const avatarBg = post.isRepost ? (post.repostAvatarBg || getAvatarColor(authorHandle)) : (post.staticAvatarBg || (user ? getAvatarColor(user.username) : '#888'));
+
     const avatar = document.createElement('div');
     avatar.className = 'post-avatar';
-    avatar.style.background = getAvatarColor(user.username);
-    avatar.textContent = getInitials(user.name, user.username);
+    avatar.style.background = avatarBg;
+    avatar.textContent = getInitials(authorName, authorHandle);
     header.appendChild(avatar);
 
     const meta = document.createElement('div');
@@ -772,12 +1141,12 @@
 
     const username = document.createElement('span');
     username.className = 'post-username';
-    username.textContent = user.name;
+    username.textContent = authorName;
     meta.appendChild(username);
 
     const handle = document.createElement('span');
     handle.className = 'post-handle';
-    handle.textContent = formatHandle(user.username) + ' · ' + formatRelativeTime(post.createdAt);
+    handle.textContent = formatHandle(authorHandle) + ' · ' + formatRelativeTime(post.createdAt);
     meta.appendChild(handle);
 
     header.appendChild(meta);
@@ -797,11 +1166,11 @@
 
     const actions = document.createElement('div');
     actions.className = 'post-actions';
-    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true));
-    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false));
-    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
-    actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
-    if (currentUser && currentUser.id === post.userId) {
+    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true, 'like'));
+    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
+    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false, 'repost'));
+    actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false, 'save'));
+    if (currentUser && user && currentUser.id === (post.isRepost ? null : post.userId) && !post.isRepost && !post.isStaticMirror) {
       actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
     }
     article.appendChild(actions);
@@ -809,8 +1178,8 @@
     return article;
   }
 
-  async function renderDashboardTabs(userPosts, user) {
-    dashboardTabCollections = buildDashboardTabCollections(userPosts);
+  async function renderDashboardTabs(userPosts, allPosts, user) {
+    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user);
     for (let index = 0; index < profileTabPanels.length; index += 1) {
       const panel = profileTabPanels[index];
       const tabName = panel.getAttribute('data-panel') || 'posts';
@@ -822,16 +1191,25 @@
         continue;
       }
       for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
-        panel.appendChild(await buildDashboardPostCard(items[itemIndex], user));
+        const post = items[itemIndex];
+        let postUser = user;
+        if (post.isStaticMirror) {
+          postUser = { id: '_static', name: post.staticAuthorName || 'Unknown', username: post.staticAuthorHandle || 'user' };
+        } else if (post.isRepost) {
+          postUser = user;
+        }
+        panel.appendChild(await buildDashboardPostCard(post, postUser));
       }
     }
     setDashboardTab(activeDashboardTab);
     syncDashboardTriggers();
+    syncPostActionStates();
   }
 
   async function refreshUserFacingViews() {
     updateAuthControls();
     syncDashboardTriggers();
+    syncPostActionStates();
     if (postFeed && !isDashboardPage()) {
       await renderSavedPosts();
     }
@@ -898,7 +1276,7 @@
     });
   }
 
-  function createActionButton(count, svgMarkup, isLike) {
+  function createActionButton(count, svgMarkup, isLike, actionType) {
     const button = document.createElement('button');
     button.className = 'post-action';
     button.type = 'button';
@@ -906,6 +1284,8 @@
       button.setAttribute('data-action', 'like');
       button.setAttribute('data-count', String(count || 0));
       addLikeBehavior(button);
+    } else if (actionType) {
+      button.setAttribute('data-action', actionType);
     }
 
     const icon = document.createElement('span');
@@ -1169,21 +1549,33 @@
     for (let index = orderedPosts.length - 1; index >= 0; index -= 1) {
       const post = orderedPosts[index];
       const user = accountMap.get(post.userId);
-      if (!user) {
+      if (!user && !post.isRepost && !post.isStaticMirror) {
         continue;
       }
 
       const article = document.createElement('article');
       article.className = 'post-card';
       article.setAttribute('data-user-generated', 'true');
+      article.setAttribute('data-post-id', post.id);
+
+      if (post.isRepost && user) {
+        const banner = document.createElement('div');
+        banner.className = 'post-repost-banner';
+        banner.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span>' + escapeHtml(user.name) + ' reposted</span>';
+        article.appendChild(banner);
+      }
 
       const header = document.createElement('div');
       header.className = 'post-header';
 
+      const authorName = post.isRepost ? (post.repostAuthorName || 'Unknown') : (user ? user.name : (post.staticAuthorName || 'Unknown'));
+      const authorHandle = post.isRepost ? (post.repostAuthorHandle || 'user') : (user ? user.username : (post.staticAuthorHandle || 'user'));
+      const avatarBg = post.isRepost ? (post.repostAvatarBg || getAvatarColor(authorHandle)) : (post.staticAvatarBg || (user ? getAvatarColor(user.username) : '#888'));
+
       const avatar = document.createElement('div');
       avatar.className = 'post-avatar';
-      avatar.style.background = getAvatarColor(user.username);
-      avatar.textContent = getInitials(user.name, user.username);
+      avatar.style.background = avatarBg;
+      avatar.textContent = getInitials(authorName, authorHandle);
       header.appendChild(avatar);
 
       const meta = document.createElement('div');
@@ -1191,11 +1583,11 @@
 
       const username = document.createElement('span');
       username.className = 'post-username';
-      username.textContent = user.name;
+      username.textContent = authorName;
 
       const handle = document.createElement('span');
       handle.className = 'post-handle';
-      handle.textContent = formatHandle(user.username) + ' · ' + formatRelativeTime(post.createdAt);
+      handle.textContent = formatHandle(authorHandle) + ' · ' + formatRelativeTime(post.createdAt);
 
       meta.appendChild(username);
       meta.appendChild(handle);
@@ -1216,11 +1608,11 @@
 
       const actions = document.createElement('div');
       actions.className = 'post-actions';
-      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true));
-      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false));
-      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false));
-      actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false));
-      if (currentUser && currentUser.id === post.userId) {
+      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true, 'like'));
+      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
+      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false, 'repost'));
+      actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false, 'save'));
+      if (currentUser && user && currentUser.id === post.userId && !post.isRepost && !post.isStaticMirror) {
         actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
       }
       article.appendChild(actions);
@@ -1228,6 +1620,7 @@
       postFeed.insertBefore(article, anchor);
     }
     syncDashboardTriggers();
+    syncPostActionStates();
   }
 
   function getSelectedImages() {
@@ -1360,7 +1753,7 @@
       openAuthModal('login');
     };
 
-    await renderDashboardTabs(userPosts, currentUser);
+    await renderDashboardTabs(userPosts, posts, currentUser);
   }
 
   function navigateToDashboard() {
@@ -1720,6 +2113,7 @@
     attachAuthGuards();
     attachDashboardTriggerHandlers();
     attachMediaViewerHandlers();
+    attachPostInteractionHandlers();
     await syncCurrentUserFromSession();
   }
 
