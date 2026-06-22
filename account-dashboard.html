@@ -262,6 +262,36 @@
       .auth-status { min-height: 18px; margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
       .auth-status.error { color: #cc2222; }
       .auth-status.success { color: #2a7a2a; }
+      .profile-edit-modal .auth-panel { max-width: 420px; }
+      .profile-edit-modal .auth-field textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        background: #ffffff;
+        color: var(--text);
+        font-family: inherit;
+        min-height: 96px;
+        resize: vertical;
+      }
+      .profile-edit-modal .auth-field textarea:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
+      .profile-edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 4px;
+      }
+      .profile-edit-cancel {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 9px 14px;
+        cursor: pointer;
+      }
+      .profile-edit-cancel:hover { background: var(--surface-soft); }
 
       /* ── Profile page ───────────────────────── */
       .profile-page {
@@ -835,6 +865,27 @@
         <p id="auth-status" class="auth-status" aria-live="polite"></p>
       </div>
     </div>
+    <div id="profile-edit-modal" class="auth-modal profile-edit-modal" aria-hidden="true">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
+        <button id="profile-edit-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="profile-edit-title" class="auth-title">Edit profile</h2>
+        <form id="profile-edit-form" class="auth-form active" novalidate>
+          <div class="auth-field">
+            <label for="profile-edit-name">Name</label>
+            <input id="profile-edit-name" name="profile-name" type="text" autocomplete="name" maxlength="80" required />
+          </div>
+          <div class="auth-field">
+            <label for="profile-edit-bio">Bio</label>
+            <textarea id="profile-edit-bio" name="profile-bio" maxlength="280" placeholder="Tell people a little about yourself"></textarea>
+          </div>
+          <div class="profile-edit-actions">
+            <button id="profile-edit-cancel" class="profile-edit-cancel" type="button">Cancel</button>
+            <button class="auth-submit" type="submit">Save changes</button>
+          </div>
+          <p id="profile-edit-status" class="auth-status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
 
     <!-- Profile page -->
     <div class="profile-page">
@@ -865,7 +916,8 @@
 
         <div class="profile-stats">
           <span><strong id="profile-post-total">0</strong> Posts</span>
-          <span><strong id="profile-media-total">0</strong> Media items</span>
+          <span><strong id="profile-followers-total">0</strong> Followers</span>
+          <span><strong id="profile-following-total">0</strong> Following</span>
         </div>
 
         <!-- Not verified upsell -->
