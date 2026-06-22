@@ -348,7 +348,10 @@
   function isValidBirthdayValue(value) {
     const birthday = String(value || '').trim();
     if (!birthday) return true;
-    return !Number.isNaN(Date.parse(birthday));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return false;
+    const parsedDate = new Date(birthday + 'T00:00:00Z');
+    if (Number.isNaN(parsedDate.getTime())) return false;
+    return parsedDate.toISOString().slice(0, 10) === birthday;
   }
 
   function formatCompactSize(bytes) {
@@ -1240,7 +1243,7 @@
   async function renderAccountDashboard() {
     if (!dashboardRoot) return;
     dashboardRoot.innerHTML = '';
-    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileBirthday || !profilePostTotal || !profileMediaTotal) {
+    if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileBirthday || !profileBirthdayItem || !profilePostTotal || !profileMediaTotal) {
       return;
     }
 
@@ -1310,12 +1313,12 @@
           window.alert('Please enter a valid email address for your profile.');
           return;
         }
-        const nextBirthday = window.prompt('Enter your birthday (optional):', String(currentUser.profileBirthday || ''));
+        const nextBirthday = window.prompt('Enter your birthday (optional, YYYY-MM-DD):', String(currentUser.profileBirthday || ''));
         if (nextBirthday === null) {
           return;
         }
         if (!isValidBirthdayValue(nextBirthday)) {
-          window.alert('Please enter a valid birthday date.');
+          window.alert('Please enter a valid birthday date in YYYY-MM-DD format.');
           return;
         }
         const updatedUser = Object.assign({}, currentUser, {
