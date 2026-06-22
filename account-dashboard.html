@@ -23,6 +23,12 @@
         --accent: #cc2222;
         --sticky-footer-height: 62px;
         --sticky-footer-padding-x: 6px;
+        --post-media-height-min: 180px;
+        --post-media-height-ideal: 42vw;
+        --post-media-height-max: 260px;
+        --post-media-single-height-min: 220px;
+        --post-media-single-height-ideal: 55vw;
+        --post-media-single-height-max: 320px;
       }
       * { box-sizing: border-box; }
       body {
@@ -509,6 +515,7 @@
         font-weight: 700;
         border-bottom-color: var(--accent);
         background: none;
+        padding-bottom: 2px;
       }
 
       /* ── Post counter ───────────────────────── */
@@ -777,6 +784,122 @@
         stroke-linejoin: round;
       }
 
+      /* ── Post media ──────────────────────────── */
+      .post-media-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: min(100%, 560px);
+      }
+      .post-media-grid.single {
+        grid-template-columns: 1fr;
+        width: min(100%, 420px);
+      }
+      .post-media-item {
+        min-width: 0;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface-soft);
+        overflow: hidden;
+      }
+      .post-media-button {
+        width: 100%;
+        display: block;
+        border: none;
+        padding: 0;
+        background: none;
+        border-radius: 0;
+        cursor: pointer;
+      }
+      .post-media-button:hover { background: none; }
+      .post-media-item img {
+        width: 100%;
+        display: block;
+        background: #000;
+        object-fit: cover;
+        height: clamp(var(--post-media-height-min), var(--post-media-height-ideal), var(--post-media-height-max));
+      }
+      .post-media-grid.single .post-media-item img {
+        height: clamp(var(--post-media-single-height-min), var(--post-media-single-height-ideal), var(--post-media-single-height-max));
+      }
+      .post-video-shell {
+        width: min(100%, 560px);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .post-video {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #000;
+        object-fit: cover;
+        max-height: 320px;
+      }
+      .post-action-danger { color: #d15454; }
+      .post-action-danger:hover { color: #ff7c7c; }
+
+      /* ── Comment actions ─────────────────────── */
+      .post-comment-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+      }
+      .post-comment-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 11px;
+        color: var(--text-soft);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 2px 0;
+        transition: color 0.15s;
+      }
+      .post-comment-action:hover { color: var(--accent); }
+      .post-comment-action svg {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .post-comment-reply-box {
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .post-comment-reply-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 12px;
+        resize: none;
+        font-family: inherit;
+        outline: none;
+      }
+      .post-comment-reply-input:focus { border-color: var(--accent); }
+      .post-comment-reply-submit {
+        align-self: flex-end;
+        padding: 4px 12px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
       /* ── Post detail modal ───────────────────── */
       .post-detail-modal {
         display: none;
@@ -877,7 +1000,8 @@
         padding: 0;
         text-decoration: none;
       }
-      .sticky-footer-item:hover { color: var(--accent); }
+      .sticky-footer-item:hover,
+      .sticky-footer-item.active { color: var(--accent); }
       .sticky-footer-item svg {
         width: 24px;
         height: 24px;
@@ -925,6 +1049,43 @@
         color: var(--text);
         font-family: inherit;
       }
+
+      /* ── New post modal ──────────────────────── */
+      .new-post-textarea {
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        background: #ffffff;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .new-post-textarea:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
+      .new-post-media-panel { display: grid; gap: 12px; margin-top: 12px; }
+      .new-post-file-input {
+        width: 100%;
+        border: 1px dashed var(--border-strong);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+      }
+      .new-post-file-input::file-selector-button {
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-right: 10px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .new-post-helper { font-size: 12px; color: var(--text-soft); line-height: 1.5; }
 
       /* ── Hidden dynamic root ─────────────────── */
       #account-dashboard-root { display: none; }
@@ -1102,9 +1263,6 @@
         <button class="profile-tab active" type="button" role="tab" aria-selected="true" aria-controls="profile-tab-panel-posts" data-tab="posts">Post</button>
         <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-replies" data-tab="replies">Replies</button>
         <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-articles" data-tab="articles">Articles</button>
-        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-media" data-tab="media">Media</button>
-        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-likes" data-tab="likes">Likes</button>
-        <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-saved" data-tab="saved">Saved</button>
         <button class="profile-tab" type="button" role="tab" aria-selected="false" aria-controls="profile-tab-panel-marketplace" data-tab="marketplace">Marketplace</button>
       </div>
 
@@ -1133,7 +1291,7 @@
       <button id="sticky-footer-search" class="sticky-footer-item" type="button" aria-label="Search">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
-      <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
+      <button id="sticky-footer-profile" class="sticky-footer-item active" type="button" aria-label="Profile">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
       <button id="sticky-footer-notifications" class="sticky-footer-item" type="button" aria-label="Notifications">
@@ -1157,6 +1315,35 @@
           <div id="post-detail-post" class="post-detail-post"></div>
           <div id="post-detail-comments" class="post-detail-comments-section"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- New post modal -->
+    <div id="new-post-modal" class="auth-modal" aria-hidden="true">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
+        <button id="new-post-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="new-post-title" class="auth-title">Create Post</h2>
+        <form id="new-post-form" novalidate>
+          <div class="auth-field">
+            <label for="new-post-text">Post</label>
+            <textarea id="new-post-text" class="new-post-textarea" placeholder="What's on your mind?" rows="4" aria-describedby="new-post-requirements"></textarea>
+            <div id="new-post-requirements" class="new-post-helper">Add text, photos, or a video to publish your post. Text is optional when media is attached.</div>
+          </div>
+          <div class="new-post-media-panel">
+            <div class="auth-field">
+              <label for="new-post-images">Pictures</label>
+              <input id="new-post-images" class="new-post-file-input" type="file" accept="image/*" multiple aria-describedby="new-post-images-helper" />
+              <div id="new-post-images-helper" class="new-post-helper">Upload up to 10 pictures with a maximum size of 10MB each.</div>
+            </div>
+            <div class="auth-field">
+              <label for="new-post-video">Video</label>
+              <input id="new-post-video" class="new-post-file-input" type="file" accept="video/*" aria-describedby="new-post-video-helper" />
+              <div id="new-post-video-helper" class="new-post-helper">Upload one video up to 10 minutes long.</div>
+            </div>
+          </div>
+          <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
+        </form>
+        <p id="new-post-status" class="auth-status" aria-live="polite"></p>
       </div>
     </div>
 
@@ -1210,8 +1397,32 @@
         authModal.setAttribute('aria-hidden', 'true');
         setAuthStatus('');
       }
+      function openNewPost() {
+        const modal = document.getElementById('new-post-modal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        const ta = document.getElementById('new-post-text');
+        if (ta) ta.focus();
+      }
+      window.openNewPost = openNewPost;
+      function closeNewPostModal() {
+        const modal = document.getElementById('new-post-modal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        const form = document.getElementById('new-post-form');
+        if (form) form.reset();
+        const status = document.getElementById('new-post-status');
+        if (status) status.textContent = '';
+      }
+      window.closeNewPostModal = closeNewPostModal;
       function handlePlusClick() {
-        if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
+        if (document.body.getAttribute('data-authenticated') !== 'true') {
+          openAuthModal('login');
+        } else {
+          openNewPost();
+        }
       }
 
       document.getElementById('auth-close').addEventListener('click', closeAuthModal);
@@ -1232,8 +1443,16 @@
         if (document.body.getAttribute('data-authenticated') !== 'true') openAuthModal('login');
       });
       document.getElementById('sticky-footer-search').addEventListener('click', toggleSearchBar);
+      document.getElementById('new-post-close').addEventListener('click', closeNewPostModal);
+      document.getElementById('new-post-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeNewPostModal();
+      });
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && authModal.classList.contains('open')) closeAuthModal();
+        if (e.key === 'Escape') {
+          if (authModal.classList.contains('open')) closeAuthModal();
+          const npm = document.getElementById('new-post-modal');
+          if (npm && npm.classList.contains('open')) closeNewPostModal();
+        }
       });
     </script>
     <script src="app.js"></script>

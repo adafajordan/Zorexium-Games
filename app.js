@@ -442,10 +442,6 @@
     box.className = 'post-comment-box';
     box.setAttribute('data-comment-box', postId);
 
-    const list = document.createElement('div');
-    list.className = 'post-comment-list';
-    box.appendChild(list);
-
     const form = document.createElement('div');
     form.className = 'post-comment-form';
 
@@ -462,6 +458,111 @@
     form.appendChild(input);
     form.appendChild(submit);
     box.appendChild(form);
+
+    const list = document.createElement('div');
+    list.className = 'post-comment-list';
+    box.appendChild(list);
+
+    function buildCommentActions(comment, item) {
+      var actions = document.createElement('div');
+      actions.className = 'post-comment-actions';
+
+      /* Like */
+      var likeBtn = document.createElement('button');
+      likeBtn.className = 'post-comment-action';
+      likeBtn.type = 'button';
+      likeBtn.setAttribute('data-liked', 'false');
+      likeBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> 0';
+      likeBtn.addEventListener('click', function () {
+        var liked = likeBtn.getAttribute('data-liked') === 'true';
+        likeBtn.setAttribute('data-liked', String(!liked));
+        likeBtn.style.color = liked ? '' : 'var(--accent)';
+        var parts = likeBtn.innerHTML.split('</svg> ');
+        var cur = parseInt(parts[1] || '0', 10) || 0;
+        var next = liked ? Math.max(0, cur - 1) : cur + 1;
+        likeBtn.innerHTML = parts[0] + '</svg> ' + next;
+      });
+      actions.appendChild(likeBtn);
+
+      /* Reply */
+      var replyBtn = document.createElement('button');
+      replyBtn.className = 'post-comment-action';
+      replyBtn.type = 'button';
+      replyBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Reply';
+      replyBtn.addEventListener('click', function () {
+        if (!currentUser) { openAuthModal('login'); return; }
+        var existing = item.querySelector('.post-comment-reply-box');
+        if (existing) { existing.remove(); return; }
+        var replyBox = document.createElement('div');
+        replyBox.className = 'post-comment-reply-box';
+        var replyInput = document.createElement('textarea');
+        replyInput.className = 'post-comment-reply-input';
+        replyInput.placeholder = 'Write a reply…';
+        replyInput.rows = 2;
+        var replySubmit = document.createElement('button');
+        replySubmit.className = 'post-comment-reply-submit';
+        replySubmit.type = 'button';
+        replySubmit.textContent = 'Reply';
+        replySubmit.addEventListener('click', async function () {
+          var text = replyInput.value.trim();
+          if (!text) return;
+          replyInput.value = '';
+          await addComment(postId, text);
+          replyBox.remove();
+          loadComments();
+          var parentArticle = box.closest('[data-post-id]');
+          if (parentArticle) {
+            var commentBtns = parentArticle.querySelectorAll('.post-action[data-action="comment"]');
+            commentBtns.forEach(function (btn) {
+              var countNode = btn.querySelector('.post-action-count');
+              if (countNode) {
+                var current = parseInt(countNode.textContent.replace(/[^\d]/g, ''), 10) || 0;
+                countNode.textContent = String(current + 1);
+              }
+            });
+          }
+        });
+        replyBox.appendChild(replyInput);
+        replyBox.appendChild(replySubmit);
+        item.querySelector('.post-comment-content').appendChild(replyBox);
+        replyInput.focus();
+      });
+      actions.appendChild(replyBtn);
+
+      /* Repost */
+      var repostBtn = document.createElement('button');
+      repostBtn.className = 'post-comment-action';
+      repostBtn.type = 'button';
+      repostBtn.setAttribute('data-reposted', 'false');
+      repostBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> 0';
+      repostBtn.addEventListener('click', function () {
+        if (!currentUser) { openAuthModal('login'); return; }
+        var rep = repostBtn.getAttribute('data-reposted') === 'true';
+        repostBtn.setAttribute('data-reposted', String(!rep));
+        repostBtn.style.color = rep ? '' : 'var(--accent)';
+        var parts = repostBtn.innerHTML.split('</svg> ');
+        var cur = parseInt(parts[1] || '0', 10) || 0;
+        var next = rep ? Math.max(0, cur - 1) : cur + 1;
+        repostBtn.innerHTML = parts[0] + '</svg> ' + next;
+      });
+      actions.appendChild(repostBtn);
+
+      /* Save */
+      var saveBtn = document.createElement('button');
+      saveBtn.className = 'post-comment-action';
+      saveBtn.type = 'button';
+      saveBtn.setAttribute('data-saved', 'false');
+      saveBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+      saveBtn.addEventListener('click', function () {
+        if (!currentUser) { openAuthModal('login'); return; }
+        var saved = saveBtn.getAttribute('data-saved') === 'true';
+        saveBtn.setAttribute('data-saved', String(!saved));
+        saveBtn.style.color = saved ? '' : 'var(--accent)';
+      });
+      actions.appendChild(saveBtn);
+
+      return actions;
+    }
 
     function loadComments() {
       readComments(postId).then(function (comments) {
@@ -489,6 +590,7 @@
           text.textContent = comment.text;
           content.appendChild(author);
           content.appendChild(text);
+          content.appendChild(buildCommentActions(comment, item));
           item.appendChild(avatar);
           item.appendChild(content);
           list.appendChild(item);
@@ -535,15 +637,20 @@
       const imagePlaceholder = article.querySelector('.post-image-placeholder');
       const mediaGrid = article.querySelector('.post-media-grid');
       const mediaWrapper = article.querySelector('.post-media-wrapper');
+      const videoShell = article.querySelector('.post-video-shell');
       if (repostBanner) postContainer.appendChild(repostBanner.cloneNode(true));
       if (header) postContainer.appendChild(header.cloneNode(true));
       if (body) postContainer.appendChild(body.cloneNode(true));
       if (imagePlaceholder) postContainer.appendChild(imagePlaceholder.cloneNode(true));
       if (mediaGrid) postContainer.appendChild(mediaGrid.cloneNode(true));
       if (mediaWrapper) postContainer.appendChild(mediaWrapper.cloneNode(true));
+      if (videoShell) postContainer.appendChild(videoShell.cloneNode(true));
       const actionsClone = article.querySelector('.post-actions');
       if (actionsClone) {
-        postContainer.appendChild(actionsClone.cloneNode(true));
+        const clonedActions = actionsClone.cloneNode(true);
+        const likeBtn = clonedActions.querySelector('[data-action="like"]');
+        if (likeBtn) addLikeBehavior(likeBtn);
+        postContainer.appendChild(clonedActions);
       }
     }
     if (commentsSection) {
@@ -1474,29 +1581,6 @@
         video.preload = 'metadata';
         wrapper.appendChild(video);
 
-        const actions = document.createElement('div');
-        actions.className = 'post-media-toolbar';
-
-        const expandButton = document.createElement('button');
-        expandButton.type = 'button';
-        expandButton.className = 'post-media-toolbar-button';
-        expandButton.textContent = 'View larger';
-        expandButton.addEventListener('click', function () {
-          openMediaViewer('video', mediaUrl, altBase + ' (video)');
-        });
-        actions.appendChild(expandButton);
-
-        const fullscreenButton = document.createElement('button');
-        fullscreenButton.type = 'button';
-        fullscreenButton.className = 'post-media-toolbar-button';
-        fullscreenButton.textContent = 'Fullscreen';
-        fullscreenButton.addEventListener('click', function () {
-          requestElementFullscreen(video).catch(function () {
-          });
-        });
-        actions.appendChild(fullscreenButton);
-
-        wrapper.appendChild(actions);
         fragment.appendChild(wrapper);
       }
     }
