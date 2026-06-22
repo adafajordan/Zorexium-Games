@@ -1226,6 +1226,7 @@
       month: 'long',
       year: 'numeric'
     })) : 'Create an account to get started';
+    document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
 
     profileAvatar.style.background = getAvatarColor(currentUser ? currentUser.username : 'guest');
     profileAvatar.textContent = currentUser ? getInitials(currentUser.name, currentUser.username) : 'YA';
