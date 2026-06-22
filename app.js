@@ -105,6 +105,11 @@
     return Math.max(0, Math.floor(numeric));
   }
 
+  function normalizeProfileBio(value) {
+    const bio = String(value || '').trim();
+    return bio === LEGACY_PROFILE_BIO_MESSAGE ? '' : bio;
+  }
+
   function transactionDone(transaction) {
     return new Promise(function (resolve, reject) {
       transaction.oncomplete = function () {
@@ -132,10 +137,10 @@
     if (!profileEditModal || !profileEditForm || !profileEditNameInput || !profileEditBioInput || !currentUser) {
       return;
     }
-    const savedBio = String(currentUser.profileBio || '').trim();
+    const savedBio = normalizeProfileBio(currentUser.profileBio);
     profileEditNameInput.value = String(currentUser.name || '').trim();
     profileEditNameInput.minLength = MIN_PROFILE_NAME_LENGTH;
-    profileEditBioInput.value = savedBio === LEGACY_PROFILE_BIO_MESSAGE ? '' : savedBio;
+    profileEditBioInput.value = savedBio;
     setProfileEditStatus('');
     profileEditModal.classList.add('open');
     profileEditModal.setAttribute('aria-hidden', 'false');
@@ -1309,8 +1314,7 @@
     }) : [];
     document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
     const profileThemeColor = getAvatarColor(currentUser ? currentUser.username : 'guest');
-    const bioValueRaw = currentUser ? String(currentUser.profileBio || '').trim() : '';
-    const bioValue = bioValueRaw === LEGACY_PROFILE_BIO_MESSAGE ? '' : bioValueRaw;
+    const bioValue = currentUser ? normalizeProfileBio(currentUser.profileBio) : '';
     const birthdayValue = currentUser ? String(currentUser.profileBirthday || '').trim() : '';
     const profileEmailValue = currentUser ? String(currentUser.profileEmail || '').trim().toLowerCase() : '';
     const followerCount = normalizeProfileMetric(currentUser ? currentUser.profileFollowers : 0);
@@ -1684,7 +1688,7 @@
         const nextName = String(profileEditNameInput ? profileEditNameInput.value : '').trim();
         const nextBio = String(profileEditBioInput ? profileEditBioInput.value : '').trim();
         if (nextName.length < MIN_PROFILE_NAME_LENGTH) {
-          setProfileEditStatus('Please enter your full name.', 'error');
+          setProfileEditStatus('Name must be at least 2 characters long.', 'error');
           if (profileEditNameInput) {
             profileEditNameInput.focus();
           }
