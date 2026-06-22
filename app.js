@@ -464,25 +464,30 @@
     box.appendChild(list);
 
     function buildCommentActions(comment, item) {
-      var actions = document.createElement('div');
-      actions.className = 'post-comment-actions';
+      var commentActions = document.createElement('div');
+      commentActions.className = 'post-comment-actions';
 
       /* Like */
       var likeBtn = document.createElement('button');
       likeBtn.className = 'post-comment-action';
       likeBtn.type = 'button';
       likeBtn.setAttribute('data-liked', 'false');
-      likeBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> 0';
+      likeBtn.setAttribute('data-count', '0');
+      var likeSvg = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+      var likeCountSpan = document.createElement('span');
+      likeCountSpan.textContent = '0';
+      likeBtn.innerHTML = likeSvg;
+      likeBtn.appendChild(likeCountSpan);
       likeBtn.addEventListener('click', function () {
         var liked = likeBtn.getAttribute('data-liked') === 'true';
-        likeBtn.setAttribute('data-liked', String(!liked));
-        likeBtn.style.color = liked ? '' : 'var(--accent)';
-        var parts = likeBtn.innerHTML.split('</svg> ');
-        var cur = parseInt(parts[1] || '0', 10) || 0;
+        var cur = parseInt(likeBtn.getAttribute('data-count') || '0', 10);
         var next = liked ? Math.max(0, cur - 1) : cur + 1;
-        likeBtn.innerHTML = parts[0] + '</svg> ' + next;
+        likeBtn.setAttribute('data-liked', String(!liked));
+        likeBtn.setAttribute('data-count', String(next));
+        likeBtn.style.color = liked ? '' : 'var(--accent)';
+        likeCountSpan.textContent = String(next);
       });
-      actions.appendChild(likeBtn);
+      commentActions.appendChild(likeBtn);
 
       /* Reply */
       var replyBtn = document.createElement('button');
@@ -527,25 +532,30 @@
         item.querySelector('.post-comment-content').appendChild(replyBox);
         replyInput.focus();
       });
-      actions.appendChild(replyBtn);
+      commentActions.appendChild(replyBtn);
 
       /* Repost */
       var repostBtn = document.createElement('button');
       repostBtn.className = 'post-comment-action';
       repostBtn.type = 'button';
       repostBtn.setAttribute('data-reposted', 'false');
-      repostBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> 0';
+      repostBtn.setAttribute('data-count', '0');
+      var repostSvg = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+      var repostCountSpan = document.createElement('span');
+      repostCountSpan.textContent = '0';
+      repostBtn.innerHTML = repostSvg;
+      repostBtn.appendChild(repostCountSpan);
       repostBtn.addEventListener('click', function () {
         if (!currentUser) { openAuthModal('login'); return; }
         var rep = repostBtn.getAttribute('data-reposted') === 'true';
-        repostBtn.setAttribute('data-reposted', String(!rep));
-        repostBtn.style.color = rep ? '' : 'var(--accent)';
-        var parts = repostBtn.innerHTML.split('</svg> ');
-        var cur = parseInt(parts[1] || '0', 10) || 0;
+        var cur = parseInt(repostBtn.getAttribute('data-count') || '0', 10);
         var next = rep ? Math.max(0, cur - 1) : cur + 1;
-        repostBtn.innerHTML = parts[0] + '</svg> ' + next;
+        repostBtn.setAttribute('data-reposted', String(!rep));
+        repostBtn.setAttribute('data-count', String(next));
+        repostBtn.style.color = rep ? '' : 'var(--accent)';
+        repostCountSpan.textContent = String(next);
       });
-      actions.appendChild(repostBtn);
+      commentActions.appendChild(repostBtn);
 
       /* Save */
       var saveBtn = document.createElement('button');
@@ -559,9 +569,9 @@
         saveBtn.setAttribute('data-saved', String(!saved));
         saveBtn.style.color = saved ? '' : 'var(--accent)';
       });
-      actions.appendChild(saveBtn);
+      commentActions.appendChild(saveBtn);
 
-      return actions;
+      return commentActions;
     }
 
     function loadComments() {
