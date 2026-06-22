@@ -577,6 +577,21 @@
           flex-direction: column;
           align-items: flex-start;
         }
+        .post-media-grid,
+        .post-media-grid.single,
+        .post-video-shell {
+          width: 100%;
+        }
+        .media-viewer-modal {
+          padding: 12px;
+        }
+        .media-viewer-panel {
+          padding: 14px;
+        }
+        .media-viewer-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
       }
       /* ── Post feed ───────────────────────────── */
       .post-feed {
@@ -661,27 +676,132 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
+       width: min(100%, 560px);
       }
       .post-media-grid.single {
-        grid-template-columns: 1fr;
+       grid-template-columns: 1fr;
+       width: min(100%, 420px);
       }
       .post-media-item {
-        min-width: 0;
+       min-width: 0;
+       border: 1px solid var(--border);
+       border-radius: 10px;
+       background: var(--surface-soft);
+       overflow: hidden;
       }
-      .post-media-item img,
+      .post-media-button {
+       width: 100%;
+       display: block;
+       border: none;
+       padding: 0;
+       background: none;
+       border-radius: 0;
+      }
+      .post-media-button:hover {
+       background: none;
+       border: none;
+      }
+      .post-media-item img {
+       width: 100%;
+       display: block;
+       background: var(--surface-soft);
+       object-fit: contain;
+       height: min(260px, 42vw);
+      }
+      .post-media-grid.single .post-media-item img {
+        height: min(320px, 55vw);
+      }
+      .post-video-shell {
+        width: min(100%, 560px);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
       .post-video {
         width: 100%;
         display: block;
         border: 1px solid var(--border);
         border-radius: 10px;
         background: var(--surface-soft);
-        object-fit: cover;
+        object-fit: contain;
+        max-height: 320px;
       }
-      .post-media-item img {
-        aspect-ratio: 16 / 10;
+      .post-media-toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
       }
-      .post-video {
-        max-height: 480px;
+      .post-media-toolbar-button {
+        padding: 7px 12px;
+        font-size: 12px;
+      }
+      .post-action-danger {
+        color: #d15454;
+      }
+      .post-action-danger:hover {
+        color: #ff7c7c;
+      }
+      .media-viewer-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 320;
+        background: rgba(0, 0, 0, 0.92);
+        padding: 20px;
+        align-items: center;
+        justify-content: center;
+      }
+      .media-viewer-modal.open {
+        display: flex;
+      }
+      .media-viewer-panel {
+        width: min(1100px, 100%);
+        max-height: 100%;
+        background: #0c0c0c;
+        border: 1px solid var(--border-strong);
+        border-radius: 16px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow: hidden;
+      }
+      .media-viewer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .media-viewer-title {
+        margin: 0;
+        font-size: 15px;
+        color: var(--text);
+      }
+      .media-viewer-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .media-viewer-action {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      .media-viewer-stage {
+        min-height: 0;
+        overflow: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px;
+      }
+      .media-viewer-media {
+        max-width: 100%;
+        max-height: min(78vh, 820px);
+        object-fit: contain;
+        transition: transform 0.18s ease;
+        background: #000;
+        border-radius: 12px;
       }
       .post-actions {
         display: flex;
@@ -1211,6 +1331,22 @@
           <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
         </form>
         <p id="new-post-status" class="auth-status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="media-viewer-modal" class="media-viewer-modal" aria-hidden="true">
+      <div class="media-viewer-panel" role="dialog" aria-modal="true" aria-labelledby="media-viewer-title">
+        <div class="media-viewer-header">
+          <h2 id="media-viewer-title" class="media-viewer-title">Media viewer</h2>
+          <div class="media-viewer-actions">
+            <button id="media-viewer-zoom-out" class="media-viewer-action" type="button">Zoom out</button>
+            <button id="media-viewer-fit" class="media-viewer-action" type="button">Fit</button>
+            <button id="media-viewer-zoom-in" class="media-viewer-action" type="button">Zoom in</button>
+            <button id="media-viewer-fullscreen" class="media-viewer-action" type="button">Fullscreen</button>
+            <button id="media-viewer-close" class="media-viewer-action" type="button">Close</button>
+          </div>
+        </div>
+        <div id="media-viewer-content" class="media-viewer-stage"></div>
       </div>
     </div>
 
