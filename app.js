@@ -551,7 +551,11 @@
   function updateDashboardTabSummary() {
     if (!profileTabSummary) return;
     const items = dashboardTabCollections[activeDashboardTab] || [];
-    profileTabSummary.innerHTML = '<strong>' + items.length + '</strong> ' + escapeHtml(getDashboardTabSummaryLabel(activeDashboardTab, items.length));
+    profileTabSummary.textContent = '';
+    const count = document.createElement('strong');
+    count.textContent = String(items.length);
+    profileTabSummary.appendChild(count);
+    profileTabSummary.appendChild(document.createTextNode(' ' + getDashboardTabSummaryLabel(activeDashboardTab, items.length)));
   }
 
   function setDashboardTab(tabName) {
