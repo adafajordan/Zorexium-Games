@@ -345,6 +345,12 @@
     });
   }
 
+  function isValidBirthdayValue(value) {
+    const birthday = String(value || '').trim();
+    if (!birthday) return true;
+    return !Number.isNaN(Date.parse(birthday));
+  }
+
   function formatCompactSize(bytes) {
     const value = Number(bytes || 0);
     if (value <= 0) return '0 B';
@@ -1266,11 +1272,12 @@
       profileBanner.style.background = profileThemeColor;
     }
     profileAvatar.style.background = profileThemeColor;
-    profileAvatar.textContent = currentUser ? getInitials(currentUser.name, currentUser.username) : '';
+    profileAvatar.textContent = currentUser ? getInitials(currentUser.name, currentUser.username) : 'YA';
     profileAvatar.setAttribute('aria-label', currentUser ? (currentUser.name + ' avatar') : 'Your account avatar');
-    profileName.textContent = currentUser ? currentUser.name : '';
+    profileName.textContent = currentUser ? currentUser.name : 'Your account';
     profileHandle.textContent = currentUser ? formatHandle(currentUser.username) : '@yourprofile';
     profileBio.textContent = bioValue;
+    profileBio.hidden = !bioValue;
     profileContactLink.textContent = hasProfileEmail ? profileEmailValue : '';
     profileContactLink.href = hasProfileEmail ? getSafeMailtoHref(profileEmailValue) : '#';
     profileBirthday.textContent = birthdayValue;
@@ -1305,6 +1312,10 @@
         }
         const nextBirthday = window.prompt('Enter your birthday (optional):', String(currentUser.profileBirthday || ''));
         if (nextBirthday === null) {
+          return;
+        }
+        if (!isValidBirthdayValue(nextBirthday)) {
+          window.alert('Please enter a valid birthday date.');
           return;
         }
         const updatedUser = Object.assign({}, currentUser, {
