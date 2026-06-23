@@ -557,7 +557,7 @@
     <!-- Header -->
     <header>
       <div class="header-left">
-        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write article">&#43;</button>
+        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write article">+</button>
       </div>
       <div class="header-center">
         <a class="brand" href="index.html">
@@ -1014,9 +1014,8 @@
         trigger.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
         trigger.addEventListener('click', function (e) {
           e.stopPropagation();
-          var nextOpen = !wrap.classList.contains('open');
           closeArticleMenus(wrap);
-          wrap.classList.toggle('open', nextOpen);
+          wrap.classList.toggle('open');
         });
         wrap.appendChild(trigger);
 
@@ -1687,7 +1686,6 @@
             companionPost.gifUrl = '';
             companionPost.poll = null;
             companionPost.scheduledAt = null;
-            companionPost.createdAt = now;
             return putRecord(POSTS_STORE, companionPost).then(function () {
               if (posts.length > 1) {
                 return Promise.all(posts.slice(1).map(function (post) { return deleteRecord(POSTS_STORE, post.id); }));
@@ -2144,7 +2142,7 @@
         });
 
         document.addEventListener('click', function () {
-          closeArticleMenus();
+          if (document.querySelector('.article-card-menu.open')) closeArticleMenus();
         });
       }
 
