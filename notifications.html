@@ -1,94 +1,444 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Notifications — Zorexium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
-      :root { --bg:#000; --surface:#111; --surface-soft:#1a1a1a; --text:#eaeaea; --text-soft:#9f9f9f; --border:#2a2a2a; --accent:#3b82f6; }
-      * { box-sizing:border-box; }
-      body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,sans-serif; }
-      header { position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(0,0,0,.9); border-bottom:1px solid var(--border); }
-      .header-right { display:flex; gap:8px; }
-      .header-icon-btn { border:none; background:transparent; color:var(--text); cursor:pointer; padding:6px; }
-      .header-icon-btn:hover { color:var(--accent); }
-      .header-title { margin:0; font-size:18px; font-weight:700; }
-      main { max-width:720px; margin:0 auto; padding:14px 14px 90px; }
-      .post-card { border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:14px; margin-bottom:12px; }
-      .post-card-empty { background:var(--surface-soft); }
-      .post-empty-title { margin:0 0 6px; font-weight:700; }
-      .post-empty-description, .post-handle { margin:0; color:var(--text-soft); font-size:13px; line-height:1.5; }
-      .sticky-footer { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:space-around; border-top:1px solid var(--border); background:rgba(0,0,0,.94); padding:8px 0; }
-      .sticky-footer-item { background:none; border:none; color:var(--text-soft); width:54px; height:34px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-      .sticky-footer-item.active, .sticky-footer-item:hover { color:var(--accent); }
-      .sticky-footer-item svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; }
-      .auth-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:40; align-items:center; justify-content:center; }
-      .auth-modal.open { display:flex; }
-      .auth-panel { width:min(92vw,420px); background:#0f0f0f; border:1px solid var(--border); border-radius:14px; padding:18px; }
-      .auth-tabs { display:flex; gap:8px; margin-bottom:12px; }
-      .auth-tab, .auth-submit { border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
-      .auth-tab.active, .auth-submit { background:var(--accent); color:#fff; }
-      .auth-form { display:none; }
-      .auth-form.active { display:block; }
-      .auth-field { display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
-      .auth-field input { background:#0a0a0a; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; }
-      .auth-status { min-height:18px; color:#fca5a5; font-size:13px; }
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f5f5f5;
+        --surface-soft: #eeeeee;
+        --text: #111111;
+        --text-muted: #333333;
+        --text-soft: #666666;
+        --border: #e0e0e0;
+        --border-strong: #cccccc;
+        --focus: #e02020;
+        --accent: #cc2222;
+        --sticky-footer-height: 62px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding-bottom: var(--sticky-footer-height);
+      }
+      header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.97);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(6px);
+      }
+      .header-left,
+      .header-center,
+      .header-right {
+        display: flex;
+        align-items: center;
+      }
+      .header-center,
+      .header-right {
+        min-width: 0;
+      }
+      .header-center { justify-content: center; }
+      .header-right {
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .header-icon-btn {
+        background: none;
+        border: none;
+        color: var(--text);
+        font-size: 20px;
+        cursor: pointer;
+        padding: 6px 8px;
+        border-radius: 6px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .header-icon-btn:hover {
+        background: var(--surface-soft);
+        color: var(--accent);
+      }
+      .header-icon-btn-plus {
+        font-size: 28px;
+        font-weight: 700;
+        padding: 2px 8px;
+      }
+      .header-icon-btn-lg svg {
+        width: 22px;
+        height: 22px;
+        stroke-width: 2.5;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .brand-logo {
+        width: auto;
+        height: clamp(42px, 8vw, 72px);
+        max-width: min(100%, 460px);
+        object-fit: contain;
+        display: block;
+      }
+      .header-search {
+        flex: 1 1 220px;
+        min-width: 150px;
+        max-width: 320px;
+      }
+      .search-bar-input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+      }
+      .search-bar-input:focus,
+      .new-post-textarea:focus,
+      .new-post-text-input:focus,
+      .new-post-date-input:focus,
+      .auth-field input:focus {
+        outline: 2px solid var(--focus);
+        border-color: var(--focus);
+      }
+      main {
+        width: min(760px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 20px 0 24px;
+      }
+      .page-intro {
+        margin-bottom: 16px;
+      }
+      .page-title {
+        margin: 0;
+        font-size: clamp(24px, 4vw, 32px);
+      }
+      .page-subtitle {
+        margin: 6px 0 0;
+        color: var(--text-soft);
+        line-height: 1.5;
+      }
+      .post-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .post-card-empty {
+        background: var(--surface);
+      }
+      .post-empty-title {
+        margin: 0 0 6px;
+        font-weight: 700;
+      }
+      .post-empty-description,
+      .post-handle {
+        margin: 0;
+        color: var(--text-soft);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .sticky-footer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        min-height: var(--sticky-footer-height);
+        border-top: 1px solid var(--border);
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(8px);
+      }
+      .sticky-footer-item {
+        background: none;
+        border: none;
+        color: var(--text-soft);
+        width: 54px;
+        height: 34px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sticky-footer-item.active,
+      .sticky-footer-item:hover {
+        color: var(--accent);
+      }
+      .sticky-footer-item svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+      }
+      .auth-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0,0,0,0.4);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .auth-modal.open { display: flex; }
+      .auth-panel {
+        width: min(520px, 100%);
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 24px 70px rgba(0,0,0,0.18);
+        padding: 22px;
+        position: relative;
+      }
+      .auth-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        font-size: 18px;
+        line-height: 1;
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .auth-title { margin: 0 0 14px; color: var(--accent); }
+      .auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+      .auth-tab,
+      .auth-submit {
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .auth-tab:hover,
+      .auth-submit:hover,
+      .auth-close:hover { background: #f0e8e8; border-color: #d08080; }
+      .auth-tab.active,
+      .auth-submit {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .auth-form { display: none; }
+      .auth-form.active { display: block; }
+      .auth-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .auth-field input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        font-family: inherit;
+      }
+      .auth-status {
+        min-height: 18px;
+        margin: 10px 0 0;
+        font-size: 13px;
+      }
+      .auth-status.error { color: #b42318; }
+      .auth-status.success { color: #166534; }
+      .new-post-textarea {
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        background: #ffffff;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .new-post-media-panel,
+      .new-post-meta-panel {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .new-post-meta-panel {
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      .new-post-file-input,
+      .new-post-text-input,
+      .new-post-date-input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        background: #ffffff;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+      }
+      .new-post-file-input {
+        border-style: dashed;
+        background: var(--surface);
+      }
+      .new-post-file-input::file-selector-button {
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-right: 10px;
+        cursor: pointer;
+      }
+      .new-post-helper {
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.5;
+      }
+      .new-post-poll-options {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      @media (max-width: 760px) {
+        header {
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+        .header-right {
+          grid-column: 1 / -1;
+          width: 100%;
+        }
+        .header-search {
+          max-width: none;
+        }
+        .brand-logo {
+          height: clamp(34px, 11vw, 56px);
+        }
+      }
     </style>
   </head>
   <body>
     <header>
-      <h1 class="header-title">Notifications</h1>
+      <div class="header-left">
+        <button class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write a post" title="New post" onclick="handlePlusClick()">&#43;</button>
+      </div>
+      <div class="header-center">
+        <a class="brand" href="index.html">
+          <img
+            class="brand-logo"
+            src="https://github.com/user-attachments/assets/8f82f840-59fb-4dd2-857d-499d9e79266d"
+            alt="Zorexium logo"
+          />
+        </a>
+      </div>
       <div class="header-right">
-        <button id="header-profile-btn" class="header-icon-btn" type="button" aria-label="Profile" title="Profile">
-          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="header-search">
+          <input id="header-search-input" class="search-bar-input" type="search" placeholder="search posts, news, people…" aria-label="Search" />
+        </div>
+        <button id="header-profile-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Profile" title="Profile">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
-        <button id="header-notifications-btn" class="header-icon-btn" type="button" aria-label="Notifications" title="Notifications">
-          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <button id="header-notifications-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Notifications" title="Notifications">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         </button>
       </div>
     </header>
 
     <main>
+      <section class="page-intro" aria-labelledby="notifications-page-title">
+        <h1 id="notifications-page-title" class="page-title">Notifications</h1>
+        <p class="page-subtitle">Keep up with mentions, likes, reposts, saves, comments, and profile activity in one place.</p>
+      </section>
       <div id="notifications-list" aria-live="polite"></div>
     </main>
 
     <footer class="sticky-footer" aria-label="Quick navigation">
-      <button class="sticky-footer-item" type="button" onclick="window.location.href='index.html'" aria-label="Home">
+      <a class="sticky-footer-item" href="index.html" aria-label="Home">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      </button>
-      <button id="sticky-footer-search" class="sticky-footer-item" type="button" aria-label="Search">
-        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </button>
+      </a>
+      <a class="sticky-footer-item" href="newsroom.html" aria-label="Articles">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg>
+      </a>
       <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
       <button id="sticky-footer-notifications" class="sticky-footer-item active" type="button" aria-label="Notifications">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button class="sticky-footer-item" type="button" onclick="window.location.href='account-dashboard.html'" aria-label="Dashboard">
-        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 3h7v9H3z"/><path d="M14 3h7v5h-7z"/><path d="M14 12h7v9h-7z"/><path d="M3 16h7v5H3z"/></svg>
+      <button id="sticky-footer-marketplace" class="sticky-footer-item" type="button" aria-label="Marketplace">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 7h18l-1.5 13a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2z"/><path d="M8 7a4 4 0 0 1 8 0"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/></svg>
       </button>
     </footer>
 
     <div id="auth-modal" class="auth-modal" aria-hidden="true">
       <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <button id="auth-close" class="header-icon-btn" type="button" aria-label="Close">✕</button>
-        <h2 id="auth-title">Welcome back</h2>
-        <div class="auth-tabs">
-          <button id="auth-tab-login" class="auth-tab active" type="button" data-auth-view="login">Login</button>
-          <button id="auth-tab-register" class="auth-tab" type="button" data-auth-view="register">Sign Up</button>
+        <button id="auth-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="auth-title" class="auth-title">Welcome back</h2>
+        <div class="auth-tabs" role="tablist" aria-label="Authentication views">
+          <button id="auth-tab-login" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="login-form" data-auth-view="login">Login</button>
+          <button id="auth-tab-register" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="register-form" data-auth-view="register">Sign Up</button>
         </div>
         <form id="login-form" class="auth-form active" novalidate>
-          <div class="auth-field"><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="email" required /></div>
-          <div class="auth-field"><label for="login-password">Password</label><input id="login-password" name="password" type="password" autocomplete="current-password" minlength="8" required /></div>
+          <div class="auth-field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+          </div>
           <button class="auth-submit" type="submit">Log In</button>
         </form>
         <form id="register-form" class="auth-form" novalidate>
-          <div class="auth-field"><label for="register-name">Name</label><input id="register-name" name="name" type="text" autocomplete="name" minlength="2" required /></div>
-          <div class="auth-field"><label for="register-username">Username</label><input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required /></div>
-          <div class="auth-field"><label for="register-email">Email</label><input id="register-email" name="email" type="email" autocomplete="email" required /></div>
-          <div class="auth-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required /></div>
-          <div class="auth-field"><label for="register-confirm-password">Confirm Password</label><input id="register-confirm-password" name="confirm-password" type="password" autocomplete="new-password" minlength="8" required /></div>
+          <div class="auth-field">
+            <label for="register-name">Name</label>
+            <input id="register-name" name="name" type="text" autocomplete="name" minlength="2" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-username">Username</label>
+            <input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-email">Email</label>
+            <input id="register-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-password">Password</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-confirm-password">Confirm Password</label>
+            <input id="register-confirm-password" name="confirm-password" type="password" autocomplete="new-password" minlength="8" required />
+          </div>
           <label><input id="accept-terms" type="checkbox" required /> I agree to the terms and privacy policy</label>
           <button class="auth-submit" type="submit">Create Account</button>
         </form>
@@ -96,6 +446,141 @@
       </div>
     </div>
 
+    <div id="new-post-modal" class="auth-modal" aria-hidden="true">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
+        <button id="new-post-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="new-post-title" class="auth-title">Create Post</h2>
+        <form id="new-post-form" novalidate>
+          <div class="auth-field">
+            <label for="new-post-text">Post</label>
+            <textarea id="new-post-text" class="new-post-textarea" placeholder="What's on your mind?" rows="4" aria-describedby="new-post-requirements"></textarea>
+            <div id="new-post-requirements" class="new-post-helper">Add text, photos, a GIF, a two-option poll, or a video to publish your post. Text is optional when media or a poll is attached.</div>
+          </div>
+          <div class="new-post-media-panel">
+            <div class="auth-field">
+              <label for="new-post-images">Pictures</label>
+              <input id="new-post-images" class="new-post-file-input" type="file" accept="image/*" multiple aria-describedby="new-post-images-helper" />
+              <div id="new-post-images-helper" class="new-post-helper">Upload up to 10 pictures with a maximum size of 10MB each.</div>
+            </div>
+            <div class="auth-field">
+              <label for="new-post-video">Video</label>
+              <input id="new-post-video" class="new-post-file-input" type="file" accept="video/*" aria-describedby="new-post-video-helper" />
+              <div id="new-post-video-helper" class="new-post-helper">Upload one video up to 10 minutes long.</div>
+            </div>
+          </div>
+          <div class="new-post-meta-panel">
+            <div class="auth-field">
+              <label for="new-post-gif-url">GIF URL</label>
+              <input id="new-post-gif-url" class="new-post-text-input" type="url" inputmode="url" placeholder="https://example.com/reaction.gif" aria-describedby="new-post-gif-helper" />
+              <div id="new-post-gif-helper" class="new-post-helper">Paste a direct GIF link to add it to your post.</div>
+            </div>
+            <div class="auth-field">
+              <label for="new-post-poll-question">Poll</label>
+              <input id="new-post-poll-question" class="new-post-text-input" type="text" maxlength="120" placeholder="Ask a question…" aria-describedby="new-post-poll-helper" />
+              <div id="new-post-poll-helper" class="new-post-helper">Polls currently support two answer options.</div>
+              <div class="new-post-poll-options">
+                <input id="new-post-poll-option-1" class="new-post-text-input" type="text" maxlength="80" placeholder="Option 1" />
+                <input id="new-post-poll-option-2" class="new-post-text-input" type="text" maxlength="80" placeholder="Option 2" />
+              </div>
+            </div>
+            <div class="auth-field">
+              <label for="new-post-schedule">Schedule post</label>
+              <input id="new-post-schedule" class="new-post-date-input" type="datetime-local" aria-describedby="new-post-schedule-helper" />
+              <div id="new-post-schedule-helper" class="new-post-helper">Leave blank to publish immediately.</div>
+            </div>
+          </div>
+          <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
+        </form>
+        <p id="new-post-status" class="auth-status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <script>
+      const authModal = document.getElementById('auth-modal');
+      const authTitle = document.getElementById('auth-title');
+      const authStatus = document.getElementById('auth-status');
+      const authTabs = document.querySelectorAll('.auth-tab');
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+
+      function setAuthStatus(message, type) {
+        authStatus.textContent = message || '';
+        authStatus.className = 'auth-status';
+        if (type) authStatus.classList.add(type);
+      }
+
+      function switchAuthView(view) {
+        const isLogin = view === 'login';
+        loginForm.classList.toggle('active', isLogin);
+        registerForm.classList.toggle('active', !isLogin);
+        authTitle.textContent = isLogin ? 'Welcome back' : 'Create your account';
+        authTabs.forEach(function (tab) {
+          const selected = tab.getAttribute('data-auth-view') === view;
+          tab.classList.toggle('active', selected);
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+        setAuthStatus('');
+      }
+
+      function openAuthModal(view) {
+        switchAuthView(view || 'login');
+        authModal.classList.add('open');
+        authModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeAuthModal() {
+        authModal.classList.remove('open');
+        authModal.setAttribute('aria-hidden', 'true');
+        setAuthStatus('');
+      }
+
+      window.openAuthModal = openAuthModal;
+      window.closeAuthModal = closeAuthModal;
+
+      function openNewPost() {
+        const modal = document.getElementById('new-post-modal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        const textArea = document.getElementById('new-post-text');
+        if (textArea) textArea.focus();
+      }
+
+      function closeNewPostModal() {
+        const modal = document.getElementById('new-post-modal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        const form = document.getElementById('new-post-form');
+        if (form) form.reset();
+        const status = document.getElementById('new-post-status');
+        if (status) status.textContent = '';
+      }
+
+      window.openNewPost = openNewPost;
+      window.closeNewPostModal = closeNewPostModal;
+
+      document.getElementById('auth-close').addEventListener('click', closeAuthModal);
+      authTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          switchAuthView(tab.getAttribute('data-auth-view'));
+        });
+      });
+      authModal.addEventListener('click', function (event) {
+        if (event.target === authModal) closeAuthModal();
+      });
+      document.getElementById('new-post-close').addEventListener('click', closeNewPostModal);
+      document.getElementById('new-post-modal').addEventListener('click', function (event) {
+        if (event.target === this) closeNewPostModal();
+      });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          if (authModal.classList.contains('open')) closeAuthModal();
+          const newPostModal = document.getElementById('new-post-modal');
+          if (newPostModal && newPostModal.classList.contains('open')) closeNewPostModal();
+        }
+      });
+    </script>
     <script src="app.js"></script>
   </body>
 </html>

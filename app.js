@@ -733,15 +733,19 @@
       const header = article.querySelector('.post-header');
       const body = article.querySelector('.post-body');
       const imagePlaceholder = article.querySelector('.post-image-placeholder');
-      const mediaGrid = article.querySelector('.post-media-grid');
+      const mediaGrids = Array.from(article.querySelectorAll('.post-media-grid'));
       const mediaWrapper = article.querySelector('.post-media-wrapper');
       const videoShell = article.querySelector('.post-video-shell');
+      const poll = article.querySelector('.post-poll');
       if (repostBanner) postContainer.appendChild(repostBanner.cloneNode(true));
       if (header) postContainer.appendChild(header.cloneNode(true));
       if (body) postContainer.appendChild(body.cloneNode(true));
       if (imagePlaceholder) postContainer.appendChild(imagePlaceholder.cloneNode(true));
-      if (mediaGrid) postContainer.appendChild(mediaGrid.cloneNode(true));
+      mediaGrids.forEach(function (grid) {
+        postContainer.appendChild(grid.cloneNode(true));
+      });
       if (mediaWrapper) postContainer.appendChild(mediaWrapper.cloneNode(true));
+      if (poll) postContainer.appendChild(poll.cloneNode(true));
       if (videoShell) {
         const videoShellClone = videoShell.cloneNode(true);
         videoShellClone.removeAttribute('data-video-enhanced');
@@ -783,6 +787,61 @@
 
   function attachPostInteractionHandlers() {
     document.addEventListener('click', async function (event) {
+      const pollButton = event.target.closest && event.target.closest('.post-poll-option');
+      if (pollButton) {
+        const article = pollButton.closest('[data-post-id]');
+        const postId = article ? article.dataset.postId : '';
+        const optionId = pollButton.getAttribute('data-option-id') || '';
+        event.preventDefault();
+        event.stopPropagation();
+        if (!currentUser) {
+          openAuthModal('login');
+          return;
+        }
+        if (!postId || !optionId) {
+          return;
+        }
+        pollButton.disabled = true;
+        try {
+          const post = await getRecord(POSTS_STORE, postId);
+          if (!post || !hasConfiguredPoll(post)) {
+            throw new Error('This poll is no longer available.');
+          }
+          const votesByUser = Object.assign({}, post.poll.votesByUser || {});
+          const previousOptionId = votesByUser[currentUser.id] || '';
+          if (previousOptionId === optionId) {
+            return;
+          }
+          const nextOptions = post.poll.options.map(function (option, index) {
+            const normalizedId = option.id || ('option-' + (index + 1));
+            let votes = Math.max(0, Math.round(Number(option.votes) || 0));
+            if (normalizedId === previousOptionId) {
+              votes = Math.max(0, votes - 1);
+            }
+            if (normalizedId === optionId) {
+              votes += 1;
+            }
+            return Object.assign({}, option, {
+              id: normalizedId,
+              votes: votes
+            });
+          });
+          votesByUser[currentUser.id] = optionId;
+          post.poll = {
+            question: post.poll.question,
+            options: nextOptions,
+            votesByUser: votesByUser
+          };
+          await putRecord(POSTS_STORE, post);
+          await refreshUserFacingViews();
+        } catch (error) {
+          setInterfaceStatus(error && error.message ? error.message : 'Unable to update that poll right now.', 'error');
+        } finally {
+          pollButton.disabled = false;
+        }
+        return;
+      }
+
       const button = event.target.closest && event.target.closest('.post-action[data-action="comment"], .post-action[data-action="repost"], .post-action[data-action="save"]');
       if (!button) return;
       const article = button.closest('[data-post-id]');
@@ -840,7 +899,7 @@
     }, true);
 
     document.addEventListener('click', function (event) {
-      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, [data-action], .post-detail-modal, .post-video-shell')) {
+      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, .post-poll, [data-action], .post-detail-modal, .post-video-shell')) {
         return;
       }
       const article = event.target.closest && event.target.closest('[data-post-id]');
@@ -945,6 +1004,28 @@
     });
   }
 
+  function getPostPublishTimestamp(post) {
+    const timestamp = Number(post && (post.scheduledAt || post.createdAt));
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
+  function isPostScheduled(post) {
+    return Boolean(post && Number.isFinite(Number(post.scheduledAt)) && Number(post.scheduledAt) > Date.now());
+  }
+
+  function isPostPublished(post) {
+    return getPostPublishTimestamp(post) <= Date.now();
+  }
+
+  function formatPostMetaText(post, authorHandle) {
+    const handle = formatHandle(authorHandle);
+    const publishedAt = getPostPublishTimestamp(post);
+    if (isPostScheduled(post)) {
+      return handle + ' · Scheduled for ' + formatLongDate(publishedAt);
+    }
+    return handle + ' · ' + formatRelativeTime(publishedAt);
+  }
+
   function formatJoinedDate(timestamp) {
     if (!timestamp) return 'Create an account to get started';
     return 'Joined ' + new Date(timestamp).toLocaleDateString(undefined, {
@@ -1003,7 +1084,15 @@
   }
 
   function isSafeMediaUrl(url) {
-    return /^blob:/i.test(String(url || ''));
+    const value = String(url || '').trim();
+    if (!value) return false;
+    if (/^blob:/i.test(value)) return true;
+    try {
+      const parsed = new URL(value, window.location.href);
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch (error) {
+      return false;
+    }
   }
 
   function switchAuthView(view) {
@@ -1205,7 +1294,7 @@
   }
 
   function hasPostMedia(post) {
-    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId);
+    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId) || Boolean(String(post && post.gifUrl || '').trim());
   }
 
   function getPostAuthorHandle(post) {
@@ -1374,6 +1463,81 @@
     };
   }
 
+  function hasConfiguredPoll(post) {
+    return Boolean(post && post.poll && String(post.poll.question || '').trim() && Array.isArray(post.poll.options) && post.poll.options.length >= 2);
+  }
+
+  function buildPollElement(post) {
+    if (!hasConfiguredPoll(post)) {
+      return null;
+    }
+
+    const section = document.createElement('section');
+    section.className = 'post-poll';
+    section.setAttribute('aria-label', 'Poll');
+
+    const question = document.createElement('p');
+    question.className = 'post-poll-question';
+    question.textContent = String(post.poll.question || '').trim();
+    section.appendChild(question);
+
+    const optionsWrap = document.createElement('div');
+    optionsWrap.className = 'post-poll-options';
+
+    const votesByUser = post.poll && post.poll.votesByUser ? post.poll.votesByUser : {};
+    const selectedOptionId = currentUser ? votesByUser[currentUser.id] : '';
+    const totalVotes = post.poll.options.reduce(function (sum, option) {
+      return sum + Math.max(0, Math.round(Number(option && option.votes) || 0));
+    }, 0);
+
+    post.poll.options.forEach(function (option, index) {
+      if (!option || !String(option.text || '').trim()) return;
+      const optionId = option.id || ('option-' + (index + 1));
+      const votes = Math.max(0, Math.round(Number(option.votes) || 0));
+      const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+
+      const button = document.createElement('button');
+      button.className = 'post-poll-option';
+      button.type = 'button';
+      button.setAttribute('data-option-id', optionId);
+      button.setAttribute('aria-pressed', selectedOptionId === optionId ? 'true' : 'false');
+      if (selectedOptionId === optionId) {
+        button.classList.add('active');
+      }
+
+      const label = document.createElement('span');
+      label.className = 'post-poll-option-label';
+      label.textContent = String(option.text || '').trim();
+      button.appendChild(label);
+
+      const meta = document.createElement('span');
+      meta.className = 'post-poll-option-meta';
+      meta.textContent = percent + '% · ' + formatCountValue(votes);
+      button.appendChild(meta);
+
+      optionsWrap.appendChild(button);
+    });
+
+    section.appendChild(optionsWrap);
+
+    const footer = document.createElement('p');
+    footer.className = 'post-poll-total';
+    footer.textContent = totalVotes === 1 ? '1 vote' : formatCountValue(totalVotes) + ' votes';
+    section.appendChild(footer);
+
+    return section;
+  }
+
+  function createScheduledStatusNode(post) {
+    if (!isPostScheduled(post)) {
+      return null;
+    }
+    const badge = document.createElement('p');
+    badge.className = 'post-schedule-badge';
+    badge.textContent = 'Scheduled for ' + formatLongDate(getPostPublishTimestamp(post));
+    return badge;
+  }
+
   async function buildDashboardPostCard(post, user) {
     const article = document.createElement('article');
     article.className = 'post-card';
@@ -1427,7 +1591,7 @@
 
     const handle = document.createElement('span');
     handle.className = 'post-handle';
-    handle.textContent = formatHandle(authorHandle) + ' · ' + formatRelativeTime(post.createdAt);
+    handle.textContent = formatPostMetaText(post, authorHandle);
     meta.appendChild(handle);
 
     header.appendChild(meta);
@@ -1443,6 +1607,16 @@
     const mediaFragment = await buildMediaFragment(post);
     if (mediaFragment.childNodes.length) {
       article.appendChild(mediaFragment);
+    }
+
+    const poll = buildPollElement(post);
+    if (poll) {
+      article.appendChild(poll);
+    }
+
+    const scheduleStatus = createScheduledStatusNode(post);
+    if (scheduleStatus) {
+      article.appendChild(scheduleStatus);
     }
 
     const actions = document.createElement('div');
@@ -2118,6 +2292,32 @@
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
     const altBase = post.text ? post.text.trim().replace(/\s+/g, ' ').split(' ').slice(0, 12).join(' ') : 'User upload';
 
+    if (String(post.gifUrl || '').trim() && isSafeMediaUrl(post.gifUrl)) {
+      const gifGrid = document.createElement('div');
+      gifGrid.className = 'post-media-grid single';
+
+      const gifItem = document.createElement('div');
+      gifItem.className = 'post-media-item';
+
+      const gifImage = document.createElement('img');
+      gifImage.src = post.gifUrl;
+      gifImage.alt = altBase + ' (GIF)';
+      gifImage.loading = 'lazy';
+
+      const gifTrigger = document.createElement('button');
+      gifTrigger.className = 'post-media-button';
+      gifTrigger.type = 'button';
+      gifTrigger.setAttribute('aria-label', 'Open ' + gifImage.alt + ' in fullscreen viewer');
+      gifTrigger.addEventListener('click', function () {
+        openMediaViewer('image', post.gifUrl, gifImage.alt);
+      });
+
+      gifTrigger.appendChild(gifImage);
+      gifItem.appendChild(gifTrigger);
+      gifGrid.appendChild(gifItem);
+      fragment.appendChild(gifGrid);
+    }
+
     if (imageIds.length) {
       const grid = document.createElement('div');
       grid.className = 'post-media-grid' + (imageIds.length === 1 ? ' single' : '');
@@ -2212,7 +2412,9 @@
     const accountMap = new Map(accounts.map(function (account) {
       return [account.id, account];
     }));
-    const orderedPosts = posts.slice().sort(function (left, right) {
+    const orderedPosts = posts.filter(function (post) {
+      return isPostPublished(post);
+    }).slice().sort(function (left, right) {
       return right.createdAt - left.createdAt;
     });
     const anchor = postFeed.firstElementChild;
@@ -2258,7 +2460,7 @@
 
       const handle = document.createElement('span');
       handle.className = 'post-handle';
-      handle.textContent = formatHandle(authorHandle) + ' · ' + formatRelativeTime(post.createdAt);
+      handle.textContent = formatPostMetaText(post, authorHandle);
 
       meta.appendChild(username);
       meta.appendChild(handle);
@@ -2275,6 +2477,11 @@
       const mediaFragment = await buildMediaFragment(post);
       if (mediaFragment.childNodes.length) {
         article.appendChild(mediaFragment);
+      }
+
+      const poll = buildPollElement(post);
+      if (poll) {
+        article.appendChild(poll);
       }
 
       const actions = document.createElement('div');
@@ -2307,6 +2514,61 @@
   function getSelectedVideo() {
     const input = document.getElementById('new-post-video');
     return input && input.files && input.files[0] ? input.files[0] : null;
+  }
+
+  function getSelectedGifUrl() {
+    const input = document.getElementById('new-post-gif-url');
+    return String(input ? input.value : '').trim();
+  }
+
+  function getSelectedPoll() {
+    const questionInput = document.getElementById('new-post-poll-question');
+    const optionOneInput = document.getElementById('new-post-poll-option-1');
+    const optionTwoInput = document.getElementById('new-post-poll-option-2');
+    const question = String(questionInput ? questionInput.value : '').trim();
+    const options = [optionOneInput, optionTwoInput].map(function (input) {
+      return String(input ? input.value : '').trim();
+    }).filter(Boolean);
+
+    if (!question && !options.length) {
+      return null;
+    }
+
+    if (!question) {
+      throw new Error('Add a poll question before posting your poll.');
+    }
+
+    if (options.length < 2) {
+      throw new Error('Polls currently require two answer options.');
+    }
+
+    return {
+      question: question,
+      options: options.slice(0, 2).map(function (optionText, index) {
+        return {
+          id: 'option-' + (index + 1),
+          text: optionText,
+          votes: 0
+        };
+      }),
+      votesByUser: {}
+    };
+  }
+
+  function getSelectedScheduleTimestamp() {
+    const input = document.getElementById('new-post-schedule');
+    const value = String(input ? input.value : '').trim();
+    if (!value) {
+      return null;
+    }
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) {
+      throw new Error('Choose a valid schedule date and time.');
+    }
+    if (timestamp <= Date.now()) {
+      throw new Error('Scheduled posts must be set in the future.');
+    }
+    return timestamp;
   }
 
   function loadVideoDuration(file) {
@@ -2346,7 +2608,7 @@
     }
   }
 
-  async function savePost(text, images, video) {
+  async function savePost(text, images, video, extras) {
     const imageMediaIds = [];
     for (let index = 0; index < images.length; index += 1) {
       imageMediaIds.push(await putMediaFile(images[index]));
@@ -2357,16 +2619,23 @@
       videoMediaId = await putMediaFile(video);
     }
 
+    const scheduledAt = extras && extras.scheduledAt ? extras.scheduledAt : null;
+    const publishTimestamp = scheduledAt || Date.now();
     const postRecord = {
       id: generateId('post'),
       userId: currentUser.id,
       text: text,
       imageMediaIds: imageMediaIds,
       videoMediaId: videoMediaId,
-      createdAt: Date.now()
+      gifUrl: extras && extras.gifUrl ? extras.gifUrl : '',
+      poll: extras && extras.poll ? extras.poll : null,
+      scheduledAt: scheduledAt,
+      createdAt: publishTimestamp
     };
     await putRecord(POSTS_STORE, postRecord);
-    await addMentionNotifications(postRecord, text);
+    if (isPostPublished(postRecord)) {
+      await addMentionNotifications(postRecord, text);
+    }
   }
 
   async function renderAccountDashboard() {
@@ -2658,17 +2927,27 @@
       const images = getSelectedImages();
       const video = getSelectedVideo();
 
-      if (!text && !images.length && !video) {
-        setNewPostStatus('Add text, photos, or a video before posting.', 'error');
-        return;
-      }
-
       try {
+        const gifUrl = getSelectedGifUrl();
+        const poll = getSelectedPoll();
+        const scheduledAt = getSelectedScheduleTimestamp();
+        if (gifUrl && !isSafeMediaUrl(gifUrl)) {
+          setNewPostStatus('Add a valid GIF URL that starts with http:// or https://.', 'error');
+          return;
+        }
+        if (!text && !images.length && !video && !gifUrl && !poll) {
+          setNewPostStatus('Add text, photos, a GIF, a poll, or a video before posting.', 'error');
+          return;
+        }
         await validatePostMedia(images, video);
         setNewPostStatus('Publishing post…', 'success');
-        await savePost(text, images, video);
+        await savePost(text, images, video, {
+          gifUrl: gifUrl,
+          poll: poll,
+          scheduledAt: scheduledAt
+        });
         await refreshUserFacingViews();
-        setNewPostStatus('Post published successfully.', 'success');
+        setNewPostStatus(scheduledAt ? ('Post scheduled for ' + formatLongDate(scheduledAt) + '.') : 'Post published successfully.', 'success');
         setTimeout(closeNewPostModal, 800);
       } catch (error) {
         setNewPostStatus(error && error.message ? error.message : 'Unable to publish this post.', 'error');
