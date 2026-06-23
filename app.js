@@ -20,6 +20,7 @@
   const PASSWORD_ITERATIONS = 600000;
   const PROFILE_NAME_MIN_LENGTH = 2;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
+  const MENTION_PATTERN = /@([a-zA-Z0-9_]+)/g;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
 
   const authModal = document.getElementById('auth-modal');
@@ -366,9 +367,9 @@
 
   async function addMentionNotifications(post, text) {
     if (!post || !currentUser || !text) return;
-    const handles = Array.from(new Set((String(text).match(/@([a-z0-9_]+)/gi) || []).map(function (entry) {
+    const handles = Array.from(new Set((String(text).match(MENTION_PATTERN) || []).map(function (entry) {
       return entry.slice(1).toLowerCase();
-    })));
+    }))).slice(0, 25);
     if (!handles.length) return;
     const accounts = await readAccounts();
     const accountMap = new Map(accounts.map(function (account) {
@@ -1092,7 +1093,7 @@
   function parseCountValue(value) {
     const normalized = String(value || '').trim().toLowerCase().replace(/,/g, '');
     if (!normalized) return 0;
-    const matched = normalized.match(/^(\d+(?:\.\d+)?)([km])?$/i);
+    const matched = normalized.match(/^(\d+(?:\.\d+)?)([km])?$/);
     if (!matched) {
       const fallback = parseInt(normalized.replace(/[^\d]/g, ''), 10);
       return Number.isFinite(fallback) ? fallback : 0;
@@ -1185,6 +1186,11 @@
     return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId);
   }
 
+  function getPostAuthorHandle(post) {
+    if (!post) return 'post';
+    return post.repostAuthorHandle || post.staticAuthorHandle || 'post';
+  }
+
   function getDashboardTabSummaryLabel(tabName, count) {
     switch (tabName) {
       case 'replies':
@@ -1273,7 +1279,7 @@
       case 'replies':
         return {
           title: 'No replies yet',
-          description: 'Reply-style posts and comments you leave on posts will appear here.'
+          description: 'Replies and comments you leave on posts will appear here.'
         };
       case 'articles':
         return {
@@ -1312,19 +1318,18 @@
     const savedIds = user && user.savedPostIds ? user.savedPostIds : [];
     const allPostsList = Array.isArray(allPosts) ? allPosts : [];
     const commentList = Array.isArray(userComments) ? userComments : [];
+    const postById = new Map(allPostsList.map(function (post) { return [post.id, post]; }));
     const savedPosts = allPostsList.filter(function (post) {
       return savedIds.indexOf(post.id) !== -1;
     });
     const commentReplies = commentList.map(function (comment) {
-      const parentPost = allPostsList.find(function (post) {
-        return post.id === comment.postId;
-      });
+      const parentPost = postById.get(comment.postId);
       return {
         id: comment.id,
         isCommentReply: true,
         text: comment.text,
         createdAt: comment.createdAt,
-        replyToHandle: parentPost ? (parentPost.repostAuthorHandle || parentPost.staticAuthorHandle || parentPost.userId || 'post') : 'post',
+        replyToHandle: getPostAuthorHandle(parentPost),
         replyToText: parentPost ? summarizePost(parentPost) : ''
       };
     });
@@ -1562,6 +1567,7 @@
 
   function syncActionCountAcrossPost(postId, action, count) {
     if (!postId || !action) return;
+    if (['like', 'comment', 'repost'].indexOf(action) === -1) return;
     document.querySelectorAll('[data-post-id="' + postId + '"] .post-action[data-action="' + action + '"]').forEach(function (node) {
       setActionCount(node, count);
     });
@@ -1593,7 +1599,8 @@
         syncActionCountAcrossPost(postId, 'like', nextCount);
       }
       if (!isLiked) {
-        addPostOwnerNotification(postId, 'like', (currentUser ? (currentUser.name || currentUser.username) : 'Someone') + ' liked your post.').catch(function () {
+        addPostOwnerNotification(postId, 'like', (currentUser ? (currentUser.name || currentUser.username) : 'Someone') + ' liked your post.').catch(function (error) {
+          console.warn('Unable to add like notification.', error);
         });
       }
     });
@@ -1746,6 +1753,25 @@
     label.textContent = formatTimeLeft(Math.max(0, video.duration - video.currentTime)) + ' left';
   }
 
+  function configurePostVideoElement(video) {
+    if (!video) return;
+    video.autoplay = true;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.controls = true;
+    video.setAttribute('playsinline', 'true');
+    video.preload = 'metadata';
+    video.setAttribute('data-autoplay-muted', 'true');
+    const originalLabel = video.getAttribute('data-original-aria-label') || video.getAttribute('aria-label') || 'Video';
+    video.setAttribute('data-original-aria-label', originalLabel);
+    if (!/autoplay muted/i.test(originalLabel)) {
+      video.setAttribute('aria-label', originalLabel + ' (autoplay muted)');
+    } else {
+      video.setAttribute('aria-label', originalLabel);
+    }
+    video.setAttribute('data-previous-volume', String(Number(video.volume) || 0));
+  }
+
   function buildVideoOptionsSummary(article) {
     const actionNames = ['like', 'comment', 'repost', 'save'];
     return actionNames.map(function (action) {
@@ -1792,12 +1818,7 @@
           '<p class="post-video-fullscreen-options">' + escapeHtml(optionsSummary || 'Like • Comment • Repost • Save') + '</p>';
       }
 
-      video.autoplay = true;
-      video.muted = true;
-      video.defaultMuted = true;
-      video.controls = true;
-      video.setAttribute('playsinline', 'true');
-      video.preload = 'metadata';
+      configurePostVideoElement(video);
 
       video.addEventListener('loadedmetadata', function () {
         updateVideoRemainingLabel(video, remaining);
@@ -1810,10 +1831,11 @@
       });
 
       video.addEventListener('volumechange', function () {
-        if (!video.muted && video.volume > 0) return;
-        if (video.volume > 0) {
+        const previousVolume = Number(video.getAttribute('data-previous-volume') || '0');
+        if (video.muted && video.volume > 0 && video.volume > previousVolume) {
           video.muted = false;
         }
+        video.setAttribute('data-previous-volume', String(Number(video.volume) || 0));
       });
 
       fullscreenButton.addEventListener('click', function () {
@@ -1894,12 +1916,7 @@
         video.className = 'post-video';
         video.src = mediaUrl;
         video.setAttribute('aria-label', altBase + ' (video)');
-        video.autoplay = true;
-        video.muted = true;
-        video.defaultMuted = true;
-        video.controls = true;
-        video.setAttribute('playsinline', 'true');
-        video.preload = 'metadata';
+        configurePostVideoElement(video);
         wrapper.appendChild(video);
 
         fragment.appendChild(wrapper);
