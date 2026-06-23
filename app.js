@@ -1090,7 +1090,7 @@
     if (/^blob:/i.test(value)) return true;
     try {
       const parsed = new URL(value, window.location.href);
-      return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+      return parsed.protocol === 'https:';
     } catch (error) {
       return false;
     }
@@ -2543,7 +2543,7 @@
     }
 
     if (options.length < 2) {
-      throw new Error('Polls require exactly two answer options.');
+      throw new Error('Please provide both poll answer options.');
     }
 
     return {
@@ -2948,7 +2948,7 @@
         const poll = getSelectedPoll();
         const scheduledAt = getSelectedScheduleTimestamp();
         if (gifUrl && !isSafeMediaUrl(gifUrl)) {
-          setNewPostStatus('Add a valid GIF URL that starts with http:// or https://.', 'error');
+          setNewPostStatus('Add a valid GIF URL that starts with https://.', 'error');
           return;
         }
         if (!text && !images.length && !video && !gifUrl && !poll) {
