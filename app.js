@@ -1836,6 +1836,7 @@
         fsUserMeta.appendChild(fsName);
       }
       if (articleHandle) {
+        // handle.textContent is formatted as "@user · 2h" — split on · to get just the handle
         const rawHandle = articleHandle.textContent.split('·')[0].trim();
         const fsHandle = document.createElement('span');
         fsHandle.className = 'post-video-fs-handle';
@@ -2012,7 +2013,8 @@
 
       fullscreenButton.addEventListener('click', function () {
         if (isInFullscreen()) {
-          (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(function () {});
+          const exitFn = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exitFn) exitFn.call(document).catch(function () {});
         } else {
           requestElementFullscreen(shell).catch(function (error) {
             console.debug('Fullscreen request was blocked by the browser.', error);
