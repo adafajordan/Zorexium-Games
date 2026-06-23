@@ -1708,31 +1708,23 @@
 
   async function requestElementFullscreen(element) {
     if (!element) return;
-    const requestFn = element.requestFullscreen || element.webkitRequestFullscreen;
-    if (typeof requestFn === 'function') {
+    const requestFullscreen = element.requestFullscreen || element.webkitRequestFullscreen;
+    if (typeof requestFullscreen === 'function') {
       try {
-        const result = requestFn.call(element);
+        const result = requestFullscreen.call(element);
         if (result && typeof result.catch === 'function') {
           await result;
         }
       } catch (error) {
-        // iOS Safari doesn't support requestFullscreen on any element;
-        // fall back to the video-native webkitEnterFullscreen API.
-        if (element.tagName === 'VIDEO' && typeof element.webkitEnterFullscreen === 'function') {
-          element.webkitEnterFullscreen();
-          return;
-        }
         setInterfaceStatus('Fullscreen mode could not be opened.', 'error');
         throw error;
       }
       return;
     }
-    // iOS: no requestFullscreen at all – use video-native API when available.
-    if (element.tagName === 'VIDEO' && typeof element.webkitEnterFullscreen === 'function') {
-      element.webkitEnterFullscreen();
-      return;
-    }
-    setInterfaceStatus('Fullscreen mode is not supported in this browser.', 'error');
+    // No native Fullscreen API (e.g. iOS Safari) — use a CSS-simulated fullscreen
+    // so mobile looks and behaves identically to the desktop fullscreen view.
+    element.classList.add('is-simfullscreen');
+    document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: element } }));
   }
 
   function openMediaViewer(type, src, label) {
@@ -1951,8 +1943,8 @@
       let isSeeking = false;
 
       function isInFullscreen() {
-        return document.fullscreenElement === video || document.webkitFullscreenElement === video ||
-               (typeof video.webkitDisplayingFullscreen === 'boolean' && video.webkitDisplayingFullscreen);
+        return document.fullscreenElement === shell || document.webkitFullscreenElement === shell ||
+               shell.classList.contains('is-simfullscreen');
       }
 
       function updateControls() {
@@ -1984,7 +1976,7 @@
       }
 
       function enterFullscreenAndPlay() {
-        requestElementFullscreen(video).catch(function (error) {
+        requestElementFullscreen(shell).catch(function (error) {
           console.debug('Fullscreen request was blocked by the browser.', error);
         });
       }
@@ -2025,19 +2017,24 @@
 
       fullscreenButton.addEventListener('click', function () {
         if (isInFullscreen()) {
-          const exitFn = document.exitFullscreen || document.webkitExitFullscreen;
-          if (exitFn) exitFn.call(document).catch(function () {});
+          if (shell.classList.contains('is-simfullscreen')) {
+            shell.classList.remove('is-simfullscreen');
+            document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: null } }));
+          } else {
+            const exitFn = document.exitFullscreen || document.webkitExitFullscreen;
+            if (exitFn) exitFn.call(document).catch(function () {});
+          }
         } else {
-          requestElementFullscreen(video).catch(function (error) {
+          requestElementFullscreen(shell).catch(function (error) {
             console.debug('Fullscreen request was blocked by the browser.', error);
           });
         }
       });
 
       function onFullscreenChange() {
-        if (isInFullscreen()) {
-          // Enable native browser controls so the user has play/seek/exit UI in fullscreen.
-          video.controls = true;
+        const inFullscreen = isInFullscreen();
+        document.body.style.overflow = (inFullscreen && shell.classList.contains('is-simfullscreen')) ? 'hidden' : '';
+        if (inFullscreen) {
           if (video.muted) {
             video.muted = false;
             const prevVol = Number(video.getAttribute('data-previous-volume') || String(DEFAULT_POST_VIDEO_VOLUME));
@@ -2047,17 +2044,19 @@
           }
           pauseOtherPostVideos(video);
           video.play().catch(function () {});
-        } else {
-          // Restore custom-controls-only mode.
-          video.controls = false;
         }
         updateControls();
       }
       document.addEventListener('fullscreenchange', onFullscreenChange);
       document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-      // iOS Safari fires these events on the video element itself.
-      video.addEventListener('webkitbeginfullscreen', onFullscreenChange);
-      video.addEventListener('webkitendfullscreen', onFullscreenChange);
+      document.addEventListener('simfullscreenchange', onFullscreenChange);
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && shell.classList.contains('is-simfullscreen')) {
+          shell.classList.remove('is-simfullscreen');
+          document.body.style.overflow = '';
+          document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: null } }));
+        }
+      });
 
       video.addEventListener('loadedmetadata', updateControls);
       video.addEventListener('timeupdate', updateControls);
