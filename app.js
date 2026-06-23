@@ -1,11 +1,13 @@
 (function () {
   const DB_NAME = 'zorexium-app-db';
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
   const ACCOUNTS_STORE = 'accounts';
   const POSTS_STORE = 'posts';
   const SESSION_STORE = 'session';
   const MEDIA_STORE = 'media';
   const COMMENTS_STORE = 'comments';
+  const NOTIFICATIONS_STORE = 'notifications';
+  const NOTIFICATIONS_PATH = 'notifications.html';
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const MAX_IMAGE_COUNT = 10;
@@ -19,6 +21,10 @@
   const PROFILE_NAME_MIN_LENGTH = 2;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
+
+  const SVG_MUTED = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+  const SVG_UNMUTED = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+  const SVG_EXPAND = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');
@@ -241,6 +247,9 @@
         if (!database.objectStoreNames.contains(COMMENTS_STORE)) {
           database.createObjectStore(COMMENTS_STORE, { keyPath: 'id' });
         }
+        if (!database.objectStoreNames.contains(NOTIFICATIONS_STORE)) {
+          database.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id' });
+        }
       };
       request.onsuccess = function () {
         resolve(request.result);
@@ -328,6 +337,62 @@
       text: String(text).trim(),
       createdAt: Date.now()
     });
+    // Notify post owner if different from commenter
+    const post = await getRecord(POSTS_STORE, postId);
+    if (post && post.userId && post.userId !== currentUser.id && post.userId !== '_static') {
+      await addNotification('comment', post.userId, postId, post.text || '', {
+        actorName: currentUser.name,
+        actorHandle: currentUser.username,
+        excerpt: String(text).trim().slice(0, 100)
+      });
+    }
+  }
+
+  async function readNotifications(userId) {
+    const all = await getAllRecords(NOTIFICATIONS_STORE);
+    return all.filter(function (n) { return n.targetUserId === userId; }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+  }
+
+  async function addNotification(type, targetUserId, postId, postText, extra) {
+    if (!currentUser || !targetUserId) return;
+    await putRecord(NOTIFICATIONS_STORE, {
+      id: generateId('notif'),
+      targetUserId: targetUserId,
+      actorId: currentUser.id,
+      actorName: (extra && extra.actorName) || currentUser.name,
+      actorHandle: (extra && extra.actorHandle) || currentUser.username,
+      type: type,
+      postId: postId || null,
+      postText: String(postText || '').slice(0, 120),
+      excerpt: (extra && extra.excerpt) || '',
+      read: false,
+      createdAt: Date.now()
+    });
+  }
+
+  async function markAllNotificationsRead(userId) {
+    const all = await getAllRecords(NOTIFICATIONS_STORE);
+    await Promise.all(all.filter(function (n) { return n.targetUserId === userId && !n.read; }).map(function (n) {
+      return putRecord(NOTIFICATIONS_STORE, Object.assign({}, n, { read: true }));
+    }));
+  }
+
+  async function getUnreadNotificationCount(userId) {
+    const all = await getAllRecords(NOTIFICATIONS_STORE);
+    return all.filter(function (n) { return n.targetUserId === userId && !n.read; }).length;
+  }
+
+  function parseCount(value) {
+    var str = String(value || '0').trim();
+    if (/k$/i.test(str)) return Math.round(parseFloat(str) * 1000);
+    if (/m$/i.test(str)) return Math.round(parseFloat(str) * 1000000);
+    return parseInt(str.replace(/[^\d]/g, ''), 10) || 0;
+  }
+
+  function formatCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return String(n);
   }
 
   async function toggleSavePost(postId, staticInfo) {
@@ -352,6 +417,10 @@
         });
       }
       saved.push(postId);
+      const postRecord = await getRecord(POSTS_STORE, postId);
+      if (postRecord && postRecord.userId && postRecord.userId !== currentUser.id && postRecord.userId !== '_static') {
+        await addNotification('save', postRecord.userId, postId, postRecord.text || '', {});
+      }
     }
     const updated = Object.assign({}, currentUser, { savedPostIds: saved });
     await putRecord(ACCOUNTS_STORE, updated);
@@ -390,6 +459,10 @@
         createdAt: Date.now()
       });
       reposted.push(postId);
+      const postRecord = await getRecord(POSTS_STORE, postId);
+      if (postRecord && postRecord.userId && postRecord.userId !== currentUser.id && postRecord.userId !== '_static') {
+        await addNotification('repost', postRecord.userId, postId, postRecord.text || '', {});
+      }
     }
     const updated = Object.assign({}, currentUser, { repostedPostIds: reposted });
     await putRecord(ACCOUNTS_STORE, updated);
@@ -1054,6 +1127,9 @@
       headerNotificationsButton.setAttribute('title', isAuthenticated ? 'Your notifications' : 'Notifications');
     }
     document.body.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
+    if (isAuthenticated) {
+      updateNotificationBadge();
+    }
   }
 
   function syncDashboardTriggers() {
@@ -1222,6 +1298,115 @@
     };
   }
 
+  function buildDashboardCommentCard(comment, post, user) {
+    const article = document.createElement('article');
+    article.className = 'post-card post-comment-reply-card';
+
+    const header = document.createElement('div');
+    header.className = 'post-header';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'post-avatar';
+    avatar.style.background = user ? getAvatarColor(user.username) : '#888';
+    avatar.textContent = user ? getInitials(user.name, user.username) : '?';
+    header.appendChild(avatar);
+
+    const meta = document.createElement('div');
+    meta.className = 'post-meta';
+    const authorSpan = document.createElement('span');
+    authorSpan.className = 'post-username';
+    authorSpan.textContent = user ? user.name : 'You';
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'post-handle';
+    timeSpan.textContent = (user ? formatHandle(user.username) : '') + ' · ' + formatRelativeTime(comment.createdAt);
+    meta.appendChild(authorSpan);
+    meta.appendChild(timeSpan);
+    header.appendChild(meta);
+    article.appendChild(header);
+
+    if (post) {
+      const context = document.createElement('div');
+      context.className = 'post-reply-context';
+      const postAuthor = post.staticAuthorName || post.repostAuthorName || '';
+      const postHandle = post.staticAuthorHandle || post.repostAuthorHandle || '';
+      const postText = String(post.text || '').trim().slice(0, 100);
+      context.textContent = 'Replying to ' + (postAuthor ? postAuthor : (postHandle ? '@' + postHandle : 'a post')) + (postText ? ': "' + postText + (post.text && post.text.length > 100 ? '…' : '') + '"' : '');
+      article.appendChild(context);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'post-body';
+    body.textContent = comment.text;
+    article.appendChild(body);
+
+    return article;
+  }
+
+  async function renderDashboardTabs(userPosts, allPosts, user) {
+    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user);
+
+    // Build reply items: user's @-reply posts + user's comments
+    let userComments = [];
+    if (user) {
+      const allComments = await getAllRecords(COMMENTS_STORE);
+      userComments = allComments.filter(function (c) { return c.userId === user.id; }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+    }
+    const allPostsMap = new Map((Array.isArray(allPosts) ? allPosts : []).map(function (p) { return [p.id, p]; }));
+
+    for (let index = 0; index < profileTabPanels.length; index += 1) {
+      const panel = profileTabPanels[index];
+      const tabName = panel.getAttribute('data-panel') || 'posts';
+      panel.innerHTML = '';
+
+      if (tabName === 'replies') {
+        const replyPosts = dashboardTabCollections.replies || [];
+        const totalItems = replyPosts.length + userComments.length;
+        if (!totalItems) {
+          const emptyState = getDashboardEmptyState(tabName, Boolean(user));
+          panel.appendChild(createDashboardEmptyCard(emptyState.title, emptyState.description, emptyState.actionLabel));
+          continue;
+        }
+        for (let i = 0; i < replyPosts.length; i++) {
+          let postUser = user;
+          if (replyPosts[i].isStaticMirror) postUser = { id: '_static', name: replyPosts[i].staticAuthorName || 'Unknown', username: replyPosts[i].staticAuthorHandle || 'user' };
+          panel.appendChild(await buildDashboardPostCard(replyPosts[i], postUser));
+        }
+        if (userComments.length) {
+          const divider = document.createElement('div');
+          divider.className = 'dashboard-replies-divider';
+          divider.textContent = 'Your comments';
+          panel.appendChild(divider);
+          for (let j = 0; j < userComments.length; j++) {
+            const comment = userComments[j];
+            const relatedPost = allPostsMap.get(comment.postId) || null;
+            panel.appendChild(buildDashboardCommentCard(comment, relatedPost, user));
+          }
+        }
+        continue;
+      }
+
+      const items = dashboardTabCollections[tabName] || [];
+      if (!items.length) {
+        const emptyState = getDashboardEmptyState(tabName, Boolean(user));
+        panel.appendChild(createDashboardEmptyCard(emptyState.title, emptyState.description, emptyState.actionLabel));
+        continue;
+      }
+      for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
+        const post = items[itemIndex];
+        let postUser = user;
+        if (post.isStaticMirror) {
+          postUser = { id: '_static', name: post.staticAuthorName || 'Unknown', username: post.staticAuthorHandle || 'user' };
+        } else if (post.isRepost) {
+          postUser = user;
+        }
+        panel.appendChild(await buildDashboardPostCard(post, postUser));
+      }
+    }
+    setDashboardTab(activeDashboardTab);
+    syncDashboardTriggers();
+    syncPostActionStates();
+  }
+
   async function buildDashboardPostCard(post, user) {
     const article = document.createElement('article');
     article.className = 'post-card';
@@ -1291,34 +1476,6 @@
     return article;
   }
 
-  async function renderDashboardTabs(userPosts, allPosts, user) {
-    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user);
-    for (let index = 0; index < profileTabPanels.length; index += 1) {
-      const panel = profileTabPanels[index];
-      const tabName = panel.getAttribute('data-panel') || 'posts';
-      panel.innerHTML = '';
-      const items = dashboardTabCollections[tabName] || [];
-      if (!items.length) {
-        const emptyState = getDashboardEmptyState(tabName, Boolean(user));
-        panel.appendChild(createDashboardEmptyCard(emptyState.title, emptyState.description, emptyState.actionLabel));
-        continue;
-      }
-      for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
-        const post = items[itemIndex];
-        let postUser = user;
-        if (post.isStaticMirror) {
-          postUser = { id: '_static', name: post.staticAuthorName || 'Unknown', username: post.staticAuthorHandle || 'user' };
-        } else if (post.isRepost) {
-          postUser = user;
-        }
-        panel.appendChild(await buildDashboardPostCard(post, postUser));
-      }
-    }
-    setDashboardTab(activeDashboardTab);
-    syncDashboardTriggers();
-    syncPostActionStates();
-  }
-
   async function refreshUserFacingViews() {
     updateAuthControls();
     syncDashboardTriggers();
@@ -1375,16 +1532,101 @@
   }
 
   function addLikeBehavior(button) {
-    button.addEventListener('click', function () {
+    if (button._likeHandlerAttached) return;
+    button._likeHandlerAttached = true;
+    button.addEventListener('click', async function () {
       const isLiked = button.getAttribute('data-liked') === 'true';
-      const currentCount = Number(button.getAttribute('data-count') || '0');
+      const rawCount = button.getAttribute('data-count') || '0';
+      const currentCount = parseCount(rawCount);
       const nextCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
       button.setAttribute('data-liked', String(!isLiked));
       button.setAttribute('data-count', String(nextCount));
       button.style.color = isLiked ? '' : 'var(--accent)';
       const countNode = button.querySelector('.post-action-count');
       if (countNode) {
-        countNode.textContent = String(nextCount);
+        countNode.textContent = formatCount(nextCount);
+      }
+      if (!isLiked && currentUser) {
+        const article = button.closest('[data-post-id]');
+        if (article) {
+          const postId = article.dataset.postId;
+          const post = await getRecord(POSTS_STORE, postId);
+          if (post && post.userId && post.userId !== currentUser.id && post.userId !== '_static') {
+            await addNotification('like', post.userId, postId, post.text || '', {});
+          }
+        }
+      }
+    });
+  }
+
+  function initStaticActionButtons() {
+    document.querySelectorAll('.post-action[data-action="like"]').forEach(function (btn) {
+      var countNode = btn.querySelector('.post-action-count');
+      if (!countNode) {
+        var rawText = btn.textContent.trim();
+        var lastToken = rawText.split(/\s+/).pop();
+        countNode = document.createElement('span');
+        countNode.className = 'post-action-count';
+        countNode.textContent = formatCount(parseCount(lastToken));
+        var iconSpan = btn.querySelector('.post-action-icon');
+        while (btn.childNodes.length > 0 && btn.lastChild !== iconSpan) {
+          btn.removeChild(btn.lastChild);
+        }
+        btn.appendChild(countNode);
+      } else {
+        var parsed = parseCount(countNode.textContent.trim() || btn.getAttribute('data-count') || '0');
+        btn.setAttribute('data-count', String(parsed));
+        countNode.textContent = formatCount(parsed);
+      }
+      var rawCount = btn.getAttribute('data-count') || (countNode ? countNode.textContent : '0');
+      btn.setAttribute('data-count', String(parseCount(rawCount)));
+      addLikeBehavior(btn);
+    });
+    document.querySelectorAll('.post-action[data-action="comment"]').forEach(function (btn) {
+      var countNode = btn.querySelector('.post-action-count');
+      if (!countNode) {
+        var iconSpan = btn.querySelector('.post-action-icon');
+        var rawText = btn.textContent.trim();
+        var lastToken = rawText.split(/\s+/).pop();
+        var count = parseCount(lastToken);
+        while (btn.lastChild && btn.lastChild !== iconSpan) {
+          btn.removeChild(btn.lastChild);
+        }
+        countNode = document.createElement('span');
+        countNode.className = 'post-action-count';
+        countNode.textContent = formatCount(count);
+        btn.appendChild(countNode);
+      } else {
+        var parsed2 = parseCount(countNode.textContent.trim());
+        countNode.textContent = formatCount(parsed2);
+      }
+    });
+    document.querySelectorAll('.post-action[data-action="repost"]').forEach(function (btn) {
+      var countNode = btn.querySelector('.post-action-count');
+      if (countNode) {
+        var parsed3 = parseCount(countNode.textContent.trim());
+        countNode.textContent = formatCount(parsed3);
+      }
+    });
+    updateNotificationBadge();
+  }
+
+  async function updateNotificationBadge() {
+    if (!currentUser) return;
+    var count = await getUnreadNotificationCount(currentUser.id);
+    [headerNotificationsButton, stickyFooterNotificationsButton].forEach(function (btn) {
+      if (!btn) return;
+      var badge = btn.querySelector('.notif-badge');
+      if (count > 0) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'notif-badge';
+          btn.style.position = 'relative';
+          btn.appendChild(badge);
+        }
+        badge.textContent = count > 99 ? '99+' : String(count);
+      } else if (badge) {
+        badge.remove();
       }
     });
   }
@@ -1531,7 +1773,51 @@
     }
   }
 
-  async function buildMediaFragment(post) {
+  function openVideoInViewer(src, article, startTime) {
+    if (!mediaViewerModal || !mediaViewerContent) return;
+    if (!isSafeMediaUrl(src)) {
+      setInterfaceStatus('This media could not be opened safely.', 'error');
+      return;
+    }
+    mediaViewerState = { scale: 1, type: 'video', src: src, label: 'Video' };
+    mediaViewerContent.innerHTML = '';
+    if (mediaViewerTitle) mediaViewerTitle.textContent = 'Video';
+
+    const videoEl = document.createElement('video');
+    videoEl.className = 'media-viewer-media media-viewer-video-fullscreen';
+    videoEl.src = src;
+    videoEl.controls = true;
+    videoEl.setAttribute('playsinline', 'true');
+    videoEl.setAttribute('aria-label', 'Video');
+    if (startTime) videoEl.currentTime = startTime;
+    videoEl.autoplay = true;
+    mediaViewerContent.appendChild(videoEl);
+
+    if (article) {
+      const postInfo = document.createElement('div');
+      postInfo.className = 'media-viewer-post-info';
+      const header = article.querySelector('.post-header');
+      const body = article.querySelector('.post-body');
+      const actionsEl = article.querySelector('.post-actions');
+      if (header) postInfo.appendChild(header.cloneNode(true));
+      if (body) postInfo.appendChild(body.cloneNode(true));
+      if (actionsEl) {
+        const actionsClone = actionsEl.cloneNode(true);
+        const likeBtn = actionsClone.querySelector('[data-action="like"]');
+        if (likeBtn) addLikeBehavior(likeBtn);
+        postInfo.appendChild(actionsClone);
+      }
+      mediaViewerContent.appendChild(postInfo);
+    }
+
+    mediaViewerModal.classList.add('open');
+    mediaViewerModal.setAttribute('aria-hidden', 'false');
+    if (mediaViewerZoomInButton) mediaViewerZoomInButton.disabled = true;
+    if (mediaViewerZoomOutButton) mediaViewerZoomOutButton.disabled = true;
+    if (mediaViewerFitButton) mediaViewerFitButton.disabled = true;
+  }
+
+
     const fragment = document.createDocumentFragment();
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
     const altBase = post.text ? post.text.trim().replace(/\s+/g, ' ').split(' ').slice(0, 12).join(' ') : 'User upload';
@@ -1583,14 +1869,70 @@
         const wrapper = document.createElement('div');
         wrapper.className = 'post-video-shell';
 
+        const container = document.createElement('div');
+        container.className = 'post-video-container';
+
         const video = document.createElement('video');
         video.className = 'post-video';
         video.src = mediaUrl;
         video.setAttribute('aria-label', altBase + ' (video)');
-        video.controls = true;
-        video.preload = 'metadata';
-        wrapper.appendChild(video);
+        video.muted = true;
+        video.autoplay = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('loop', 'true');
+        video.preload = 'auto';
 
+        const controlsOverlay = document.createElement('div');
+        controlsOverlay.className = 'post-video-controls';
+
+        const muteBtn = document.createElement('button');
+        muteBtn.className = 'post-video-btn';
+        muteBtn.type = 'button';
+        muteBtn.setAttribute('aria-label', 'Unmute video');
+        muteBtn.innerHTML = SVG_MUTED;
+        muteBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          video.muted = !video.muted;
+          muteBtn.setAttribute('aria-label', video.muted ? 'Unmute video' : 'Mute video');
+          muteBtn.innerHTML = video.muted ? SVG_MUTED : SVG_UNMUTED;
+        });
+
+        const timeEl = document.createElement('span');
+        timeEl.className = 'post-video-time';
+
+        function updateTimeDisplay() {
+          if (!video.duration || !isFinite(video.duration)) { timeEl.textContent = ''; return; }
+          var rem = Math.max(0, video.duration - video.currentTime);
+          var m = Math.floor(rem / 60);
+          var s = Math.floor(rem % 60);
+          timeEl.textContent = m + ':' + (s < 10 ? '0' : '') + s + ' left';
+        }
+        video.addEventListener('timeupdate', updateTimeDisplay);
+        video.addEventListener('loadedmetadata', updateTimeDisplay);
+        video.addEventListener('ended', function () { timeEl.textContent = ''; });
+
+        const expandBtn = document.createElement('button');
+        expandBtn.className = 'post-video-btn';
+        expandBtn.type = 'button';
+        expandBtn.setAttribute('aria-label', 'Expand video');
+        expandBtn.innerHTML = SVG_EXPAND;
+        expandBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var article = expandBtn.closest('[data-post-id]');
+          openVideoInViewer(mediaUrl, article, video.currentTime);
+        });
+
+        video.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (video.paused) video.play().catch(function () {}); else video.pause();
+        });
+
+        controlsOverlay.appendChild(muteBtn);
+        controlsOverlay.appendChild(timeEl);
+        controlsOverlay.appendChild(expandBtn);
+        container.appendChild(video);
+        container.appendChild(controlsOverlay);
+        wrapper.appendChild(container);
         fragment.appendChild(wrapper);
       }
     }
@@ -1771,14 +2113,33 @@
       videoMediaId = await putMediaFile(video);
     }
 
+    const postId = generateId('post');
     await putRecord(POSTS_STORE, {
-      id: generateId('post'),
+      id: postId,
       userId: currentUser.id,
       text: text,
       imageMediaIds: imageMediaIds,
       videoMediaId: videoMediaId,
       createdAt: Date.now()
     });
+
+    // Notify @mentioned users
+    if (text) {
+      const mentions = String(text).match(/@([\w]+)/g);
+      if (mentions) {
+        const accounts = await readAccounts();
+        const usernameMap = new Map(accounts.map(function (a) { return [a.usernameKey || a.username.toLowerCase(), a]; }));
+        const notified = new Set();
+        for (var mi = 0; mi < mentions.length; mi++) {
+          var handle = mentions[mi].slice(1).toLowerCase();
+          var mentionedUser = usernameMap.get(handle);
+          if (mentionedUser && mentionedUser.id !== currentUser.id && !notified.has(mentionedUser.id)) {
+            notified.add(mentionedUser.id);
+            await addNotification('mention', mentionedUser.id, postId, text, {});
+          }
+        }
+      }
+    }
   }
 
   async function renderAccountDashboard() {
@@ -2052,6 +2413,18 @@
       attachAuthenticatedClickGuard(button, function () {
         if (button === headerProfileButton || button === stickyFooterProfileButton) {
           navigateToDashboard();
+        } else if (button === headerNotificationsButton || button === stickyFooterNotificationsButton) {
+          window.location.href = NOTIFICATIONS_PATH;
+        }
+      });
+    });
+
+    // Unauthenticated clicks on notification buttons also go to notifications (which will show login prompt)
+    [headerNotificationsButton, stickyFooterNotificationsButton].forEach(function (button) {
+      if (!button) return;
+      button.addEventListener('click', function () {
+        if (!currentUser) {
+          openAuthModal('login');
         }
       });
     });
@@ -2204,6 +2577,7 @@
     attachDashboardTriggerHandlers();
     attachMediaViewerHandlers();
     attachPostInteractionHandlers();
+    initStaticActionButtons();
     await syncCurrentUserFromSession();
   }
 

@@ -723,14 +723,130 @@
         flex-direction: column;
         gap: 8px;
       }
+      .post-video-container {
+        position: relative;
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #000;
+        cursor: pointer;
+      }
       .post-video {
         width: 100%;
         display: block;
-        border: 1px solid var(--border);
-        border-radius: 10px;
         background: #000;
-        object-fit: cover;
-        max-height: 320px;
+        object-fit: contain;
+        aspect-ratio: 16 / 9;
+        max-height: 480px;
+      }
+      .post-video-controls {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.72));
+        pointer-events: none;
+      }
+      .post-video-btn {
+        pointer-events: all;
+        background: rgba(0,0,0,0.45);
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #fff;
+        flex-shrink: 0;
+        padding: 0;
+        transition: background 0.15s;
+      }
+      .post-video-btn:hover {
+        background: rgba(0,0,0,0.7);
+      }
+      .post-video-btn svg {
+        width: 15px;
+        height: 15px;
+        stroke: #fff;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .post-video-time {
+        flex: 1;
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255,255,255,0.9);
+        font-weight: 500;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        pointer-events: none;
+      }
+      .notif-badge {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        background: #e53e3e;
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        border-radius: 10px;
+        min-width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 3px;
+        pointer-events: none;
+        line-height: 1;
+      }
+      .media-viewer-video-fullscreen {
+        width: 100%;
+        max-height: 60vh;
+        object-fit: contain;
+      }
+      .media-viewer-post-info {
+        padding: 12px 4px 4px;
+        border-top: 1px solid var(--border);
+      }
+      .media-viewer-post-info .post-header {
+        margin-bottom: 8px;
+      }
+      .media-viewer-post-info .post-body {
+        margin-bottom: 10px;
+        color: var(--text);
+      }
+      .media-viewer-stage {
+        min-height: 0;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 6px;
+        background: #000;
+      }
+      .dashboard-replies-divider {
+        padding: 10px 0 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-soft);
+        border-top: 1px solid var(--border);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .post-reply-context {
+        font-size: 12px;
+        color: var(--text-soft);
+        padding: 4px 0 2px;
+        font-style: italic;
       }
       .post-media-toolbar {
         display: flex;
@@ -792,15 +908,6 @@
       .media-viewer-action {
         padding: 8px 12px;
         font-size: 12px;
-      }
-      .media-viewer-stage {
-        min-height: 0;
-        overflow: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 6px;
-        background: #000;
       }
       .media-viewer-media {
         max-width: 100%;
@@ -1357,8 +1464,8 @@
               The new climate deal signed at the global summit is <strong>historic</strong>. 197 nations agreeing on binding carbon targets by 2035 — nobody thought this would happen so soon. This is what cooperation looks like. 🌍
             </div>
             <div class="post-actions">
-              <button class="post-action" type="button" data-action="like" data-count="4.2k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 4.2k</button>
-              <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 318</button>
+              <button class="post-action" type="button" data-action="like" data-count="4200"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="post-action-count">4.2k</span></button>
+              <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="post-action-count">318</span></button>
               <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">1.1k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
@@ -1378,8 +1485,8 @@
             </div>
             <div class="post-image-placeholder" aria-label="Article preview image">📡 Image · Tech Chronicle</div>
             <div class="post-actions">
-              <button class="post-action" type="button" data-action="like" data-count="9.7k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 9.7k</button>
-              <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 872</button>
+              <button class="post-action" type="button" data-action="like" data-count="9700"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="post-action-count">9.7k</span></button>
+              <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="post-action-count">872</span></button>
               <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">3.4k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
