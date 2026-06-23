@@ -1556,6 +1556,61 @@
         color: var(--text-soft);
         margin: 0 0 4px;
       }
+      /* ── Article companion card (in main feed) ─────── */
+      .article-companion-card {
+        display: block;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        color: inherit;
+        transition: border-color 0.15s;
+      }
+      .article-companion-card:hover {
+        border-color: var(--border-strong);
+      }
+      .article-companion-cover {
+        width: 100%;
+        display: block;
+        aspect-ratio: 5 / 2;
+        object-fit: cover;
+        background: var(--surface-soft);
+      }
+      .article-companion-body {
+        padding: 12px 14px;
+      }
+      .article-companion-title {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .article-companion-excerpt {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: var(--text-soft);
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .article-companion-footer {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-soft);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .article-companion-footer svg {
+        flex-shrink: 0;
+      }
       .sticky-footer {
         position: fixed;
         left: 0;
@@ -2182,7 +2237,7 @@
       <a class="sticky-footer-item active" href="./" aria-label="Home">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </a>
-      <a class="sticky-footer-item" href="newsroom.html" aria-label="Articles">
+      <a class="sticky-footer-item" href="articles.html" aria-label="Articles">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg>
       </a>
       <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile" title="Profile coming soon">
