@@ -1476,7 +1476,7 @@
         return (right.createdAt || 0) - (left.createdAt || 0);
       }),
       articles: userPosts.filter(function (post) {
-        return String(post.text || '').trim().length >= 180;
+        return post.type === 'article' || String(post.text || '').trim().length >= 180;
       }),
       media: userPosts.filter(function (post) {
         return hasPostMedia(post);

@@ -51,9 +51,52 @@
       .sidebar-bubbles span { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; color: var(--text-muted); }
 
       /* ── Header ────────────────────────────────────────────────── */
-      header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: rgba(255,255,255,.95); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border); backdrop-filter: blur(6px); }
-      .menu-btn { font-size: 22px; cursor: pointer; background: none; border: none; color: var(--text); padding: 4px 6px; line-height: 1; }
-      .page-title { flex: 1; font-size: 17px; font-weight: 700; margin: 0; }
+      header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: rgba(255,255,255,.97);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(6px);
+      }
+      .header-left { display: flex; align-items: center; gap: 8px; }
+      .header-center { display: flex; align-items: center; justify-content: center; min-width: 0; }
+      .header-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+      .header-icon-btn {
+        background: none;
+        border: none;
+        color: var(--text);
+        font-size: 20px;
+        cursor: pointer;
+        padding: 6px 8px;
+        border-radius: 6px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .header-icon-btn:hover { background: var(--surface-soft); color: var(--accent); }
+      .header-icon-btn-plus { font-size: 28px; font-weight: 700; padding: 2px 8px; }
+      .header-icon-btn-lg svg { width: 22px; height: 22px; stroke-width: 2.5; }
+      .brand { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; flex-shrink: 0; }
+      .brand-logo { width: auto; height: clamp(42px, 8vw, 72px); max-width: min(100%, 460px); object-fit: contain; display: block; }
+      .header-search { flex: 1 1 220px; min-width: 150px; max-width: 320px; }
+      .header-search .search-bar-input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-soft);
+        color: var(--text);
+        padding: 10px 14px;
+        font-size: 13px;
+        outline: none;
+      }
+      .header-search .search-bar-input:focus { border-color: var(--accent); background: #fff; }
       .btn { border: 1px solid var(--border-strong); background: var(--surface-soft); color: var(--text); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
       .btn:hover { background: var(--surface); }
       .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -101,7 +144,8 @@
         cursor: pointer;
       }
       .article-card:hover { background: var(--surface); }
-      .article-card-header { display: flex; align-items: center; gap: 10px; }
+      .article-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      .article-card-header-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
       .post-avatar {
         width: 38px;
         height: 38px;
@@ -146,6 +190,47 @@
       .article-action-btn:hover { color: var(--text); background: var(--surface-soft); }
       .article-action-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
       .article-action-btn.liked { color: var(--accent); }
+      .article-card-menu { position: relative; flex-shrink: 0; }
+      .article-card-menu-btn {
+        width: 30px;
+        height: 30px;
+        border: 1px solid transparent;
+        border-radius: 50%;
+        background: none;
+        color: var(--text-soft);
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .article-card-menu-btn:hover { background: var(--surface-soft); color: var(--text); }
+      .article-card-menu-btn svg { width: 16px; height: 16px; fill: currentColor; }
+      .article-card-menu-panel {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 150px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.12);
+        padding: 6px;
+        display: none;
+        z-index: 20;
+      }
+      .article-card-menu.open .article-card-menu-panel { display: block; }
+      .article-card-menu-action {
+        width: 100%;
+        border: none;
+        background: none;
+        text-align: left;
+        font-size: 13px;
+        color: var(--text);
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+      .article-card-menu-action:hover { background: var(--surface-soft); }
+      .article-card-menu-action.danger { color: #c0392b; }
 
       /* ── Empty state ─────────────────────────────────────────── */
       .empty-state { text-align: center; padding: 60px 24px; color: var(--text-soft); }
@@ -471,14 +556,25 @@
 
     <!-- Header -->
     <header>
-      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open navigation">&#9776;</button>
-      <h1 class="page-title">Articles</h1>
-      <button class="btn btn-accent btn-sm header-write-btn" id="header-write-btn" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        Write Article
-      </button>
-      <button class="btn btn-sm" id="header-manage-btn" type="button" title="Manage your articles">My Articles</button>
-      <button id="header-auth-btn" class="btn btn-sm" type="button">Log In</button>
+      <div class="header-left">
+        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write an article"><span aria-hidden="true">+</span></button>
+      </div>
+      <div class="header-center">
+        <a class="brand" href="index.html">
+          <img
+            class="brand-logo"
+            src="https://github.com/user-attachments/assets/8f82f840-59fb-4dd2-857d-499d9e79266d"
+            alt="Zorexium logo"
+          />
+        </a>
+      </div>
+      <div class="header-right">
+        <div class="header-search">
+          <input id="header-search-input" class="search-bar-input" type="search" placeholder="Search posts, news, people…" aria-label="Search posts, news, people" />
+        </div>
+        <button id="header-profile-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Profile" title="Profile"><svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+        <button id="header-notifications-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Notifications" title="Notifications"><svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+      </div>
     </header>
 
     <!-- Tab navigation -->
@@ -693,6 +789,7 @@
       };
       var autosaveTimerId = null;
       var generatedUrls = [];
+      var articleMenusOpen = false;
 
       /* ── IDB helpers ────────────────────────────────────────── */
       function openDb() {
@@ -856,9 +953,7 @@
         if (!id) return Promise.resolve(null);
         return getRecord(MEDIA_STORE, id).then(function (rec) {
           if (!rec || !(rec.blob instanceof Blob)) return null;
-          var url = URL.createObjectURL(rec.blob);
-          generatedUrls.push(url);
-          return url;
+          return URL.createObjectURL(rec.blob);
         });
       }
 
@@ -868,6 +963,27 @@
       function saveArticle(article) { return putRecord(ARTICLES_STORE, article); }
 
       function deleteArticleById(id) { return deleteRecord(ARTICLES_STORE, id); }
+
+      function findCompanionPosts(articleId) {
+        if (!articleId) return Promise.resolve([]);
+        return getAllRecords(POSTS_STORE).then(function (posts) {
+          return (posts || []).filter(function (post) {
+            return post && post.type === 'article' && post.articleId === articleId;
+          });
+        });
+      }
+
+      function deleteCompanionPosts(articleId) {
+        return findCompanionPosts(articleId).then(function (posts) {
+          return Promise.all(posts.map(function (post) { return deleteRecord(POSTS_STORE, post.id); }));
+        });
+      }
+
+      function deleteArticleWithCompanion(articleId) {
+        return deleteCompanionPosts(articleId).then(function () {
+          return deleteArticleById(articleId);
+        });
+      }
 
       /* ── Feed rendering ─────────────────────────────────────── */
       function buildActionButton(svgMarkup, label, extraClass) {
@@ -879,6 +995,134 @@
         return btn;
       }
 
+      function closeArticleMenus(except) {
+        var anyOpen = false;
+        document.querySelectorAll('.article-card-menu.open').forEach(function (menu) {
+          if (except && menu === except) {
+            anyOpen = true;
+            return;
+          }
+          if (menu.classList.contains('open')) {
+            menu.classList.remove('open');
+          }
+        });
+        articleMenusOpen = anyOpen;
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+          try {
+            var el = document.createElement('textarea');
+            el.value = text;
+            el.setAttribute('readonly', '');
+            el.style.position = 'fixed';
+            el.style.top = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            // Fallback for environments without Clipboard API support.
+            var copied = document.execCommand('copy');
+            document.body.removeChild(el);
+            if (copied) resolve();
+            else reject(new Error('Copy command failed'));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+
+      function confirmArticleDelete(article) {
+        var targetTitle = article && article.title ? ('\n\nTitle: ' + article.title) : '';
+        return window.confirm('Permanently delete this article? This cannot be undone.' + targetTitle);
+      }
+
+      function buildArticleMenu(article) {
+        if (!currentUser || article.userId !== currentUser.id) return null;
+
+        var wrap = document.createElement('div');
+        wrap.className = 'article-card-menu';
+
+        var trigger = document.createElement('button');
+        trigger.className = 'article-card-menu-btn';
+        trigger.type = 'button';
+        trigger.setAttribute('aria-label', 'Open article menu');
+        trigger.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+        trigger.addEventListener('click', function (e) {
+          e.stopPropagation();
+          closeArticleMenus(wrap);
+          wrap.classList.toggle('open');
+          articleMenusOpen = wrap.classList.contains('open');
+        });
+        wrap.appendChild(trigger);
+
+        var panel = document.createElement('div');
+        panel.className = 'article-card-menu-panel';
+        panel.addEventListener('click', function (e) { e.stopPropagation(); });
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'article-card-menu-action';
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Copy link';
+        copyBtn.addEventListener('click', function () {
+          var link = window.location.origin + window.location.pathname + '?read=' + encodeURIComponent(article.id);
+          copyText(link).then(function () {
+            copyBtn.textContent = 'Copied!';
+            setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1800);
+          }).catch(function () {
+            copyBtn.textContent = 'Unable to copy link';
+            setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1800);
+          });
+          closeArticleMenus();
+        });
+        panel.appendChild(copyBtn);
+
+        var editBtn = document.createElement('button');
+        editBtn.className = 'article-card-menu-action';
+        editBtn.type = 'button';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', function () {
+          closeArticleMenus();
+          openEditor(article);
+        });
+        panel.appendChild(editBtn);
+
+        if (article.status === 'published') {
+          var unpublishBtn = document.createElement('button');
+          unpublishBtn.className = 'article-card-menu-action';
+          unpublishBtn.type = 'button';
+          unpublishBtn.textContent = 'Unpublish';
+          unpublishBtn.addEventListener('click', function () {
+            article.status = 'draft';
+            article.publishedAt = null;
+            saveArticle(article).then(function () {
+              return deleteCompanionPosts(article.id);
+            }).then(function () {
+              return renderFeed();
+            });
+            closeArticleMenus();
+          });
+          panel.appendChild(unpublishBtn);
+        }
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.className = 'article-card-menu-action danger';
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', function () {
+          if (!confirmArticleDelete(article)) return;
+          deleteArticleWithCompanion(article.id).then(function () {
+            return renderFeed();
+          });
+          closeArticleMenus();
+        });
+        panel.appendChild(deleteBtn);
+
+        wrap.appendChild(panel);
+        return wrap;
+      }
+
       function buildArticleCard(article, user) {
         var card = document.createElement('article');
         card.className = 'article-card';
@@ -888,11 +1132,14 @@
         var header = document.createElement('div');
         header.className = 'article-card-header';
 
+        var headerMain = document.createElement('div');
+        headerMain.className = 'article-card-header-main';
+
         var avatar = document.createElement('div');
         avatar.className = 'post-avatar';
         avatar.style.background = getAvatarColor(user ? user.username : 'user');
         avatar.textContent = getInitials(user ? user.name : '', user ? user.username : '');
-        header.appendChild(avatar);
+        headerMain.appendChild(avatar);
 
         var metaDiv = document.createElement('div');
         metaDiv.className = 'article-card-meta';
@@ -907,7 +1154,11 @@
         handleEl.textContent = '@' + (user ? user.username : 'user') + ' \u00b7 ' + formatRelativeTime(article.publishedAt || article.createdAt);
         metaDiv.appendChild(handleEl);
 
-        header.appendChild(metaDiv);
+        headerMain.appendChild(metaDiv);
+        header.appendChild(headerMain);
+
+        var menu = buildArticleMenu(article);
+        if (menu) header.appendChild(menu);
         card.appendChild(header);
 
         // Cover image (rendered after build if mediaId is set)
@@ -1066,12 +1317,8 @@
 
       /* ── Auth UI ────────────────────────────────────────────── */
       function updateAuthUI() {
-        var authBtn = document.getElementById('header-auth-btn');
         var writeBtn = document.getElementById('header-write-btn');
         var fabBtn = document.getElementById('write-fab');
-        if (authBtn) {
-          authBtn.textContent = currentUser ? 'Log Out' : 'Log In';
-        }
         var canWrite = Boolean(currentUser);
         if (writeBtn) writeBtn.style.opacity = canWrite ? '1' : '0.6';
         if (fabBtn) fabBtn.style.opacity = canWrite ? '1' : '0.6';
@@ -1455,28 +1702,33 @@
         };
 
         return saveArticle(article).then(function () {
-          // Create companion post in the main feed
           var excerpt = getExcerpt(data.body, 120);
           var readTime = calcReadTime(data.body);
-          var companionPost = {
-            id: generateId('post'),
-            userId: currentUser.id,
-            type: 'article',
-            articleId: articleId,
-            articleTitle: data.title,
-            articleExcerpt: excerpt,
-            articleCoverMediaId: editorState.coverMediaId || null,
-            articleReadTime: readTime,
-            text: '',
-            replyAudience: audience || 'everyone',
-            imageMediaIds: [],
-            videoMediaId: null,
-            gifUrl: '',
-            poll: null,
-            scheduledAt: null,
-            createdAt: now
-          };
-          return putRecord(POSTS_STORE, companionPost);
+          return findCompanionPosts(articleId).then(function (posts) {
+            var companionPost = posts.length ? posts[0] : {
+              id: generateId('post'),
+              createdAt: now
+            };
+            companionPost.userId = currentUser.id;
+            companionPost.type = 'article';
+            companionPost.articleId = articleId;
+            companionPost.articleTitle = data.title;
+            companionPost.articleExcerpt = excerpt;
+            companionPost.articleCoverMediaId = editorState.coverMediaId || null;
+            companionPost.articleReadTime = readTime;
+            companionPost.text = '';
+            companionPost.replyAudience = audience || 'everyone';
+            companionPost.imageMediaIds = [];
+            companionPost.videoMediaId = null;
+            companionPost.gifUrl = '';
+            companionPost.poll = null;
+            companionPost.scheduledAt = null;
+            return putRecord(POSTS_STORE, companionPost).then(function () {
+              if (posts.length > 1) {
+                return Promise.all(posts.slice(1).map(function (post) { return deleteRecord(POSTS_STORE, post.id); }));
+              }
+            });
+          });
         }).then(function () {
           clearDraft();
           editorState.articleId = articleId;
@@ -1721,6 +1973,8 @@
                 article.status = 'draft';
                 article.publishedAt = null;
                 saveArticle(article).then(function () {
+                  return deleteCompanionPosts(article.id);
+                }).then(function () {
                   renderMgmtList();
                   renderFeed();
                 });
@@ -1733,8 +1987,8 @@
             delBtn.className = 'mgmt-action-btn danger';
             delBtn.textContent = 'Delete';
             delBtn.addEventListener('click', function () {
-              if (!window.confirm('Permanently delete "' + (article.title || 'this article') + '"? This cannot be undone.')) return;
-              deleteArticleById(article.id).then(function () {
+              if (!confirmArticleDelete(article)) return;
+              deleteArticleWithCompanion(article.id).then(function () {
                 renderMgmtList();
                 renderFeed();
               });
@@ -1786,10 +2040,6 @@
         var fab = document.getElementById('write-fab');
         if (writeBtn) writeBtn.addEventListener('click', function () { openEditor(null); });
         if (fab) fab.addEventListener('click', function () { openEditor(null); });
-
-        // Manage button
-        var manageBtn = document.getElementById('header-manage-btn');
-        if (manageBtn) manageBtn.addEventListener('click', openMgmt);
 
         // Editor close
         var editorClose = document.getElementById('editor-close-btn');
@@ -1874,19 +2124,6 @@
           });
         }
 
-        // Auth button in header
-        var authBtn = document.getElementById('header-auth-btn');
-        if (authBtn) authBtn.addEventListener('click', function () {
-          if (currentUser) {
-            // Delegate logout to app.js if available
-            if (typeof window.logoutUser === 'function') {
-              window.logoutUser();
-            }
-          } else {
-            openAuthModalPage('login');
-          }
-        });
-
         // Sticky footer auth redirects
         var profileBtn = document.getElementById('sticky-footer-profile');
         if (profileBtn) profileBtn.addEventListener('click', function () {
@@ -1930,6 +2167,7 @@
         // Escape key handling
         document.addEventListener('keydown', function (e) {
           if (e.key !== 'Escape') return;
+          closeArticleMenus();
           var editorOverlay = document.getElementById('editor-overlay');
           var readerOverlay = document.getElementById('reader-overlay');
           var mgmtOverlay = document.getElementById('mgmt-overlay');
@@ -1938,6 +2176,10 @@
           if (editorOverlay && editorOverlay.classList.contains('open')) { doAutosave(); closeEditor(); return; }
           if (readerOverlay && readerOverlay.classList.contains('open')) { closeReader(); return; }
           if (mgmtOverlay && mgmtOverlay.classList.contains('open')) { closeMgmt(); return; }
+        });
+
+        document.addEventListener('click', function () {
+          if (articleMenusOpen) closeArticleMenus();
         });
       }
 
