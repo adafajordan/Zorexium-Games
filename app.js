@@ -3297,6 +3297,7 @@
       item.className = 'npc-img-item';
 
       const isVideo = file.type && file.type.startsWith('video/');
+      // url is a browser-generated blob: URL from a local File object (not user text), safe to assign to src.
       const url = URL.createObjectURL(file);
       generatedMediaUrls.push(url);
 
@@ -3423,8 +3424,19 @@
     }
     badge.hidden = false;
     const d = new Date(ts);
-    badge.innerHTML = '&#128337; ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
-      ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + ' <span style="font-size:10px;opacity:.7">&#10005;</span>';
+    const clockIcon = document.createElement('span');
+    clockIcon.textContent = '🕐 ';
+    const dateText = document.createTextNode(
+      d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+      ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + ' '
+    );
+    const closeIcon = document.createElement('span');
+    closeIcon.className = 'npc-badge-close';
+    closeIcon.textContent = '\u2715';
+    badge.innerHTML = '';
+    badge.appendChild(clockIcon);
+    badge.appendChild(dateText);
+    badge.appendChild(closeIcon);
     badge.title = 'Scheduled for ' + d.toLocaleString();
     badge.onclick = function () {
       npcState.scheduledAt = null;
