@@ -2015,6 +2015,9 @@
   const PV_CONTROLS_HIDE_DELAY = 3000;
   const PV_SWIPE_THRESHOLD = 80;
 
+  // WeakMap to store per-player helper callbacks without polluting the DOM element.
+  const pvPlayerHelpers = new WeakMap();
+
   function getPostVideoObserver() {
     if (postVideoIntersectionObserver) return postVideoIntersectionObserver;
     postVideoIntersectionObserver = new IntersectionObserver(function (entries) {
@@ -2336,6 +2339,7 @@
         }
       } catch (e) {
         // Buffered data not accessible in the current playback state; ignore.
+        console.debug('Video buffered ranges not accessible.', e);
       }
     }
 
@@ -2414,6 +2418,10 @@
           closeImmersivePlayer();
         }
       } else if (e.key === ' ' || e.key === 'k') {
+        // Only intercept Space/K when focus is not on an interactive element inside
+        // the player (e.g. a button), so screen readers and button activation still work.
+        const tag = document.activeElement ? document.activeElement.tagName : '';
+        if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
         e.preventDefault();
         if (video.paused || video.ended) video.play().catch(function () {}); else video.pause();
         showControls();
@@ -2441,7 +2449,10 @@
       const dx = e.changedTouches[0].clientX - swipeStartX;
       swipeStartY = null;
       swipeStartX = null;
-      if (Math.abs(dy) > PV_SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+      const absDy = Math.abs(dy);
+      if (absDy > PV_SWIPE_THRESHOLD && absDy > Math.abs(dx)) {
+        // dy < 0 means finger moved upward (swipe up) → advance to next video.
+        // dy > 0 means finger moved downward (swipe down) → return to feed.
         if (dy < 0) {
           navigateImmersivePlayer(1);
         } else {
@@ -2490,9 +2501,8 @@
       updateImmersiveControls();
     });
 
-    // Expose helpers for open/navigate to call after loading new source
-    player._updateControls = updateImmersiveControls;
-    player._showControls = showControls;
+    // Store helpers via WeakMap to avoid polluting the DOM element with custom properties.
+    pvPlayerHelpers.set(player, { updateControls: updateImmersiveControls, showControls: showControls });
   }
 
   function openImmersivePlayer(inlineVideo, article) {
@@ -2521,8 +2531,11 @@
 
     pvVideo.play().catch(function () {});
 
-    if (player._updateControls) player._updateControls();
-    if (player._showControls) player._showControls();
+    const helpers = pvPlayerHelpers.get(player);
+    if (helpers) {
+      helpers.updateControls();
+      helpers.showControls();
+    }
   }
 
   function closeImmersivePlayer() {
@@ -2587,8 +2600,11 @@
     pvVideo.playbackRate = pvPlaybackRate;
     pvVideo.play().catch(function () {});
 
-    if (player._updateControls) player._updateControls();
-    if (player._showControls) player._showControls();
+    const helpers = pvPlayerHelpers.get(player);
+    if (helpers) {
+      helpers.updateControls();
+      helpers.showControls();
+    }
   }
 
 
