@@ -824,65 +824,117 @@
       }
       .post-video-shell {
         width: min(100%, 560px);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #000;
       }
       .post-video {
         width: 100%;
         display: block;
-        border: 1px solid var(--border);
-        border-radius: 10px;
+        border: none;
+        border-radius: inherit;
         background: #000;
         object-fit: cover;
-        max-height: 320px;
+        max-height: 420px;
+        aspect-ratio: 16 / 9;
       }
-      .post-video-remaining {
+      .post-video-center-play {
         position: absolute;
-        right: 10px;
-        bottom: 10px;
-        padding: 4px 8px;
+        inset: 50% auto auto 50%;
+        transform: translate(-50%, -50%);
+        width: 56px;
+        height: 56px;
         border-radius: 999px;
-        font-size: 12px;
-        color: #fff;
-        background: rgba(0, 0, 0, 0.68);
-      }
-      .post-video-fullscreen-toggle {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
         background: rgba(0, 0, 0, 0.6);
         color: #fff;
-        font-size: 12px;
-        padding: 4px 10px;
-        cursor: pointer;
+        font-size: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
       }
-      .post-video-fullscreen-overlay { display: none; }
-      .post-video-shell:fullscreen .post-video {
-        width: 100vw;
-        height: 100vh;
-        max-height: 100vh;
-        border: none;
-        border-radius: 0;
-        object-fit: contain;
-      }
-      .post-video-shell:fullscreen .post-video-remaining { display: none; }
-      .post-video-shell:fullscreen .post-video-fullscreen-toggle { opacity: 0.5; }
-      .post-video-shell:fullscreen .post-video-fullscreen-overlay {
-        display: block;
+      .post-video-controls {
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
-        padding: 16px;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0));
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 10px 10px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+        opacity: 1;
+        transition: opacity 0.18s ease;
       }
-      .post-video-fullscreen-author { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
-      .post-video-fullscreen-author span { margin-left: 8px; font-weight: 400; color: #d0d0d0; }
-      .post-video-fullscreen-text { margin: 0 0 8px; font-size: 13px; line-height: 1.45; color: #f2f2f2; }
-      .post-video-fullscreen-options { margin: 0; font-size: 12px; color: #d7d7d7; }
+      .post-video-seek {
+        width: 100%;
+        margin: 0;
+        accent-color: #1d9bf0;
+      }
+      .post-video-controls-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .post-video-control {
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        min-width: 30px;
+        height: 30px;
+        padding: 0 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      .post-video-control:hover {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+      .post-video-time {
+        margin-left: auto;
+        margin-right: 4px;
+        color: #fff;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .post-video-shell.is-playing .post-video-center-play {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .post-video-shell.is-playing .post-video-controls {
+        opacity: 0;
+      }
+      .post-video-shell:hover .post-video-controls,
+      .post-video-shell:focus-within .post-video-controls,
+      .post-video-shell:not(.is-playing) .post-video-controls {
+        opacity: 1;
+      }
+      .post-video-shell:hover .post-video-center-play,
+      .post-video-shell:focus-within .post-video-center-play,
+      .post-video-shell:not(.is-playing) .post-video-center-play {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .post-video-shell:fullscreen {
+        border-radius: 0;
+      }
+      .post-video-shell:fullscreen .post-video {
+        width: 100vw;
+        height: 100vh;
+        max-height: none;
+        border: none;
+        border-radius: 0;
+        object-fit: contain;
+      }
+      .post-video-shell:fullscreen .post-video-controls {
+        padding: 16px;
+      }
       .post-action-danger { color: #d15454; }
       .post-action-danger:hover { color: #ff7c7c; }
 
