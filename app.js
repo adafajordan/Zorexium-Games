@@ -1,12 +1,13 @@
 (function () {
   const DB_NAME = 'zorexium-app-db';
-  const DB_VERSION = 3;
+  const DB_VERSION = 4; // v4: added ARTICLES_STORE
   const ACCOUNTS_STORE = 'accounts';
   const POSTS_STORE = 'posts';
   const SESSION_STORE = 'session';
   const MEDIA_STORE = 'media';
   const COMMENTS_STORE = 'comments';
   const NOTIFICATIONS_STORE = 'notifications';
+  const ARTICLES_STORE = 'articles';
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const NOTIFICATIONS_PAGE_PATH = 'notifications.html';
@@ -273,6 +274,9 @@
         }
         if (!database.objectStoreNames.contains(NOTIFICATIONS_STORE)) {
           database.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id' });
+        }
+        if (!database.objectStoreNames.contains(ARTICLES_STORE)) {
+          database.createObjectStore(ARTICLES_STORE, { keyPath: 'id' });
         }
       };
       request.onsuccess = function () {
@@ -1624,14 +1628,19 @@
       article.appendChild(body);
     }
 
-    const mediaFragment = await buildMediaFragment(post);
-    if (mediaFragment.childNodes.length) {
-      article.appendChild(mediaFragment);
-    }
+    if (post.type === 'article') {
+      const companionCard = await buildArticleCompanionCard(post);
+      article.appendChild(companionCard);
+    } else {
+      const mediaFragment = await buildMediaFragment(post);
+      if (mediaFragment.childNodes.length) {
+        article.appendChild(mediaFragment);
+      }
 
-    const poll = buildPollElement(post);
-    if (poll) {
-      article.appendChild(poll);
+      const poll = buildPollElement(post);
+      if (poll) {
+        article.appendChild(poll);
+      }
     }
 
     const scheduleStatus = createScheduledStatusNode(post);
@@ -2609,6 +2618,50 @@
 
 
 
+  async function buildArticleCompanionCard(post) {
+    const ARTICLE_DOC_ICON = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+    const card = document.createElement('a');
+    card.className = 'article-companion-card';
+    card.href = 'articles.html?read=' + encodeURIComponent(post.articleId || '');
+
+    if (post.articleCoverMediaId) {
+      const mediaRecord = await getMediaRecord(post.articleCoverMediaId);
+      if (mediaRecord && mediaRecord.blob instanceof Blob) {
+        const url = URL.createObjectURL(mediaRecord.blob);
+        generatedMediaUrls.push(url);
+        const img = document.createElement('img');
+        img.className = 'article-companion-cover';
+        if (isSafeMediaUrl(url)) img.src = url;
+        img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
+        img.loading = 'lazy';
+        card.appendChild(img);
+      }
+    }
+
+    const body = document.createElement('div');
+    body.className = 'article-companion-body';
+
+    const title = document.createElement('p');
+    title.className = 'article-companion-title';
+    title.textContent = post.articleTitle || 'Untitled Article';
+    body.appendChild(title);
+
+    if (post.articleExcerpt) {
+      const excerpt = document.createElement('p');
+      excerpt.className = 'article-companion-excerpt';
+      excerpt.textContent = post.articleExcerpt;
+      body.appendChild(excerpt);
+    }
+
+    const footer = document.createElement('p');
+    footer.className = 'article-companion-footer';
+    footer.innerHTML = ARTICLE_DOC_ICON + ' <span>Article</span>' + (post.articleReadTime ? ' <span class="article-companion-readtime">&middot; ' + escapeHtml(post.articleReadTime) + '</span>' : '');
+    body.appendChild(footer);
+
+    card.appendChild(body);
+    return card;
+  }
+
   async function buildMediaFragment(post) {
     const fragment = document.createDocumentFragment();
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
@@ -2796,14 +2849,19 @@
         article.appendChild(body);
       }
 
-      const mediaFragment = await buildMediaFragment(post);
-      if (mediaFragment.childNodes.length) {
-        article.appendChild(mediaFragment);
-      }
+      if (post.type === 'article') {
+        const companionCard = await buildArticleCompanionCard(post);
+        article.appendChild(companionCard);
+      } else {
+        const mediaFragment = await buildMediaFragment(post);
+        if (mediaFragment.childNodes.length) {
+          article.appendChild(mediaFragment);
+        }
 
-      const poll = buildPollElement(post);
-      if (poll) {
-        article.appendChild(poll);
+        const poll = buildPollElement(post);
+        if (poll) {
+          article.appendChild(poll);
+        }
       }
 
       const actions = document.createElement('div');
