@@ -924,6 +924,64 @@
         color: var(--text-soft);
         margin: 0;
       }
+      .post-comment-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+      }
+      .post-comment-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 11px;
+        color: var(--text-soft);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 2px 0;
+        transition: color 0.15s;
+      }
+      .post-comment-action:hover { color: var(--accent); }
+      .post-comment-action svg {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .post-comment-reply-box {
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .post-comment-reply-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 12px;
+        resize: none;
+        font-family: inherit;
+        outline: none;
+      }
+      .post-comment-reply-input:focus { border-color: var(--accent); }
+      .post-comment-reply-submit {
+        align-self: flex-end;
+        padding: 4px 12px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
 
       /* ── Repost banner ───────────────────────── */
       .post-repost-banner {
@@ -1053,7 +1111,8 @@
         padding: 0;
         text-decoration: none;
       }
-      .sticky-footer-item:hover {
+      .sticky-footer-item:hover,
+      .sticky-footer-item.active {
         color: var(--accent);
       }
       .sticky-footer-item svg {
@@ -1300,7 +1359,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="4.2k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 4.2k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 318</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 1.1k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">1.1k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1321,7 +1380,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="9.7k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 9.7k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 872</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 3.4k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">3.4k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1342,7 +1401,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="14.3k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 14.3k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 540</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 2.8k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">2.8k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1365,7 +1424,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="22.1k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 22.1k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 1.4k</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 8.9k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">8.9k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1385,7 +1444,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="6.5k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 6.5k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 2.1k</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 1.7k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">1.7k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1406,7 +1465,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="3.8k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 3.8k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 445</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 920</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">920</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1427,7 +1486,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="11.2k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 11.2k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 387</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 2.3k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">2.3k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1447,7 +1506,7 @@
             <div class="post-actions">
               <button class="post-action" type="button" data-action="like" data-count="5.1k"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 5.1k</button>
               <button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 692</button>
-              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> 1.5k</button>
+              <button class="post-action" type="button" data-action="repost"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="post-action-count">1.5k</span></button>
               <button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>
             </div>
           </article>
@@ -1462,7 +1521,7 @@
     <div class="ad-banner">Advertisement</div>
 
     <footer class="sticky-footer" aria-label="Quick navigation">
-      <a class="sticky-footer-item" href="./" aria-label="Home">
+      <a class="sticky-footer-item active" href="./" aria-label="Home">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </a>
       <button id="sticky-footer-search" class="sticky-footer-item" type="button" aria-label="Search">
