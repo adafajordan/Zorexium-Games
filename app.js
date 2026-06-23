@@ -1,13 +1,15 @@
 (function () {
   const DB_NAME = 'zorexium-app-db';
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
   const ACCOUNTS_STORE = 'accounts';
   const POSTS_STORE = 'posts';
   const SESSION_STORE = 'session';
   const MEDIA_STORE = 'media';
   const COMMENTS_STORE = 'comments';
+  const NOTIFICATIONS_STORE = 'notifications';
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
+  const NOTIFICATIONS_PAGE_PATH = 'notifications.html';
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -67,6 +69,7 @@
   const mediaViewerFitButton = document.getElementById('media-viewer-fit');
   const mediaViewerFullscreenButton = document.getElementById('media-viewer-fullscreen');
   const mediaViewerCloseButton = document.getElementById('media-viewer-close');
+  const notificationsList = document.getElementById('notifications-list');
 
   let currentUser = null;
   let appDbPromise = null;
@@ -241,6 +244,9 @@
         if (!database.objectStoreNames.contains(COMMENTS_STORE)) {
           database.createObjectStore(COMMENTS_STORE, { keyPath: 'id' });
         }
+        if (!database.objectStoreNames.contains(NOTIFICATIONS_STORE)) {
+          database.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id' });
+        }
       };
       request.onsuccess = function () {
         resolve(request.result);
@@ -319,15 +325,79 @@
     return all.filter(function (c) { return c.postId === postId; }).sort(function (a, b) { return a.createdAt - b.createdAt; });
   }
 
+  async function readAllComments() {
+    return getAllRecords(COMMENTS_STORE);
+  }
+
+  async function readNotifications(userId) {
+    const all = await getAllRecords(NOTIFICATIONS_STORE);
+    return all.filter(function (notification) {
+      return notification.userId === userId;
+    }).sort(function (left, right) {
+      return right.createdAt - left.createdAt;
+    });
+  }
+
+  async function addNotification(record) {
+    if (!record || !record.userId) return;
+    await putRecord(NOTIFICATIONS_STORE, {
+      id: generateId('notification'),
+      userId: record.userId,
+      actorId: record.actorId || null,
+      type: record.type || 'activity',
+      message: record.message || '',
+      postId: record.postId || null,
+      createdAt: Date.now()
+    });
+  }
+
+  async function addPostOwnerNotification(postId, notificationType, message) {
+    if (!postId || !currentUser || !message) return;
+    const post = await getRecord(POSTS_STORE, postId);
+    if (!post || !post.userId || post.userId === currentUser.id || post.userId === '_static') return;
+    await addNotification({
+      userId: post.userId,
+      actorId: currentUser.id,
+      type: notificationType,
+      message: message,
+      postId: postId
+    });
+  }
+
+  async function addMentionNotifications(post, text) {
+    if (!post || !currentUser || !text) return;
+    const handles = Array.from(new Set((String(text).match(/@([a-z0-9_]+)/gi) || []).map(function (entry) {
+      return entry.slice(1).toLowerCase();
+    })));
+    if (!handles.length) return;
+    const accounts = await readAccounts();
+    const accountMap = new Map(accounts.map(function (account) {
+      return [String(account.usernameKey || '').toLowerCase(), account];
+    }));
+    for (let index = 0; index < handles.length; index += 1) {
+      const mention = accountMap.get(handles[index]);
+      if (!mention || mention.id === currentUser.id) continue;
+      await addNotification({
+        userId: mention.id,
+        actorId: currentUser.id,
+        type: 'mention',
+        message: (currentUser.name || currentUser.username) + ' mentioned you in a post.',
+        postId: post.id
+      });
+    }
+  }
+
   async function addComment(postId, text) {
     if (!currentUser) return;
+    const commentText = String(text).trim();
     await putRecord(COMMENTS_STORE, {
       id: generateId('comment'),
       postId: postId,
       userId: currentUser.id,
-      text: String(text).trim(),
+      text: commentText,
       createdAt: Date.now()
     });
+    await addPostOwnerNotification(postId, 'comment', (currentUser.name || currentUser.username) + ' commented on your post.');
   }
 
   async function toggleSavePost(postId, staticInfo) {
@@ -356,6 +426,9 @@
     const updated = Object.assign({}, currentUser, { savedPostIds: saved });
     await putRecord(ACCOUNTS_STORE, updated);
     currentUser = updated;
+    if (!isSaved) {
+      await addPostOwnerNotification(postId, 'save', (currentUser.name || currentUser.username) + ' saved your post.');
+    }
     if (isDashboardPage()) {
       await renderAccountDashboard();
     }
@@ -394,6 +467,9 @@
     const updated = Object.assign({}, currentUser, { repostedPostIds: reposted });
     await putRecord(ACCOUNTS_STORE, updated);
     currentUser = updated;
+    if (!isReposted) {
+      await addPostOwnerNotification(postId, 'repost', (currentUser.name || currentUser.username) + ' reposted your post.');
+    }
     await refreshUserFacingViews();
     return !isReposted;
   }
@@ -519,12 +595,12 @@
           if (parentArticle) {
             var commentBtns = parentArticle.querySelectorAll('.post-action[data-action="comment"]');
             commentBtns.forEach(function (btn) {
-              var countNode = btn.querySelector('.post-action-count');
-              if (countNode) {
-                var current = parseInt(countNode.textContent.replace(/[^\d]/g, ''), 10) || 0;
-                countNode.textContent = String(current + 1);
-              }
+              var current = parseCountValue(btn.getAttribute('data-count') || (btn.querySelector('.post-action-count') ? btn.querySelector('.post-action-count').textContent : '0'));
+              setActionCount(btn, current + 1);
             });
+            if (commentBtns.length) {
+              syncActionCountAcrossPost(postId, 'comment', parseCountValue(commentBtns[0].getAttribute('data-count')));
+            }
           }
         });
         replyBox.appendChild(replyInput);
@@ -621,12 +697,12 @@
       if (parentArticle) {
         var commentBtns = parentArticle.querySelectorAll('.post-action[data-action="comment"]');
         commentBtns.forEach(function (btn) {
-          var countNode = btn.querySelector('.post-action-count');
-          if (countNode) {
-            var current = parseInt(countNode.textContent.replace(/[^\d]/g, ''), 10) || 0;
-            countNode.textContent = String(current + 1);
-          }
+          var current = parseCountValue(btn.getAttribute('data-count') || (btn.querySelector('.post-action-count') ? btn.querySelector('.post-action-count').textContent : '0'));
+          setActionCount(btn, current + 1);
         });
+        if (commentBtns.length) {
+          syncActionCountAcrossPost(postId, 'comment', parseCountValue(commentBtns[0].getAttribute('data-count')));
+        }
       }
     });
 
@@ -658,10 +734,13 @@
       const actionsClone = article.querySelector('.post-actions');
       if (actionsClone) {
         const clonedActions = actionsClone.cloneNode(true);
-        const likeBtn = clonedActions.querySelector('[data-action="like"]');
-        if (likeBtn) addLikeBehavior(likeBtn);
         postContainer.appendChild(clonedActions);
       }
+      initializeActionButtonCounts(postContainer);
+      postContainer.querySelectorAll('.post-action[data-action="like"]').forEach(function (likeButton) {
+        addLikeBehavior(likeButton);
+      });
+      enhancePostVideoPresentation(postContainer);
     }
     if (commentsSection) {
       commentsSection.innerHTML = '';
@@ -718,10 +797,10 @@
           button.style.color = isNowReposted ? 'var(--accent)' : '';
           button.setAttribute('data-reposted', String(isNowReposted));
           const countNode = button.querySelector('.post-action-count');
-          if (countNode) {
-            const cur = parseInt(countNode.textContent.replace(/[^\d]/g, ''), 10) || 0;
-            countNode.textContent = String(isNowReposted ? cur + 1 : Math.max(0, cur - 1));
-          }
+          const cur = parseCountValue(button.getAttribute('data-count') || (countNode ? countNode.textContent : '0'));
+          const nextCount = isNowReposted ? cur + 1 : Math.max(0, cur - 1);
+          setActionCount(button, nextCount);
+          syncActionCountAcrossPost(postId, 'repost', nextCount);
         } catch (err) {}
         button.disabled = false;
         return;
@@ -1010,6 +1089,36 @@
     return new Date(timestamp).toLocaleDateString();
   }
 
+  function parseCountValue(value) {
+    const normalized = String(value || '').trim().toLowerCase().replace(/,/g, '');
+    if (!normalized) return 0;
+    const matched = normalized.match(/^(\d+(?:\.\d+)?)([km])?$/i);
+    if (!matched) {
+      const fallback = parseInt(normalized.replace(/[^\d]/g, ''), 10);
+      return Number.isFinite(fallback) ? fallback : 0;
+    }
+    const base = parseFloat(matched[1]);
+    const suffix = matched[2];
+    if (!Number.isFinite(base)) return 0;
+    if (suffix === 'k') return Math.round(base * 1000);
+    if (suffix === 'm') return Math.round(base * 1000000);
+    return Math.round(base);
+  }
+
+  function formatCountValue(count) {
+    const value = Math.max(0, Math.round(Number(count) || 0));
+    if (value >= 1000000) return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'm';
+    if (value >= 1000) return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return String(value);
+  }
+
+  function formatTimeLeft(seconds) {
+    const value = Math.max(0, Math.floor(Number(seconds) || 0));
+    const minutes = Math.floor(value / 60);
+    const remainingSeconds = value % 60;
+    return minutes + ':' + String(remainingSeconds).padStart(2, '0');
+  }
+
   function injectNameField() {
     if (!registerForm || document.getElementById('register-name')) return;
     const usernameField = registerForm.querySelector('#register-username') ? registerForm.querySelector('#register-username').closest('.auth-field') : null;
@@ -1164,7 +1273,7 @@
       case 'replies':
         return {
           title: 'No replies yet',
-          description: 'Reply-style posts that start with a handle will appear here.'
+          description: 'Reply-style posts and comments you leave on posts will appear here.'
         };
       case 'articles':
         return {
@@ -1199,16 +1308,32 @@
     }
   }
 
-  function buildDashboardTabCollections(userPosts, allPosts, user) {
+  function buildDashboardTabCollections(userPosts, allPosts, user, userComments) {
     const savedIds = user && user.savedPostIds ? user.savedPostIds : [];
     const allPostsList = Array.isArray(allPosts) ? allPosts : [];
+    const commentList = Array.isArray(userComments) ? userComments : [];
     const savedPosts = allPostsList.filter(function (post) {
       return savedIds.indexOf(post.id) !== -1;
+    });
+    const commentReplies = commentList.map(function (comment) {
+      const parentPost = allPostsList.find(function (post) {
+        return post.id === comment.postId;
+      });
+      return {
+        id: comment.id,
+        isCommentReply: true,
+        text: comment.text,
+        createdAt: comment.createdAt,
+        replyToHandle: parentPost ? (parentPost.repostAuthorHandle || parentPost.staticAuthorHandle || parentPost.userId || 'post') : 'post',
+        replyToText: parentPost ? summarizePost(parentPost) : ''
+      };
     });
     return {
       posts: userPosts.slice(),
       replies: userPosts.filter(function (post) {
         return /^\s*@[\w]+/i.test(String(post.text || ''));
+      }).concat(commentReplies).sort(function (left, right) {
+        return (right.createdAt || 0) - (left.createdAt || 0);
       }),
       articles: userPosts.filter(function (post) {
         return String(post.text || '').trim().length >= 180;
@@ -1225,6 +1350,22 @@
   async function buildDashboardPostCard(post, user) {
     const article = document.createElement('article');
     article.className = 'post-card';
+    if (post.isCommentReply) {
+      article.classList.add('post-card-reply');
+      const replyHeader = document.createElement('div');
+      replyHeader.className = 'post-header';
+      replyHeader.innerHTML = '<div class="post-meta"><span class="post-username">Your reply</span><span class="post-handle">' + formatRelativeTime(post.createdAt) + '</span></div>';
+      const replyBody = document.createElement('div');
+      replyBody.className = 'post-body';
+      replyBody.textContent = post.text || '';
+      const replyContext = document.createElement('p');
+      replyContext.className = 'post-handle';
+      replyContext.textContent = 'Replied to ' + formatHandle(post.replyToHandle || 'post') + (post.replyToText ? (': "' + post.replyToText + '"') : '');
+      article.appendChild(replyHeader);
+      article.appendChild(replyBody);
+      article.appendChild(replyContext);
+      return article;
+    }
     if (post.id) {
       article.setAttribute('data-post-id', post.id);
     }
@@ -1287,12 +1428,17 @@
       actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
     }
     article.appendChild(actions);
+    initializeActionButtonCounts(article);
+    article.querySelectorAll('.post-action[data-action="like"]').forEach(function (likeButton) {
+      addLikeBehavior(likeButton);
+    });
+    enhancePostVideoPresentation(article);
 
     return article;
   }
 
-  async function renderDashboardTabs(userPosts, allPosts, user) {
-    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user);
+  async function renderDashboardTabs(userPosts, allPosts, user, userComments) {
+    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user, userComments);
     for (let index = 0; index < profileTabPanels.length; index += 1) {
       const panel = profileTabPanels[index];
       const tabName = panel.getAttribute('data-panel') || 'posts';
@@ -1321,6 +1467,13 @@
 
   async function refreshUserFacingViews() {
     updateAuthControls();
+    initializeActionButtonCounts(document);
+    document.querySelectorAll('.post-action[data-action="like"]').forEach(function (likeButton) {
+      addLikeBehavior(likeButton);
+    });
+    document.querySelectorAll('[data-post-id]').forEach(function (article) {
+      enhancePostVideoPresentation(article);
+    });
     syncDashboardTriggers();
     syncPostActionStates();
     if (postFeed && !isDashboardPage()) {
@@ -1328,6 +1481,9 @@
     }
     if (dashboardRoot) {
       await renderAccountDashboard();
+    }
+    if (notificationsList) {
+      await renderNotificationsPage();
     }
   }
 
@@ -1374,17 +1530,71 @@
     generatedMediaUrls = [];
   }
 
+  function ensureActionCountNode(button) {
+    let countNode = button.querySelector('.post-action-count');
+    if (!countNode) {
+      Array.from(button.childNodes).forEach(function (node) {
+        if (node.nodeType === Node.TEXT_NODE && node.nodeValue && node.nodeValue.trim()) {
+          node.remove();
+        }
+      });
+      countNode = document.createElement('span');
+      countNode.className = 'post-action-count';
+      const icon = button.querySelector('.post-action-icon');
+      if (icon && icon.nextSibling) {
+        button.insertBefore(countNode, icon.nextSibling);
+      } else {
+        button.appendChild(countNode);
+      }
+    }
+    return countNode;
+  }
+
+  function setActionCount(button, count) {
+    if (!button) return;
+    const nextCount = Math.max(0, Math.round(Number(count) || 0));
+    button.setAttribute('data-count', String(nextCount));
+    const countNode = ensureActionCountNode(button);
+    if (countNode) {
+      countNode.textContent = formatCountValue(nextCount);
+    }
+  }
+
+  function syncActionCountAcrossPost(postId, action, count) {
+    if (!postId || !action) return;
+    document.querySelectorAll('[data-post-id="' + postId + '"] .post-action[data-action="' + action + '"]').forEach(function (node) {
+      setActionCount(node, count);
+    });
+  }
+
+  function initializeActionButtonCounts(root) {
+    const scope = root || document;
+    scope.querySelectorAll('.post-action[data-action="like"], .post-action[data-action="comment"], .post-action[data-action="repost"]').forEach(function (button) {
+      const countNode = button.querySelector('.post-action-count');
+      const existing = button.getAttribute('data-count');
+      const source = existing || (countNode ? countNode.textContent : button.textContent);
+      setActionCount(button, parseCountValue(source));
+    });
+  }
+
   function addLikeBehavior(button) {
+    if (!button || button.getAttribute('data-like-handler') === 'true') return;
+    button.setAttribute('data-like-handler', 'true');
     button.addEventListener('click', function () {
       const isLiked = button.getAttribute('data-liked') === 'true';
-      const currentCount = Number(button.getAttribute('data-count') || '0');
+      const currentCount = parseCountValue(button.getAttribute('data-count'));
       const nextCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
+      const article = button.closest('[data-post-id]');
+      const postId = article ? article.getAttribute('data-post-id') : '';
       button.setAttribute('data-liked', String(!isLiked));
-      button.setAttribute('data-count', String(nextCount));
       button.style.color = isLiked ? '' : 'var(--accent)';
-      const countNode = button.querySelector('.post-action-count');
-      if (countNode) {
-        countNode.textContent = String(nextCount);
+      setActionCount(button, nextCount);
+      if (postId) {
+        syncActionCountAcrossPost(postId, 'like', nextCount);
+      }
+      if (!isLiked) {
+        addPostOwnerNotification(postId, 'like', (currentUser ? (currentUser.name || currentUser.username) : 'Someone') + ' liked your post.').catch(function () {
+        });
       }
     });
   }
@@ -1395,7 +1605,6 @@
     button.type = 'button';
     if (isLike) {
       button.setAttribute('data-action', 'like');
-      button.setAttribute('data-count', String(count || 0));
       addLikeBehavior(button);
     } else if (actionType) {
       button.setAttribute('data-action', actionType);
@@ -1407,10 +1616,7 @@
     button.appendChild(icon);
 
     if (count !== null) {
-      const countNode = document.createElement('span');
-      countNode.className = 'post-action-count';
-      countNode.textContent = String(count || 0);
-      button.appendChild(countNode);
+      setActionCount(button, count || 0);
     }
 
     return button;
@@ -1531,6 +1737,107 @@
     }
   }
 
+  function updateVideoRemainingLabel(video, label) {
+    if (!video || !label) return;
+    if (!Number.isFinite(video.duration) || video.duration <= 0) {
+      label.textContent = '';
+      return;
+    }
+    label.textContent = formatTimeLeft(Math.max(0, video.duration - video.currentTime)) + ' left';
+  }
+
+  function buildVideoOptionsSummary(article) {
+    const actionNames = ['like', 'comment', 'repost', 'save'];
+    return actionNames.map(function (action) {
+      const button = article.querySelector('.post-action[data-action="' + action + '"]');
+      if (!button) return null;
+      const count = action === 'save' ? '' : (' ' + formatCountValue(parseCountValue(button.getAttribute('data-count'))));
+      return action.charAt(0).toUpperCase() + action.slice(1) + count;
+    }).filter(Boolean).join(' • ');
+  }
+
+  function enhancePostVideoPresentation(article) {
+    if (!article) return;
+    article.querySelectorAll('.post-video-shell').forEach(function (shell) {
+      if (shell.getAttribute('data-video-enhanced') === 'true') return;
+      shell.setAttribute('data-video-enhanced', 'true');
+      const video = shell.querySelector('.post-video');
+      if (!video) return;
+      shell.style.position = 'relative';
+
+      const remaining = document.createElement('span');
+      remaining.className = 'post-video-remaining';
+      shell.appendChild(remaining);
+
+      const fullscreenButton = document.createElement('button');
+      fullscreenButton.className = 'post-video-fullscreen-toggle';
+      fullscreenButton.type = 'button';
+      fullscreenButton.textContent = 'Fullscreen';
+      shell.appendChild(fullscreenButton);
+
+      const fullscreenOverlay = document.createElement('div');
+      fullscreenOverlay.className = 'post-video-fullscreen-overlay';
+      shell.appendChild(fullscreenOverlay);
+
+      function refreshFullscreenOverlay() {
+        const username = article.querySelector('.post-username');
+        const handle = article.querySelector('.post-handle');
+        const body = article.querySelector('.post-body');
+        const optionsSummary = buildVideoOptionsSummary(article);
+        fullscreenOverlay.innerHTML = '<div class="post-video-fullscreen-author">' +
+          escapeHtml(username ? username.textContent : 'Post') +
+          (handle ? ' <span>' + escapeHtml(handle.textContent) + '</span>' : '') +
+          '</div>' +
+          (body ? ('<p class="post-video-fullscreen-text">' + escapeHtml(body.textContent) + '</p>') : '') +
+          '<p class="post-video-fullscreen-options">' + escapeHtml(optionsSummary || 'Like • Comment • Repost • Save') + '</p>';
+      }
+
+      video.autoplay = true;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.controls = true;
+      video.setAttribute('playsinline', 'true');
+      video.preload = 'metadata';
+
+      video.addEventListener('loadedmetadata', function () {
+        updateVideoRemainingLabel(video, remaining);
+      });
+      video.addEventListener('timeupdate', function () {
+        updateVideoRemainingLabel(video, remaining);
+      });
+      video.addEventListener('ended', function () {
+        updateVideoRemainingLabel(video, remaining);
+      });
+
+      video.addEventListener('volumechange', function () {
+        if (!video.muted && video.volume > 0) return;
+        if (video.volume > 0) {
+          video.muted = false;
+        }
+      });
+
+      fullscreenButton.addEventListener('click', function () {
+        refreshFullscreenOverlay();
+        requestElementFullscreen(shell).catch(function () {
+        });
+      });
+      video.addEventListener('dblclick', function () {
+        refreshFullscreenOverlay();
+        requestElementFullscreen(shell).catch(function () {
+        });
+      });
+      shell.addEventListener('fullscreenchange', function () {
+        if (document.fullscreenElement === shell) {
+          refreshFullscreenOverlay();
+          return;
+        }
+        fullscreenOverlay.innerHTML = '';
+      });
+      refreshFullscreenOverlay();
+      updateVideoRemainingLabel(video, remaining);
+    });
+  }
+
   async function buildMediaFragment(post) {
     const fragment = document.createDocumentFragment();
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
@@ -1587,7 +1894,11 @@
         video.className = 'post-video';
         video.src = mediaUrl;
         video.setAttribute('aria-label', altBase + ' (video)');
+        video.autoplay = true;
+        video.muted = true;
+        video.defaultMuted = true;
         video.controls = true;
+        video.setAttribute('playsinline', 'true');
         video.preload = 'metadata';
         wrapper.appendChild(video);
 
@@ -1706,6 +2017,11 @@
         actions.appendChild(createDeletePostButton(post.id, summarizePost(post)));
       }
       article.appendChild(actions);
+      initializeActionButtonCounts(article);
+      article.querySelectorAll('.post-action[data-action="like"]').forEach(function (likeButton) {
+        addLikeBehavior(likeButton);
+      });
+      enhancePostVideoPresentation(article);
 
       postFeed.insertBefore(article, anchor);
     }
@@ -1771,14 +2087,16 @@
       videoMediaId = await putMediaFile(video);
     }
 
-    await putRecord(POSTS_STORE, {
+    const postRecord = {
       id: generateId('post'),
       userId: currentUser.id,
       text: text,
       imageMediaIds: imageMediaIds,
       videoMediaId: videoMediaId,
       createdAt: Date.now()
-    });
+    };
+    await putRecord(POSTS_STORE, postRecord);
+    await addMentionNotifications(postRecord, text);
   }
 
   async function renderAccountDashboard() {
@@ -1789,9 +2107,14 @@
     }
 
     clearGeneratedMediaUrls();
-    const posts = await readPosts();
+    const [posts, comments] = await Promise.all([readPosts(), readAllComments()]);
     const userPosts = currentUser ? posts.filter(function (post) {
       return post.userId === currentUser.id;
+    }).sort(function (left, right) {
+      return right.createdAt - left.createdAt;
+    }) : [];
+    const userComments = currentUser ? comments.filter(function (comment) {
+      return comment.userId === currentUser.id;
     }).sort(function (left, right) {
       return right.createdAt - left.createdAt;
     }) : [];
@@ -1843,7 +2166,40 @@
       openAuthModal('login');
     };
 
-    await renderDashboardTabs(userPosts, posts, currentUser);
+    await renderDashboardTabs(userPosts, posts, currentUser, userComments);
+  }
+
+  async function renderNotificationsPage() {
+    if (!notificationsList) return;
+    notificationsList.innerHTML = '';
+    if (!currentUser) {
+      const card = document.createElement('article');
+      card.className = 'post-card post-card-empty';
+      card.innerHTML = '<div class="post-empty-copy"><p class="post-empty-title">Log in to view notifications</p><p class="post-empty-description">Sign in to see likes, comments, reposts, saves, follows, and mentions for your account.</p></div>';
+      notificationsList.appendChild(card);
+      return;
+    }
+    const notifications = await readNotifications(currentUser.id);
+    if (!notifications.length) {
+      const empty = document.createElement('article');
+      empty.className = 'post-card post-card-empty';
+      empty.innerHTML = '<div class="post-empty-copy"><p class="post-empty-title">No notifications yet</p><p class="post-empty-description">When people interact with your posts or mention you, updates will appear here.</p></div>';
+      notificationsList.appendChild(empty);
+      return;
+    }
+    notifications.forEach(function (notification) {
+      const item = document.createElement('article');
+      item.className = 'post-card';
+      const heading = document.createElement('p');
+      heading.className = 'post-empty-title';
+      heading.textContent = notification.message || 'New activity';
+      const time = document.createElement('p');
+      time.className = 'post-handle';
+      time.textContent = formatLongDate(notification.createdAt);
+      item.appendChild(heading);
+      item.appendChild(time);
+      notificationsList.appendChild(item);
+    });
   }
 
   function navigateToDashboard() {
@@ -1857,6 +2213,19 @@
       return;
     }
     window.location.href = ACCOUNT_DASHBOARD_PATH;
+  }
+
+  function navigateToNotifications() {
+    if (!currentUser) {
+      openAuthModal('login');
+      return;
+    }
+    if (getCurrentPageName() !== NOTIFICATIONS_PAGE_PATH) {
+      window.location.href = NOTIFICATIONS_PAGE_PATH;
+      return;
+    }
+    renderNotificationsPage().catch(function () {
+    });
   }
 
   function attachAuthenticatedClickGuard(button, onAuthenticatedClick) {
@@ -2052,6 +2421,8 @@
       attachAuthenticatedClickGuard(button, function () {
         if (button === headerProfileButton || button === stickyFooterProfileButton) {
           navigateToDashboard();
+        } else if (button === headerNotificationsButton || button === stickyFooterNotificationsButton) {
+          navigateToNotifications();
         }
       });
     });
