@@ -49,6 +49,7 @@
   const headerNotificationsButton = document.getElementById('header-notifications-btn');
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
+  const stickyFooterMarketplaceButton = document.getElementById('sticky-footer-marketplace');
   const dashboardRoot = document.getElementById('account-dashboard-root');
   const profileBanner = document.getElementById('profile-banner');
   const profileAvatar = document.getElementById('profile-avatar');
@@ -1294,7 +1295,7 @@
   }
 
   function hasPostMedia(post) {
-    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId) || Boolean(String(post && post.gifUrl || '').trim());
+    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId) || Boolean(String((post && post.gifUrl) || '').trim());
   }
 
   function getPostAuthorHandle(post) {
@@ -1682,6 +1683,9 @@
     }
     if (dashboardRoot) {
       await renderAccountDashboard();
+      if (window.location.hash === '#marketplace') {
+        setDashboardTab('marketplace');
+      }
     }
     if (notificationsList) {
       await renderNotificationsPage();
@@ -2415,7 +2419,7 @@
     const orderedPosts = posts.filter(function (post) {
       return isPostPublished(post);
     }).slice().sort(function (left, right) {
-      return right.createdAt - left.createdAt;
+      return getPostPublishTimestamp(right) - getPostPublishTimestamp(left);
     });
     const anchor = postFeed.firstElementChild;
 
@@ -2620,7 +2624,7 @@
     }
 
     const scheduledAt = extras && extras.scheduledAt ? extras.scheduledAt : null;
-    const publishTimestamp = scheduledAt || Date.now();
+    const createdAt = Date.now();
     const postRecord = {
       id: generateId('post'),
       userId: currentUser.id,
@@ -2630,7 +2634,7 @@
       gifUrl: extras && extras.gifUrl ? extras.gifUrl : '',
       poll: extras && extras.poll ? extras.poll : null,
       scheduledAt: scheduledAt,
-      createdAt: publishTimestamp
+      createdAt: createdAt
     };
     await putRecord(POSTS_STORE, postRecord);
     if (isPostPublished(postRecord)) {
@@ -2650,7 +2654,7 @@
     const userPosts = currentUser ? posts.filter(function (post) {
       return post.userId === currentUser.id;
     }).sort(function (left, right) {
-      return right.createdAt - left.createdAt;
+      return getPostPublishTimestamp(right) - getPostPublishTimestamp(left);
     }) : [];
     const userComments = currentUser ? comments.filter(function (comment) {
       return comment.userId === currentUser.id;
@@ -2765,6 +2769,18 @@
     }
     renderNotificationsPage().catch(function () {
     });
+  }
+
+  function navigateToMarketplace() {
+    if (!currentUser) {
+      openAuthModal('login');
+      return;
+    }
+    if (isDashboardPage()) {
+      setDashboardTab('marketplace');
+      return;
+    }
+    window.location.href = ACCOUNT_DASHBOARD_PATH + '#marketplace';
   }
 
   function attachAuthenticatedClickGuard(button, onAuthenticatedClick) {
@@ -2947,7 +2963,7 @@
           scheduledAt: scheduledAt
         });
         await refreshUserFacingViews();
-        setNewPostStatus(scheduledAt ? ('Post scheduled for ' + formatLongDate(scheduledAt) + '.') : 'Post published successfully.', 'success');
+        setNewPostStatus(scheduledAt ? `Post scheduled for ${formatLongDate(scheduledAt)}.` : 'Post published successfully.', 'success');
         setTimeout(closeNewPostModal, 800);
       } catch (error) {
         setNewPostStatus(error && error.message ? error.message : 'Unable to publish this post.', 'error');
@@ -2975,6 +2991,15 @@
         }
       });
     });
+
+    if (stickyFooterMarketplaceButton && stickyFooterMarketplaceButton.getAttribute('data-marketplace-bound') !== 'true') {
+      stickyFooterMarketplaceButton.setAttribute('data-marketplace-bound', 'true');
+      stickyFooterMarketplaceButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        navigateToMarketplace();
+      }, true);
+    }
   }
 
   function attachDashboardTriggerHandlers() {
