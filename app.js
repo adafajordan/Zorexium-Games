@@ -1124,7 +1124,7 @@
     return String(value);
   }
 
-  function formatDurationClock(seconds) {
+  function formatVideoDuration(seconds) {
     const value = Math.max(0, Math.floor(Number(seconds) || 0));
     const hours = Math.floor(value / 3600);
     const minutes = Math.floor(value / 60);
@@ -1796,7 +1796,6 @@
       shell.setAttribute('data-video-enhanced', 'true');
       video.setAttribute('data-player-ready', 'true');
       shell.style.position = 'relative';
-      shell.classList.add('post-video-shell-custom');
 
       const centerPlayButton = document.createElement('button');
       centerPlayButton.className = 'post-video-center-play';
@@ -1861,7 +1860,6 @@
         const currentTime = Math.max(0, video.currentTime || 0);
         const isPlaying = !video.paused && !video.ended;
         shell.classList.toggle('is-playing', isPlaying);
-        centerPlayButton.style.display = isPlaying ? 'none' : 'inline-flex';
         playButton.textContent = isPlaying ? '❚❚' : '▶';
         playButton.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
         const isMuted = video.muted || video.volume === 0;
@@ -1870,7 +1868,7 @@
         if (!isSeeking) {
           seek.value = duration > 0 ? String(Math.min(1000, Math.round((currentTime / duration) * 1000))) : '0';
         }
-        timeLabel.textContent = formatDurationClock(currentTime) + ' / ' + formatDurationClock(duration);
+        timeLabel.textContent = formatVideoDuration(currentTime) + ' / ' + formatVideoDuration(duration);
       }
 
       function togglePlayback() {
@@ -1939,17 +1937,6 @@
         }
         updateControls();
       });
-      shell.addEventListener('mouseleave', function () {
-        if (!video.paused) {
-          shell.classList.add('is-playing');
-        }
-      });
-      shell.addEventListener('mousemove', function () {
-        if (!video.paused) {
-          shell.classList.add('is-playing');
-        }
-      });
-
       video.play().catch(function () {
       });
       updateControls();
