@@ -1775,7 +1775,7 @@
     } else {
       video.setAttribute('aria-label', originalLabel);
     }
-    video.setAttribute('data-previous-volume', String(Number(video.volume) || 0));
+    video.setAttribute('data-previous-volume', String(Number(video.volume) || 0.5));
   }
 
   function pauseOtherPostVideos(activeVideo) {
@@ -1874,7 +1874,8 @@
       function togglePlayback() {
         if (video.paused || video.ended) {
           pauseOtherPostVideos(video);
-          video.play().catch(function () {
+          video.play().catch(function (error) {
+            console.debug('Video playback was blocked by the browser.', error);
           });
           return;
         }
@@ -1918,11 +1919,13 @@
       });
 
       fullscreenButton.addEventListener('click', function () {
-        requestElementFullscreen(shell).catch(function () {
+        requestElementFullscreen(shell).catch(function (error) {
+          console.debug('Fullscreen request was blocked by the browser.', error);
         });
       });
       video.addEventListener('dblclick', function () {
-        requestElementFullscreen(shell).catch(function () {
+        requestElementFullscreen(shell).catch(function (error) {
+          console.debug('Fullscreen request was blocked by the browser.', error);
         });
       });
 
@@ -1937,7 +1940,8 @@
         }
         updateControls();
       });
-      video.play().catch(function () {
+      video.play().catch(function (error) {
+        console.debug('Autoplay was blocked by the browser.', error);
       });
       updateControls();
     });
