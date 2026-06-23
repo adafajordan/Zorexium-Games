@@ -23,6 +23,7 @@
   const VIDEO_ICON_MUTED = '🔇';
   const VIDEO_ICON_UNMUTED = '🔊';
   const VIDEO_ICON_FULLSCREEN = '⛶';
+  const VIDEO_SEEK_MAX_VALUE = 1000;
   const PASSWORD_ITERATIONS = 600000;
   const PROFILE_NAME_MIN_LENGTH = 2;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
@@ -1792,10 +1793,10 @@
   function enhancePostVideoPresentation(article) {
     if (!article) return;
     article.querySelectorAll('.post-video-shell').forEach(function (shell) {
-      const video = shell.querySelector('.post-video');
-      if (!video) return;
       if (shell.getAttribute('data-video-enhanced') === 'true') return;
       shell.setAttribute('data-video-enhanced', 'true');
+      const video = shell.querySelector('.post-video');
+      if (!video) return;
       shell.style.position = 'relative';
 
       const centerPlayButton = document.createElement('button');
@@ -1812,7 +1813,7 @@
       seek.className = 'post-video-seek';
       seek.type = 'range';
       seek.min = '0';
-      seek.max = '1000';
+      seek.max = String(VIDEO_SEEK_MAX_VALUE);
       seek.step = '1';
       seek.value = '0';
       seek.setAttribute('aria-label', 'Seek video');
@@ -1867,7 +1868,7 @@
         muteButton.textContent = isMuted ? VIDEO_ICON_MUTED : VIDEO_ICON_UNMUTED;
         muteButton.setAttribute('aria-label', isMuted ? 'Unmute video' : 'Mute video');
         if (!isSeeking) {
-          seek.value = duration > 0 ? String(Math.min(1000, Math.round((currentTime / duration) * 1000))) : '0';
+          seek.value = duration > 0 ? String(Math.min(VIDEO_SEEK_MAX_VALUE, Math.round((currentTime / duration) * VIDEO_SEEK_MAX_VALUE))) : '0';
         }
         timeLabel.textContent = formatVideoDuration(currentTime) + ' / ' + formatVideoDuration(duration);
       }
@@ -1910,7 +1911,7 @@
         isSeeking = true;
         const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
         if (duration > 0) {
-          video.currentTime = (Number(seek.value) / 1000) * duration;
+          video.currentTime = (Number(seek.value) / VIDEO_SEEK_MAX_VALUE) * duration;
         }
         updateControls();
       });
