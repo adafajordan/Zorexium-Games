@@ -33,6 +33,8 @@
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
   const MENTION_PATTERN = /@([a-zA-Z0-9_]+)/g;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
+  const NPC_CHAR_LIMIT = 280;
+  const NPC_MAX_IMAGES = 4;
 
   const authModal = document.getElementById('auth-modal');
   const authStatus = document.getElementById('auth-status');
@@ -90,6 +92,14 @@
   let lastMediaWheelZoomAt = 0;
   let profileEditEscapeHandlerAttached = false;
   let activeDashboardTab = 'posts';
+  let npcState = {
+    images: [],
+    videoFile: null,
+    gifUrl: '',
+    poll: null,
+    scheduledAt: null,
+    isUploading: false
+  };
   let dashboardTabCollections = {
     posts: [],
     replies: [],
@@ -1151,6 +1161,7 @@
       newPostForm.reset();
     }
     setNewPostStatus('');
+    npcResetState();
   }
 
   function firstName(name) {
@@ -2515,68 +2526,56 @@
   }
 
   function getSelectedImages() {
-    const input = document.getElementById('new-post-images');
-    return input && input.files ? Array.from(input.files) : [];
+    return npcState.images.slice();
   }
 
   function getSelectedVideo() {
-    const input = document.getElementById('new-post-video');
-    return input && input.files && input.files[0] ? input.files[0] : null;
+    return npcState.videoFile || null;
   }
 
   function getSelectedGifUrl() {
-    const input = document.getElementById('new-post-gif-url');
-    return String(input ? input.value : '').trim();
+    return npcState.gifUrl || '';
   }
 
   function getSelectedPoll() {
-    const questionInput = document.getElementById('new-post-poll-question');
-    const optionOneInput = document.getElementById('new-post-poll-option-1');
-    const optionTwoInput = document.getElementById('new-post-poll-option-2');
-    const question = String(questionInput ? questionInput.value : '').trim();
-    const options = [optionOneInput, optionTwoInput].map(function (input) {
-      return String(input ? input.value : '').trim();
-    }).filter(Boolean);
-
-    if (!question && !options.length) {
+    if (!npcState.poll) {
       return null;
     }
 
-    if (!question) {
-      throw new Error('Add a poll question before posting your poll.');
+    const validOptions = npcState.poll.options.filter(function (opt) {
+      return String(opt.text || '').trim().length > 0;
+    });
+
+    if (validOptions.length === 0) {
+      return null;
     }
 
-    if (options.length < 2) {
-      throw new Error('Please provide both poll answer options.');
+    if (validOptions.length < 2) {
+      throw new Error('Please provide at least two poll answer options.');
     }
 
     return {
-      question: question,
-      options: options.slice(0, 2).map(function (optionText, index) {
+      question: 'Poll',
+      options: validOptions.map(function (opt, index) {
         return {
           id: 'option-' + (index + 1),
-          text: optionText,
+          text: String(opt.text || '').trim(),
           votes: 0
         };
       }),
+      durationMinutes: npcState.poll.durationMinutes || 1440,
       votesByUser: {}
     };
   }
 
   function getSelectedScheduleTimestamp() {
-    const input = document.getElementById('new-post-schedule');
-    const value = String(input ? input.value : '').trim();
-    if (!value) {
+    if (!npcState.scheduledAt) {
       return null;
     }
-    const timestamp = new Date(value).getTime();
-    if (!Number.isFinite(timestamp)) {
-      throw new Error('Choose a valid schedule date and time.');
-    }
-    if (timestamp < Date.now()) {
+    if (npcState.scheduledAt < Date.now()) {
       throw new Error('Scheduled posts must be set in the future.');
     }
-    return timestamp;
+    return npcState.scheduledAt;
   }
 
   function loadVideoDuration(file) {
@@ -3145,6 +3144,849 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // New Post Composer (NPC) – state management and interactive behaviors
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // GIF placeholder categories with sample entries.
+  // To wire a live API: replace npcFetchGifs() with a fetch to
+  //   https://tenor.googleapis.com/v2/search?q={query}&key={YOUR_TENOR_KEY}&limit=18
+  // or https://api.giphy.com/v1/gifs/search?api_key={KEY}&q={query}&limit=18
+  // and map the response items to { url, preview } objects.
+  const NPC_GIF_CATEGORIES = [
+    { label: 'Trending', emoji: '🔥', items: [] },
+    { label: 'Reactions', emoji: '😂', items: [] },
+    { label: 'Celebrations', emoji: '🎉', items: [] },
+    { label: 'Love', emoji: '❤️', items: [] }
+  ];
+
+  const NPC_EMOJI_SETS = {
+    'Smileys': ['😀','😂','🥹','😅','😊','😇','🤣','😄','😆','😋','😎','🤩','😏','🙃','😌','😍','🥰','😘','😗','🤗','😤','😢','😭','😱','😳','🤔','🤫','🫡','😶','😐','😑'],
+    'People': ['👋','🤚','✋','👌','🤌','✌','🤞','👍','👎','👏','🙌','🤝','🫶','💪','🫂','🧑','👶','🧒','👦','👧','🧑','👱','👩','🧔'],
+    'Nature': ['🌟','⭐','✨','💫','🌙','☀️','🌈','🌊','🔥','❄️','🌸','🌺','🌻','🌹','🍀','🌿','🐶','🐱','🐻','🦊','🐼','🐸','🐧'],
+    'Food': ['🍕','🍔','🌮','🍣','🍜','🍰','🎂','🍩','🍪','☕','🍺','🥂','🍾','🧃','🥤','🍫','🍬','🍭','🥐','🍞','🥑','🍓'],
+    'Activities': ['⚽','🏀','🎮','🎲','🎯','🎪','🎨','🎭','🎬','🎵','🎶','🎤','🎸','🎹','🏆','🥇','🎳','⛷','🏄','🤸','🧗'],
+    'Symbols': ['❤️','💚','💙','💜','💛','🖤','🤍','💯','🔥','💥','✅','❌','⚠️','🚀','💡','🔑','💰','📱','💻','🎧','📷','🔔','📚','🌐']
+  };
+
+  function npcResetState() {
+    npcState.images = [];
+    npcState.videoFile = null;
+    npcState.gifUrl = '';
+    npcState.poll = null;
+    npcState.scheduledAt = null;
+    npcState.isUploading = false;
+    const textarea = document.getElementById('new-post-text');
+    if (textarea) {
+      textarea.value = '';
+      textarea.style.height = '';
+    }
+    npcRenderMediaPreview();
+    npcHidePollPanel();
+    npcUpdateCharCounter();
+    npcUpdateSubmitButton();
+    npcHideScheduleBadge();
+    const dropdown = document.getElementById('npc-mention-dropdown');
+    if (dropdown) dropdown.hidden = true;
+    const picker = document.getElementById('npc-emoji-picker-popover');
+    if (picker) picker.hidden = true;
+    const gifModal = document.getElementById('npc-gif-modal');
+    if (gifModal) gifModal.classList.remove('open');
+    const schedModal = document.getElementById('npc-schedule-modal');
+    if (schedModal) schedModal.classList.remove('open');
+  }
+
+  function npcUpdateCharCounter() {
+    const textarea = document.getElementById('new-post-text');
+    const ringFill = document.getElementById('npc-ring-fill');
+    const charLabel = document.getElementById('npc-char-label');
+    if (!textarea || !ringFill || !charLabel) return;
+
+    const len = textarea.value.length;
+    const remaining = NPC_CHAR_LIMIT - len;
+    const pct = Math.min(len / NPC_CHAR_LIMIT, 1);
+    const circumference = 100;
+    const dashOffset = circumference - pct * circumference;
+
+    ringFill.style.strokeDashoffset = String(dashOffset);
+    const isOver = remaining < 0;
+    const isWarning = remaining <= 20 && !isOver;
+
+    ringFill.classList.toggle('over', isOver);
+
+    if (isWarning || isOver) {
+      charLabel.textContent = String(remaining);
+      charLabel.classList.toggle('over', isOver);
+    } else {
+      charLabel.textContent = '';
+      charLabel.classList.remove('over');
+    }
+
+    npcUpdateSubmitButton();
+  }
+
+  function npcUpdateSubmitButton() {
+    const btn = document.getElementById('npc-submit-btn');
+    if (!btn) return;
+
+    const textarea = document.getElementById('new-post-text');
+    const text = textarea ? textarea.value.trim() : '';
+    const len = textarea ? textarea.value.length : 0;
+
+    const hasContent = text.length > 0 || npcState.images.length > 0 ||
+      npcState.videoFile || npcState.gifUrl || npcState.poll;
+    const overLimit = len > NPC_CHAR_LIMIT;
+    const uploading = npcState.isUploading;
+
+    btn.disabled = !hasContent || overLimit || uploading;
+  }
+
+  function npcAutoResizeTextarea(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 300) + 'px';
+  }
+
+  function npcRenderMediaPreview() {
+    const container = document.getElementById('npc-media-preview');
+    if (!container) return;
+
+    const allItems = npcState.images.concat(npcState.videoFile ? [npcState.videoFile] : []);
+    if (!allItems.length && !npcState.gifUrl) {
+      container.hidden = true;
+      container.innerHTML = '';
+      return;
+    }
+
+    container.hidden = false;
+    container.innerHTML = '';
+
+    if (npcState.gifUrl) {
+      const gifWrap = document.createElement('div');
+      gifWrap.className = 'npc-img-grid g1';
+      const gifItem = document.createElement('div');
+      gifItem.className = 'npc-img-item';
+      const gifImg = document.createElement('img');
+      gifImg.src = npcState.gifUrl;
+      gifImg.alt = 'Selected GIF';
+      gifImg.style.maxHeight = '280px';
+      gifImg.style.objectFit = 'cover';
+      const gifRemove = document.createElement('button');
+      gifRemove.type = 'button';
+      gifRemove.className = 'npc-img-remove';
+      gifRemove.innerHTML = '&#10005;';
+      gifRemove.setAttribute('aria-label', 'Remove GIF');
+      gifRemove.addEventListener('click', function () {
+        npcState.gifUrl = '';
+        npcRenderMediaPreview();
+        npcUpdateSubmitButton();
+      });
+      gifItem.appendChild(gifImg);
+      gifItem.appendChild(gifRemove);
+      gifWrap.appendChild(gifItem);
+      container.appendChild(gifWrap);
+      return;
+    }
+
+    const count = allItems.length;
+    const gridClass = 'npc-img-grid g' + Math.min(count, 4);
+    const grid = document.createElement('div');
+    grid.className = gridClass;
+
+    allItems.slice(0, NPC_MAX_IMAGES).forEach(function (file, idx) {
+      const item = document.createElement('div');
+      item.className = 'npc-img-item';
+
+      const isVideo = file.type && file.type.startsWith('video/');
+      const url = URL.createObjectURL(file);
+      generatedMediaUrls.push(url);
+
+      let media;
+      if (isVideo) {
+        media = document.createElement('video');
+        media.src = url;
+        media.muted = true;
+        media.playsInline = true;
+        media.preload = 'metadata';
+      } else {
+        media = document.createElement('img');
+        media.src = url;
+        media.alt = 'Attachment ' + (idx + 1);
+      }
+      item.appendChild(media);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'npc-img-remove';
+      removeBtn.innerHTML = '&#10005;';
+      removeBtn.setAttribute('aria-label', 'Remove attachment');
+      const capturedIdx = idx;
+      const capturedFile = file;
+      removeBtn.addEventListener('click', function () {
+        if (capturedFile === npcState.videoFile) {
+          npcState.videoFile = null;
+        } else {
+          npcState.images = npcState.images.filter(function (f) { return f !== capturedFile; });
+        }
+        npcRenderMediaPreview();
+        npcUpdateSubmitButton();
+        npcUpdateMediaButtonState();
+      });
+      item.appendChild(removeBtn);
+      grid.appendChild(item);
+    });
+
+    container.appendChild(grid);
+  }
+
+  function npcUpdateMediaButtonState() {
+    const btn = document.getElementById('npc-media-btn');
+    if (!btn) return;
+    const total = npcState.images.length + (npcState.videoFile ? 1 : 0);
+    btn.disabled = total >= NPC_MAX_IMAGES;
+  }
+
+  function npcHidePollPanel() {
+    const panel = document.getElementById('npc-poll-panel');
+    if (panel) panel.hidden = true;
+    npcState.poll = null;
+  }
+
+  function npcShowPollPanel() {
+    const panel = document.getElementById('npc-poll-panel');
+    if (!panel) return;
+    panel.hidden = false;
+    npcState.poll = { options: [{ text: '' }, { text: '' }], durationMinutes: 1440 };
+    npcRenderPollChoices();
+    npcUpdateSubmitButton();
+    panel.querySelector('.npc-poll-choices input') && panel.querySelector('.npc-poll-choices input').focus();
+  }
+
+  function npcRenderPollChoices() {
+    const container = document.getElementById('npc-poll-choices');
+    if (!container || !npcState.poll) return;
+    container.innerHTML = '';
+    npcState.poll.options.forEach(function (opt, idx) {
+      const row = document.createElement('div');
+      row.className = 'npc-poll-choice-row';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'npc-poll-choice-input';
+      input.placeholder = 'Choice ' + (idx + 1);
+      input.maxLength = 25;
+      input.value = opt.text || '';
+      input.setAttribute('aria-label', 'Poll choice ' + (idx + 1));
+      input.addEventListener('input', function () {
+        if (npcState.poll && npcState.poll.options[idx]) {
+          npcState.poll.options[idx].text = input.value;
+        }
+        npcUpdateSubmitButton();
+      });
+      row.appendChild(input);
+
+      if (idx >= 2) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'npc-poll-choice-del';
+        del.innerHTML = '&#10005;';
+        del.setAttribute('aria-label', 'Remove choice ' + (idx + 1));
+        del.addEventListener('click', function () {
+          npcState.poll.options.splice(idx, 1);
+          npcRenderPollChoices();
+          npcUpdateAddOptionButton();
+          npcUpdateSubmitButton();
+        });
+        row.appendChild(del);
+      }
+
+      container.appendChild(row);
+    });
+  }
+
+  function npcUpdateAddOptionButton() {
+    const btn = document.getElementById('npc-poll-add-btn');
+    if (!btn || !npcState.poll) return;
+    btn.disabled = npcState.poll.options.length >= 4;
+  }
+
+  function npcHideScheduleBadge() {
+    const badge = document.getElementById('npc-schedule-badge');
+    if (badge) badge.hidden = true;
+  }
+
+  function npcSetScheduleBadge(ts) {
+    const badge = document.getElementById('npc-schedule-badge');
+    if (!badge) return;
+    if (!ts) {
+      badge.hidden = true;
+      return;
+    }
+    badge.hidden = false;
+    const d = new Date(ts);
+    badge.innerHTML = '&#128337; ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+      ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + ' <span style="font-size:10px;opacity:.7">&#10005;</span>';
+    badge.title = 'Scheduled for ' + d.toLocaleString();
+    badge.onclick = function () {
+      npcState.scheduledAt = null;
+      npcHideScheduleBadge();
+      npcUpdateSubmitButton();
+    };
+  }
+
+  // ── GIF modal ─────────────────────────────────────────────────────────────
+  function npcEnsureGifModal() {
+    if (document.getElementById('npc-gif-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'npc-gif-modal';
+    modal.className = 'npc-sub-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = [
+      '<div class="npc-sub-panel" role="dialog" aria-modal="true" aria-labelledby="npc-gif-title">',
+      '  <button type="button" class="npc-sub-close" id="npc-gif-close" aria-label="Close GIF search">&#10005;</button>',
+      '  <p class="npc-sub-title" id="npc-gif-title">Search GIFs</p>',
+      '  <div class="npc-gif-search-row">',
+      '    <input type="search" id="npc-gif-search-input" class="npc-gif-search-input" placeholder="Search GIFs…" autocomplete="off" />',
+      '  </div>',
+      '  <div class="npc-gif-tabs" id="npc-gif-tabs"></div>',
+      '  <div id="npc-gif-grid" class="npc-gif-grid"></div>',
+      '  <div class="npc-gif-url-section">',
+      '    <p class="npc-gif-url-label">Or paste a direct GIF URL:</p>',
+      '    <div class="npc-gif-url-inputs">',
+      '      <input type="url" id="npc-gif-url-paste" class="npc-gif-url-input" placeholder="https://example.com/animation.gif" />',
+      '      <button type="button" class="npc-gif-url-btn" id="npc-gif-url-confirm">Add</button>',
+      '    </div>',
+      '  </div>',
+      '</div>'
+    ].join('');
+    document.body.appendChild(modal);
+
+    const closeBtn = modal.querySelector('#npc-gif-close');
+    closeBtn.addEventListener('click', function () { npcCloseGifModal(); });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) npcCloseGifModal();
+    });
+
+    const tabsEl = modal.querySelector('#npc-gif-tabs');
+    NPC_GIF_CATEGORIES.forEach(function (cat, i) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'npc-gif-tab' + (i === 0 ? ' active' : '');
+      btn.textContent = cat.emoji + ' ' + cat.label;
+      btn.addEventListener('click', function () {
+        tabsEl.querySelectorAll('.npc-gif-tab').forEach(function (t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+        npcRenderGifGrid(cat.items);
+      });
+      tabsEl.appendChild(btn);
+    });
+    npcRenderGifGrid(NPC_GIF_CATEGORIES[0].items);
+
+    const searchInput = modal.querySelector('#npc-gif-search-input');
+    let searchTimer;
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        // Placeholder: in production, call the GIF API here with searchInput.value
+        // e.g. fetch('https://tenor.googleapis.com/v2/search?q=' + encodeURIComponent(searchInput.value) + '&key=YOUR_TENOR_API_KEY&limit=18')
+        npcRenderGifGrid([]);
+      }, 350);
+    });
+
+    const urlPaste = modal.querySelector('#npc-gif-url-paste');
+    const urlConfirm = modal.querySelector('#npc-gif-url-confirm');
+    urlConfirm.addEventListener('click', function () {
+      const url = urlPaste.value.trim();
+      if (!url || !isSafeMediaUrl(url)) {
+        setNewPostStatus('Please enter a valid GIF URL starting with https://.', 'error');
+        return;
+      }
+      npcState.gifUrl = url;
+      npcCloseGifModal();
+      npcRenderMediaPreview();
+      npcUpdateSubmitButton();
+    });
+  }
+
+  function npcRenderGifGrid(items) {
+    const grid = document.getElementById('npc-gif-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (!items || !items.length) {
+      const note = document.createElement('p');
+      note.style.cssText = 'grid-column:1/-1;font-size:12px;color:var(--text-soft);text-align:center;padding:18px 0;';
+      // Note: connect a GIF API (Tenor/Giphy) to populate live results here.
+      note.textContent = 'GIF search requires an API key (Tenor or Giphy). Paste a direct GIF URL below to add one now.';
+      grid.appendChild(note);
+      return;
+    }
+
+    items.forEach(function (item) {
+      const cell = document.createElement('div');
+      cell.className = 'npc-gif-cell';
+      if (item.url) {
+        const img = document.createElement('img');
+        img.src = item.preview || item.url;
+        img.alt = item.label || 'GIF';
+        img.loading = 'lazy';
+        cell.appendChild(img);
+      } else {
+        cell.textContent = item.emoji || '🎞';
+      }
+      cell.addEventListener('click', function () {
+        if (item.url) {
+          npcState.gifUrl = item.url;
+          npcCloseGifModal();
+          npcRenderMediaPreview();
+          npcUpdateSubmitButton();
+        }
+      });
+      grid.appendChild(cell);
+    });
+  }
+
+  function npcOpenGifModal() {
+    npcEnsureGifModal();
+    const modal = document.getElementById('npc-gif-modal');
+    if (!modal) return;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    const input = modal.querySelector('#npc-gif-search-input');
+    if (input) { input.value = ''; input.focus(); }
+    const urlInput = modal.querySelector('#npc-gif-url-paste');
+    if (urlInput) urlInput.value = '';
+  }
+
+  function npcCloseGifModal() {
+    const modal = document.getElementById('npc-gif-modal');
+    if (modal) {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  // ── Emoji picker ──────────────────────────────────────────────────────────
+  function npcEnsureEmojiPicker() {
+    if (document.getElementById('npc-emoji-picker-popover')) return;
+    const picker = document.createElement('div');
+    picker.id = 'npc-emoji-picker-popover';
+    picker.className = 'npc-emoji-picker';
+    picker.hidden = true;
+    picker.setAttribute('role', 'dialog');
+    picker.setAttribute('aria-label', 'Emoji picker');
+
+    const cats = Object.keys(NPC_EMOJI_SETS);
+    const catsRow = document.createElement('div');
+    catsRow.className = 'npc-emoji-cats';
+
+    const gridEl = document.createElement('div');
+    gridEl.className = 'npc-emoji-grid';
+
+    function showCat(catName) {
+      gridEl.innerHTML = '';
+      (NPC_EMOJI_SETS[catName] || []).forEach(function (emoji) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'npc-emoji-btn';
+        btn.textContent = emoji;
+        btn.setAttribute('aria-label', emoji);
+        btn.addEventListener('click', function () {
+          npcInsertEmoji(emoji);
+          picker.hidden = true;
+        });
+        gridEl.appendChild(btn);
+      });
+      catsRow.querySelectorAll('.npc-emoji-cat-btn').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-cat') === catName);
+      });
+    }
+
+    cats.forEach(function (catName, i) {
+      const catBtn = document.createElement('button');
+      catBtn.type = 'button';
+      catBtn.className = 'npc-emoji-cat-btn' + (i === 0 ? ' active' : '');
+      catBtn.setAttribute('data-cat', catName);
+      catBtn.textContent = catName;
+      catBtn.addEventListener('click', function () { showCat(catName); });
+      catsRow.appendChild(catBtn);
+    });
+
+    picker.appendChild(catsRow);
+    picker.appendChild(gridEl);
+    showCat(cats[0]);
+    document.body.appendChild(picker);
+
+    document.addEventListener('click', function (e) {
+      if (!picker.hidden && !picker.contains(e.target) && e.target.id !== 'npc-emoji-btn') {
+        picker.hidden = true;
+      }
+    }, true);
+  }
+
+  function npcInsertEmoji(emoji) {
+    const textarea = document.getElementById('new-post-text');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(end);
+    textarea.value = before + emoji + after;
+    const newPos = start + emoji.length;
+    textarea.setSelectionRange(newPos, newPos);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.focus();
+  }
+
+  function npcToggleEmojiPicker() {
+    npcEnsureEmojiPicker();
+    const picker = document.getElementById('npc-emoji-picker-popover');
+    const btn = document.getElementById('npc-emoji-btn');
+    if (!picker || !btn) return;
+    picker.hidden = !picker.hidden;
+    if (!picker.hidden) {
+      const rect = btn.getBoundingClientRect();
+      const pickerW = 300;
+      let left = rect.left;
+      if (left + pickerW > window.innerWidth - 10) {
+        left = window.innerWidth - pickerW - 10;
+      }
+      picker.style.position = 'fixed';
+      picker.style.left = Math.max(10, left) + 'px';
+      picker.style.top = (rect.top - picker.offsetHeight - 8) + 'px';
+      if (parseFloat(picker.style.top) < 10) {
+        picker.style.top = (rect.bottom + 8) + 'px';
+      }
+    }
+  }
+
+  // ── Schedule modal ─────────────────────────────────────────────────────────
+  function npcEnsureScheduleModal() {
+    if (document.getElementById('npc-schedule-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'npc-schedule-modal';
+    modal.className = 'npc-sub-modal';
+    modal.setAttribute('aria-hidden', 'true');
+
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30 - (now.getMinutes() % 30));
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    const defaultVal = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+      'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+    modal.innerHTML = [
+      '<div class="npc-sub-panel" role="dialog" aria-modal="true" aria-labelledby="npc-sched-title">',
+      '  <button type="button" class="npc-sub-close" id="npc-sched-close" aria-label="Close schedule picker">&#10005;</button>',
+      '  <p class="npc-sub-title" id="npc-sched-title">Schedule Post</p>',
+      '  <p class="npc-schedule-modal-note">Your post will be saved and published at the chosen time. Scheduled posts appear in your feed when published.</p>',
+      '  <label class="npc-sched-label" for="npc-sched-dt">Date &amp; time</label>',
+      '  <input type="datetime-local" id="npc-sched-dt" class="npc-sched-input" value="' + defaultVal + '" />',
+      '  <br/>',
+      '  <button type="button" class="npc-sched-btn" id="npc-sched-confirm">Confirm schedule</button>',
+      '  <button type="button" class="npc-sched-clear" id="npc-sched-clear">Remove schedule</button>',
+      '</div>'
+    ].join('');
+    document.body.appendChild(modal);
+
+    modal.querySelector('#npc-sched-close').addEventListener('click', function () { npcCloseScheduleModal(); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) npcCloseScheduleModal(); });
+
+    modal.querySelector('#npc-sched-confirm').addEventListener('click', function () {
+      const dt = modal.querySelector('#npc-sched-dt').value;
+      if (!dt) { return; }
+      const ts = new Date(dt).getTime();
+      if (!Number.isFinite(ts) || ts <= Date.now()) {
+        setNewPostStatus('Please choose a future date and time.', 'error');
+        return;
+      }
+      npcState.scheduledAt = ts;
+      npcSetScheduleBadge(ts);
+      npcUpdateSubmitButton();
+      npcCloseScheduleModal();
+    });
+
+    modal.querySelector('#npc-sched-clear').addEventListener('click', function () {
+      npcState.scheduledAt = null;
+      npcHideScheduleBadge();
+      npcUpdateSubmitButton();
+      npcCloseScheduleModal();
+    });
+  }
+
+  function npcOpenScheduleModal() {
+    npcEnsureScheduleModal();
+    const modal = document.getElementById('npc-schedule-modal');
+    if (!modal) return;
+    if (npcState.scheduledAt) {
+      const dt = modal.querySelector('#npc-sched-dt');
+      if (dt) {
+        const d = new Date(npcState.scheduledAt);
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        dt.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+    }
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function npcCloseScheduleModal() {
+    const modal = document.getElementById('npc-schedule-modal');
+    if (modal) {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  // ── @ mention dropdown ────────────────────────────────────────────────────
+  let npcMentionState = { active: false, query: '', start: 0, kbdIndex: -1 };
+
+  function npcHandleMentionInput(textarea) {
+    const val = textarea.value;
+    const cursor = textarea.selectionStart;
+    const textBefore = val.slice(0, cursor);
+    const atMatch = textBefore.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (!atMatch) {
+      npcMentionState.active = false;
+      npcHideMentionDropdown();
+      return;
+    }
+
+    npcMentionState.active = true;
+    npcMentionState.query = atMatch[1];
+    npcMentionState.start = cursor - atMatch[0].length;
+    npcMentionState.kbdIndex = -1;
+
+    readAccounts().then(function (accounts) {
+      const q = npcMentionState.query.toLowerCase();
+      const matches = accounts.filter(function (a) {
+        return (
+          String(a.username || '').toLowerCase().startsWith(q) ||
+          String(a.name || '').toLowerCase().startsWith(q)
+        );
+      }).slice(0, 6);
+      npcShowMentionDropdown(matches, textarea);
+    }).catch(function () {
+      npcHideMentionDropdown();
+    });
+  }
+
+  function npcShowMentionDropdown(accounts, textarea) {
+    const dropdown = document.getElementById('npc-mention-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+
+    if (!accounts.length) {
+      dropdown.hidden = true;
+      return;
+    }
+
+    accounts.forEach(function (account, idx) {
+      const item = document.createElement('div');
+      item.className = 'npc-mention-item';
+      item.setAttribute('role', 'option');
+      item.setAttribute('data-idx', idx);
+
+      const avatar = document.createElement('div');
+      avatar.className = 'npc-mention-avatar';
+      avatar.style.background = getAvatarColor(account.username || account.id);
+      avatar.textContent = getInitials(account.name, account.username);
+
+      const meta = document.createElement('div');
+      meta.className = 'npc-mention-meta';
+      const name = document.createElement('span');
+      name.className = 'npc-mention-name';
+      name.textContent = account.name || account.username;
+      const handle = document.createElement('span');
+      handle.className = 'npc-mention-handle';
+      handle.textContent = formatHandle(account.username);
+      meta.appendChild(name);
+      meta.appendChild(handle);
+
+      item.appendChild(avatar);
+      item.appendChild(meta);
+
+      item.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        npcInsertMention(account.username, textarea);
+      });
+
+      dropdown.appendChild(item);
+    });
+
+    dropdown.hidden = false;
+  }
+
+  function npcHideMentionDropdown() {
+    const dropdown = document.getElementById('npc-mention-dropdown');
+    if (dropdown) dropdown.hidden = true;
+    npcMentionState.active = false;
+  }
+
+  function npcInsertMention(username, textarea) {
+    if (!textarea) return;
+    const val = textarea.value;
+    const before = val.slice(0, npcMentionState.start);
+    const after = val.slice(textarea.selectionStart);
+    const mention = '@' + username + ' ';
+    textarea.value = before + mention + after;
+    const newPos = before.length + mention.length;
+    textarea.setSelectionRange(newPos, newPos);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    npcHideMentionDropdown();
+    textarea.focus();
+  }
+
+  // ── Main init ─────────────────────────────────────────────────────────────
+  function initNewPostComposer() {
+    const textarea = document.getElementById('new-post-text');
+    if (!textarea) return;
+
+    // Auto-resize
+    textarea.addEventListener('input', function () {
+      npcAutoResizeTextarea(textarea);
+      npcUpdateCharCounter();
+      npcHandleMentionInput(textarea);
+    });
+
+    // Keyboard navigation for mention dropdown
+    textarea.addEventListener('keydown', function (e) {
+      const dropdown = document.getElementById('npc-mention-dropdown');
+      if (!dropdown || dropdown.hidden || !npcMentionState.active) return;
+      const items = Array.from(dropdown.querySelectorAll('.npc-mention-item'));
+      if (!items.length) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        npcMentionState.kbdIndex = (npcMentionState.kbdIndex + 1) % items.length;
+        items.forEach(function (item, i) { item.classList.toggle('kbd-active', i === npcMentionState.kbdIndex); });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        npcMentionState.kbdIndex = (npcMentionState.kbdIndex - 1 + items.length) % items.length;
+        items.forEach(function (item, i) { item.classList.toggle('kbd-active', i === npcMentionState.kbdIndex); });
+      } else if ((e.key === 'Enter' || e.key === 'Tab') && npcMentionState.kbdIndex >= 0) {
+        e.preventDefault();
+        const selected = items[npcMentionState.kbdIndex];
+        if (selected) selected.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      } else if (e.key === 'Escape') {
+        npcHideMentionDropdown();
+      }
+    });
+
+    // Media button
+    const mediaBtn = document.getElementById('npc-media-btn');
+    const mediaInput = document.getElementById('new-post-images');
+    if (mediaBtn && mediaInput) {
+      mediaBtn.addEventListener('click', function () {
+        mediaInput.value = '';
+        mediaInput.click();
+      });
+      mediaInput.addEventListener('change', function () {
+        const files = Array.from(mediaInput.files || []);
+        files.forEach(function (file) {
+          if (file.type.startsWith('video/')) {
+            if (!npcState.videoFile) {
+              npcState.videoFile = file;
+            }
+          } else if (file.type.startsWith('image/')) {
+            if (npcState.images.length < NPC_MAX_IMAGES) {
+              npcState.images.push(file);
+            }
+          }
+        });
+        npcRenderMediaPreview();
+        npcUpdateSubmitButton();
+        npcUpdateMediaButtonState();
+      });
+    }
+
+    // GIF button
+    const gifBtn = document.getElementById('npc-gif-btn');
+    if (gifBtn) {
+      gifBtn.addEventListener('click', function () {
+        npcOpenGifModal();
+      });
+    }
+
+    // Poll button
+    const pollBtn = document.getElementById('npc-poll-btn');
+    if (pollBtn) {
+      pollBtn.addEventListener('click', function () {
+        const panel = document.getElementById('npc-poll-panel');
+        if (panel && !panel.hidden) {
+          npcHidePollPanel();
+          npcUpdateSubmitButton();
+        } else {
+          npcShowPollPanel();
+        }
+      });
+    }
+
+    // Poll remove
+    const pollRemoveBtn = document.getElementById('npc-poll-remove-btn');
+    if (pollRemoveBtn) {
+      pollRemoveBtn.addEventListener('click', function () {
+        npcHidePollPanel();
+        npcUpdateSubmitButton();
+      });
+    }
+
+    // Poll add option
+    const pollAddBtn = document.getElementById('npc-poll-add-btn');
+    if (pollAddBtn) {
+      pollAddBtn.addEventListener('click', function () {
+        if (!npcState.poll || npcState.poll.options.length >= 4) return;
+        npcState.poll.options.push({ text: '' });
+        npcRenderPollChoices();
+        npcUpdateAddOptionButton();
+        const choices = document.getElementById('npc-poll-choices');
+        if (choices) {
+          const inputs = choices.querySelectorAll('input');
+          if (inputs.length) inputs[inputs.length - 1].focus();
+        }
+      });
+    }
+
+    // Poll duration
+    const pollDuration = document.getElementById('new-post-poll-duration');
+    if (pollDuration) {
+      pollDuration.addEventListener('change', function () {
+        if (npcState.poll) {
+          npcState.poll.durationMinutes = parseInt(pollDuration.value, 10) || 1440;
+        }
+      });
+    }
+
+    // Emoji button
+    const emojiBtn = document.getElementById('npc-emoji-btn');
+    if (emojiBtn) {
+      emojiBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        npcToggleEmojiPicker();
+      });
+    }
+
+    // Schedule button
+    const scheduleBtn = document.getElementById('npc-schedule-btn');
+    if (scheduleBtn) {
+      scheduleBtn.addEventListener('click', function () {
+        npcOpenScheduleModal();
+      });
+    }
+
+    // Audience select
+    const audienceSelect = document.getElementById('npc-audience-select');
+    if (audienceSelect) {
+      audienceSelect.addEventListener('change', function () {
+        // audience is metadata on the post; stored here for future API use
+      });
+    }
+
+    // Initial state
+    npcUpdateCharCounter();
+    npcUpdateSubmitButton();
+  }
+
   async function initSharedHandlers() {
     injectNameField();
     initAuthTabs();
@@ -3155,6 +3997,7 @@
     attachDashboardTriggerHandlers();
     attachMediaViewerHandlers();
     attachPostInteractionHandlers();
+    initNewPostComposer();
     await syncCurrentUserFromSession();
   }
 
@@ -3173,6 +4016,8 @@
       modal.setAttribute('aria-hidden', 'false');
     }
   };
+
+  window.npcResetState = npcResetState;
 
   initSharedHandlers().catch(function (error) {
     if (authStatus) {
