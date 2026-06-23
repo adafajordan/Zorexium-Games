@@ -731,7 +731,18 @@
       if (imagePlaceholder) postContainer.appendChild(imagePlaceholder.cloneNode(true));
       if (mediaGrid) postContainer.appendChild(mediaGrid.cloneNode(true));
       if (mediaWrapper) postContainer.appendChild(mediaWrapper.cloneNode(true));
-      if (videoShell) postContainer.appendChild(videoShell.cloneNode(true));
+      if (videoShell) {
+        const videoShellClone = videoShell.cloneNode(true);
+        videoShellClone.removeAttribute('data-video-enhanced');
+        videoShellClone.querySelectorAll('.post-video-center-play, .post-video-controls').forEach(function (node) {
+          node.remove();
+        });
+        const clonedVideo = videoShellClone.querySelector('.post-video');
+        if (clonedVideo) {
+          clonedVideo.removeAttribute('data-player-ready');
+        }
+        postContainer.appendChild(videoShellClone);
+      }
       const actionsClone = article.querySelector('.post-actions');
       if (actionsClone) {
         const clonedActions = actionsClone.cloneNode(true);
@@ -1113,10 +1124,14 @@
     return String(value);
   }
 
-  function formatTimeLeft(seconds) {
+  function formatDurationClock(seconds) {
     const value = Math.max(0, Math.floor(Number(seconds) || 0));
+    const hours = Math.floor(value / 3600);
     const minutes = Math.floor(value / 60);
     const remainingSeconds = value % 60;
+    if (hours > 0) {
+      return hours + ':' + String(minutes % 60).padStart(2, '0') + ':' + String(remainingSeconds).padStart(2, '0');
+    }
     return minutes + ':' + String(remainingSeconds).padStart(2, '0');
   }
 
@@ -1744,21 +1759,12 @@
     }
   }
 
-  function updateVideoRemainingLabel(video, label) {
-    if (!video || !label) return;
-    if (!Number.isFinite(video.duration) || video.duration <= 0) {
-      label.textContent = '';
-      return;
-    }
-    label.textContent = formatTimeLeft(Math.max(0, video.duration - video.currentTime)) + ' left';
-  }
-
   function configurePostVideoElement(video) {
     if (!video) return;
     video.autoplay = true;
     video.muted = true;
     video.defaultMuted = true;
-    video.controls = true;
+    video.controls = false;
     video.setAttribute('playsinline', 'true');
     video.preload = 'metadata';
     video.setAttribute('data-autoplay-muted', 'true');
@@ -1772,91 +1778,181 @@
     video.setAttribute('data-previous-volume', String(Number(video.volume) || 0));
   }
 
-  function buildVideoOptionsSummary(article) {
-    const actionNames = ['like', 'comment', 'repost', 'save'];
-    return actionNames.map(function (action) {
-      const button = article.querySelector('.post-action[data-action="' + action + '"]');
-      if (!button) return null;
-      const count = action === 'save' ? '' : (' ' + formatCountValue(parseCountValue(button.getAttribute('data-count'))));
-      return action.charAt(0).toUpperCase() + action.slice(1) + count;
-    }).filter(Boolean).join(' • ');
+  function pauseOtherPostVideos(activeVideo) {
+    if (!activeVideo) return;
+    document.querySelectorAll('.post-video').forEach(function (video) {
+      if (video !== activeVideo) {
+        video.pause();
+      }
+    });
   }
 
   function enhancePostVideoPresentation(article) {
     if (!article) return;
     article.querySelectorAll('.post-video-shell').forEach(function (shell) {
-      if (shell.getAttribute('data-video-enhanced') === 'true') return;
-      shell.setAttribute('data-video-enhanced', 'true');
       const video = shell.querySelector('.post-video');
       if (!video) return;
+      if (video.getAttribute('data-player-ready') === 'true') return;
+      shell.setAttribute('data-video-enhanced', 'true');
+      video.setAttribute('data-player-ready', 'true');
       shell.style.position = 'relative';
+      shell.classList.add('post-video-shell-custom');
 
-      const remaining = document.createElement('span');
-      remaining.className = 'post-video-remaining';
-      shell.appendChild(remaining);
+      const centerPlayButton = document.createElement('button');
+      centerPlayButton.className = 'post-video-center-play';
+      centerPlayButton.type = 'button';
+      centerPlayButton.setAttribute('aria-label', 'Play video');
+      centerPlayButton.innerHTML = '<span aria-hidden="true">▶</span>';
+      shell.appendChild(centerPlayButton);
+
+      const controls = document.createElement('div');
+      controls.className = 'post-video-controls';
+
+      const seek = document.createElement('input');
+      seek.className = 'post-video-seek';
+      seek.type = 'range';
+      seek.min = '0';
+      seek.max = '1000';
+      seek.step = '1';
+      seek.value = '0';
+      seek.setAttribute('aria-label', 'Seek video');
+
+      const controlsRow = document.createElement('div');
+      controlsRow.className = 'post-video-controls-row';
+
+      const playButton = document.createElement('button');
+      playButton.className = 'post-video-control';
+      playButton.type = 'button';
+      playButton.setAttribute('data-control', 'play');
+      playButton.setAttribute('aria-label', 'Pause video');
+      playButton.textContent = '❚❚';
+
+      const muteButton = document.createElement('button');
+      muteButton.className = 'post-video-control';
+      muteButton.type = 'button';
+      muteButton.setAttribute('data-control', 'mute');
+      muteButton.setAttribute('aria-label', 'Unmute video');
+      muteButton.textContent = '🔇';
+
+      const timeLabel = document.createElement('span');
+      timeLabel.className = 'post-video-time';
+      timeLabel.textContent = '0:00 / 0:00';
 
       const fullscreenButton = document.createElement('button');
-      fullscreenButton.className = 'post-video-fullscreen-toggle';
+      fullscreenButton.className = 'post-video-control';
       fullscreenButton.type = 'button';
-      fullscreenButton.textContent = 'Fullscreen';
-      shell.appendChild(fullscreenButton);
+      fullscreenButton.setAttribute('data-control', 'fullscreen');
+      fullscreenButton.setAttribute('aria-label', 'Fullscreen');
+      fullscreenButton.textContent = '⛶';
 
-      const fullscreenOverlay = document.createElement('div');
-      fullscreenOverlay.className = 'post-video-fullscreen-overlay';
-      shell.appendChild(fullscreenOverlay);
-
-      function refreshFullscreenOverlay() {
-        const username = article.querySelector('.post-username');
-        const handle = article.querySelector('.post-handle');
-        const body = article.querySelector('.post-body');
-        const optionsSummary = buildVideoOptionsSummary(article);
-        fullscreenOverlay.innerHTML = '<div class="post-video-fullscreen-author">' +
-          escapeHtml(username ? username.textContent : 'Post') +
-          (handle ? ' <span>' + escapeHtml(handle.textContent) + '</span>' : '') +
-          '</div>' +
-          (body ? ('<p class="post-video-fullscreen-text">' + escapeHtml(body.textContent) + '</p>') : '') +
-          '<p class="post-video-fullscreen-options">' + escapeHtml(optionsSummary || 'Like • Comment • Repost • Save') + '</p>';
-      }
+      controlsRow.appendChild(playButton);
+      controlsRow.appendChild(muteButton);
+      controlsRow.appendChild(timeLabel);
+      controlsRow.appendChild(fullscreenButton);
+      controls.appendChild(seek);
+      controls.appendChild(controlsRow);
+      shell.appendChild(controls);
 
       configurePostVideoElement(video);
+      let isSeeking = false;
 
-      video.addEventListener('loadedmetadata', function () {
-        updateVideoRemainingLabel(video, remaining);
-      });
-      video.addEventListener('timeupdate', function () {
-        updateVideoRemainingLabel(video, remaining);
-      });
-      video.addEventListener('ended', function () {
-        updateVideoRemainingLabel(video, remaining);
-      });
-
-      video.addEventListener('volumechange', function () {
-        const previousVolume = Number(video.getAttribute('data-previous-volume') || '0');
-        if (video.muted && video.volume > 0 && video.volume > previousVolume) {
-          video.muted = false;
+      function updateControls() {
+        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        const currentTime = Math.max(0, video.currentTime || 0);
+        const isPlaying = !video.paused && !video.ended;
+        shell.classList.toggle('is-playing', isPlaying);
+        centerPlayButton.style.display = isPlaying ? 'none' : 'inline-flex';
+        playButton.textContent = isPlaying ? '❚❚' : '▶';
+        playButton.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
+        const isMuted = video.muted || video.volume === 0;
+        muteButton.textContent = isMuted ? '🔇' : '🔊';
+        muteButton.setAttribute('aria-label', isMuted ? 'Unmute video' : 'Mute video');
+        if (!isSeeking) {
+          seek.value = duration > 0 ? String(Math.min(1000, Math.round((currentTime / duration) * 1000))) : '0';
         }
-        video.setAttribute('data-previous-volume', String(Number(video.volume) || 0));
+        timeLabel.textContent = formatDurationClock(currentTime) + ' / ' + formatDurationClock(duration);
+      }
+
+      function togglePlayback() {
+        if (video.paused || video.ended) {
+          pauseOtherPostVideos(video);
+          video.play().catch(function () {
+          });
+          return;
+        }
+        video.pause();
+      }
+
+      centerPlayButton.addEventListener('click', function () {
+        togglePlayback();
+      });
+      video.addEventListener('click', function () {
+        togglePlayback();
+      });
+      playButton.addEventListener('click', function () {
+        togglePlayback();
+      });
+      muteButton.addEventListener('click', function () {
+        const previousVolume = Number(video.getAttribute('data-previous-volume') || '0.5');
+        if (video.muted || video.volume === 0) {
+          video.muted = false;
+          if (video.volume === 0) {
+            video.volume = previousVolume > 0 ? previousVolume : 0.5;
+          }
+        } else {
+          video.setAttribute('data-previous-volume', String(video.volume));
+          video.muted = true;
+        }
+        updateControls();
+      });
+
+      seek.addEventListener('input', function () {
+        isSeeking = true;
+        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        if (duration > 0) {
+          video.currentTime = (Number(seek.value) / 1000) * duration;
+        }
+        updateControls();
+      });
+      seek.addEventListener('change', function () {
+        isSeeking = false;
+        updateControls();
       });
 
       fullscreenButton.addEventListener('click', function () {
-        refreshFullscreenOverlay();
         requestElementFullscreen(shell).catch(function () {
         });
       });
       video.addEventListener('dblclick', function () {
-        refreshFullscreenOverlay();
         requestElementFullscreen(shell).catch(function () {
         });
       });
-      shell.addEventListener('fullscreenchange', function () {
-        if (document.fullscreenElement === shell) {
-          refreshFullscreenOverlay();
-          return;
+
+      video.addEventListener('loadedmetadata', updateControls);
+      video.addEventListener('timeupdate', updateControls);
+      video.addEventListener('play', updateControls);
+      video.addEventListener('pause', updateControls);
+      video.addEventListener('ended', updateControls);
+      video.addEventListener('volumechange', function () {
+        if (!video.muted && video.volume > 0) {
+          video.setAttribute('data-previous-volume', String(video.volume));
         }
-        fullscreenOverlay.innerHTML = '';
+        updateControls();
       });
-      refreshFullscreenOverlay();
-      updateVideoRemainingLabel(video, remaining);
+      shell.addEventListener('mouseleave', function () {
+        if (!video.paused) {
+          shell.classList.add('is-playing');
+        }
+      });
+      shell.addEventListener('mousemove', function () {
+        if (!video.paused) {
+          shell.classList.add('is-playing');
+        }
+      });
+
+      video.play().catch(function () {
+      });
+      updateControls();
     });
   }
 
