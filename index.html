@@ -741,8 +741,8 @@
         border: none;
         border-radius: inherit;
         background: #000;
-        object-fit: cover;
-        max-height: 420px;
+        object-fit: contain;
+        max-height: 480px;
         aspect-ratio: 16 / 9;
       }
       .post-video-controls {
@@ -940,6 +940,269 @@
       }
       .post-video-shell.is-simfullscreen .post-video-fs-info {
         display: flex;
+      }
+      /* ── Center play overlay (inline state) ─────────────────── */
+      .post-video-center-play {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.52);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        pointer-events: none;
+        transition: opacity 0.18s ease;
+        z-index: 2;
+      }
+      .post-video-shell.is-playing .post-video-center-play {
+        opacity: 0;
+      }
+      /* ── Bottom-right inline indicator (mute + duration) ─────── */
+      .post-video-inline-indicator {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        z-index: 3;
+      }
+      .post-video-inline-mute {
+        border: none;
+        background: rgba(0, 0, 0, 0.52);
+        color: #fff;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .post-video-inline-mute:hover {
+        background: rgba(0, 0, 0, 0.72);
+      }
+      .post-video-inline-duration {
+        font-size: 12px;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        background: rgba(0, 0, 0, 0.52);
+        padding: 2px 7px;
+        border-radius: 6px;
+      }
+      /* ── Immersive fullscreen player ─────────────────────────── */
+      #pv-immersive-player {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: #000;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-end;
+        overflow: hidden;
+        touch-action: none;
+      }
+      #pv-immersive-player.open {
+        display: flex;
+      }
+      .pv-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+      }
+      /* Top bar */
+      .pv-top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%);
+        transition: opacity 0.3s ease;
+      }
+      /* Settings panel */
+      .pv-settings-panel {
+        position: absolute;
+        top: 60px;
+        right: 16px;
+        z-index: 4;
+        background: rgba(24, 24, 24, 0.96);
+        border-radius: 12px;
+        padding: 16px;
+        min-width: 220px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .pv-settings-panel[hidden] {
+        display: none;
+      }
+      .pv-settings-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.55);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
+      }
+      .pv-speed-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pv-speed-btn {
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #fff;
+        border-radius: 8px;
+        padding: 5px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .pv-speed-btn:hover {
+        background: rgba(255,255,255,0.22);
+      }
+      .pv-speed-btn.pv-active {
+        background: #fff;
+        color: #000;
+        border-color: #fff;
+      }
+      .pv-settings-note {
+        font-size: 12px;
+        color: rgba(255,255,255,0.45);
+        line-height: 1.5;
+      }
+      /* Canvas overlay (captures taps/swipes without blocking video) */
+      .pv-canvas-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        cursor: pointer;
+        touch-action: pan-y;
+      }
+      /* Bottom controls */
+      .pv-bottom-controls {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+        background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 70%, rgba(0,0,0,0) 100%);
+        transition: opacity 0.3s ease;
+      }
+      /* Controls auto-hide */
+      #pv-immersive-player.pv-controls-hidden .pv-top-bar,
+      #pv-immersive-player.pv-controls-hidden .pv-bottom-controls {
+        opacity: 0;
+        pointer-events: none;
+      }
+      /* Custom progress bar */
+      .pv-progress-bar {
+        width: 100%;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        touch-action: none;
+      }
+      .pv-progress-track {
+        position: relative;
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255,255,255,0.2);
+        overflow: visible;
+      }
+      .pv-progress-buffer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: rgba(255,255,255,0.35);
+        border-radius: 2px;
+        width: 0%;
+        pointer-events: none;
+      }
+      .pv-progress-played {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: #fff;
+        border-radius: 2px;
+        width: 0%;
+        pointer-events: none;
+      }
+      .pv-progress-knob {
+        position: absolute;
+        top: 50%;
+        left: calc(0% - 6px);
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #fff;
+        transform: translateY(-50%);
+        pointer-events: none;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      }
+      /* Controls row */
+      .pv-controls-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .pv-btn {
+        border: none;
+        background: none;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 50%;
+        transition: background 0.15s;
+        flex-shrink: 0;
+      }
+      .pv-btn:hover {
+        background: rgba(255,255,255,0.15);
+      }
+      .pv-time {
+        font-size: 13px;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .pv-flex-spacer {
+        flex: 1;
+      }
+      .pv-cc-btn[aria-disabled="true"] {
+        opacity: 0.38;
+        cursor: not-allowed;
+      }
+      .pv-cc-btn[aria-disabled="true"]:hover {
+        background: none;
       }
       .post-media-toolbar {
         display: flex;
