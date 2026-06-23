@@ -2018,8 +2018,7 @@
       fullscreenButton.addEventListener('click', function () {
         if (isInFullscreen()) {
           if (shell.classList.contains('is-simfullscreen')) {
-            shell.classList.remove('is-simfullscreen');
-            document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: null } }));
+            exitSimulatedFullscreen();
           } else {
             const exitFn = document.exitFullscreen || document.webkitExitFullscreen;
             if (exitFn) exitFn.call(document).catch(function () {});
@@ -2031,9 +2030,34 @@
         }
       });
 
+      let simEscListener = null;
+      let savedBodyOverflow = '';
+
+      function exitSimulatedFullscreen() {
+        shell.classList.remove('is-simfullscreen');
+        if (simEscListener) {
+          document.removeEventListener('keydown', simEscListener);
+          simEscListener = null;
+        }
+        document.body.style.overflow = savedBodyOverflow;
+        document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: null } }));
+      }
+
       function onFullscreenChange() {
         const inFullscreen = isInFullscreen();
-        document.body.style.overflow = (inFullscreen && shell.classList.contains('is-simfullscreen')) ? 'hidden' : '';
+        const isSimulated = shell.classList.contains('is-simfullscreen');
+        if (isSimulated && inFullscreen && !simEscListener) {
+          savedBodyOverflow = document.body.style.overflow;
+          document.body.style.overflow = 'hidden';
+          simEscListener = function (event) {
+            if (event.key === 'Escape') exitSimulatedFullscreen();
+          };
+          document.addEventListener('keydown', simEscListener);
+        } else if (!isSimulated && simEscListener) {
+          document.removeEventListener('keydown', simEscListener);
+          simEscListener = null;
+          document.body.style.overflow = savedBodyOverflow;
+        }
         if (inFullscreen) {
           if (video.muted) {
             video.muted = false;
@@ -2050,13 +2074,6 @@
       document.addEventListener('fullscreenchange', onFullscreenChange);
       document.addEventListener('webkitfullscreenchange', onFullscreenChange);
       document.addEventListener('simfullscreenchange', onFullscreenChange);
-      document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && shell.classList.contains('is-simfullscreen')) {
-          shell.classList.remove('is-simfullscreen');
-          document.body.style.overflow = '';
-          document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: null } }));
-        }
-      });
 
       video.addEventListener('loadedmetadata', updateControls);
       video.addEventListener('timeupdate', updateControls);
