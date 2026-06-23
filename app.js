@@ -1096,6 +1096,10 @@
     }
   }
 
+  function hasGifUrl(post) {
+    return Boolean(String((post && post.gifUrl) || '').trim());
+  }
+
   function switchAuthView(view) {
     if (!loginForm || !registerForm) return;
     const isLogin = view === 'login';
@@ -1295,7 +1299,7 @@
   }
 
   function hasPostMedia(post) {
-    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId) || Boolean(String((post && post.gifUrl) || '').trim());
+    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId) || hasGifUrl(post);
   }
 
   function getPostAuthorHandle(post) {
@@ -2296,7 +2300,7 @@
     const imageIds = Array.isArray(post.imageMediaIds) ? post.imageMediaIds : [];
     const altBase = post.text ? post.text.trim().replace(/\s+/g, ' ').split(' ').slice(0, 12).join(' ') : 'User upload';
 
-    if (String(post.gifUrl || '').trim() && isSafeMediaUrl(post.gifUrl)) {
+    if (hasGifUrl(post) && isSafeMediaUrl(post.gifUrl)) {
       const gifGrid = document.createElement('div');
       gifGrid.className = 'post-media-grid single';
 
@@ -2637,6 +2641,8 @@
       createdAt: createdAt
     };
     await putRecord(POSTS_STORE, postRecord);
+    // Scheduled posts stay hidden until publish time, so mention notifications are also
+    // deferred for now instead of firing early before the post is visible.
     if (isPostPublished(postRecord)) {
       await addMentionNotifications(postRecord, text);
     }
