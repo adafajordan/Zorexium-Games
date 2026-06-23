@@ -1,0 +1,28 @@
+{
+  "name": "neter",
+  "version": "1.0.0",
+  "description": "Neter — cross-platform app (iOS, Android, Web)",
+  "scripts": {
+    "cap:sync": "npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:add:android": "npx cap add android"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adafajordan/Zorexium-Games.git"
+  },
+  "author": "adafajordan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/adafajordan/Zorexium-Games/issues"
+  },
+  "homepage": "https://github.com/adafajordan/Zorexium-Games#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1"
+  }
+}
