@@ -2182,7 +2182,7 @@
       btn.className = 'pv-speed-btn' + (speed === 1 ? ' pv-active' : '');
       btn.type = 'button';
       btn.setAttribute('data-speed', String(speed));
-      btn.textContent = speed === 1 ? '1\u00d7' : speed + '\u00d7';
+      btn.textContent = speed + '\u00d7';
       speedGroup.appendChild(btn);
     });
 
@@ -2327,13 +2327,16 @@
         progressKnob.style.left = 'calc(' + pct + '% - 6px)';
       }
 
-      // Update buffered progress
+      // Update buffered progress; accessing buffered ranges may throw if the
+      // video source is not yet available or the element is in an error state.
       try {
         if (video.buffered.length > 0 && duration > 0) {
           const bufferedEnd = video.buffered.end(video.buffered.length - 1);
           progressBuffer.style.width = ((bufferedEnd / duration) * 100) + '%';
         }
-      } catch (e) {}
+      } catch (e) {
+        // Buffered data not accessible in the current playback state; ignore.
+      }
     }
 
     video.addEventListener('timeupdate', updateImmersiveControls);
@@ -2447,11 +2450,10 @@
       }
     }, { passive: true });
 
-    // Progress bar: pointer-based seeking (works for mouse and touch via pointer events)
+    // Progress bar: pointer-based seeking (pointer events unify mouse and touch input)
     function getSeekFraction(e) {
       const rect = progressBar.getBoundingClientRect();
-      const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-      return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     }
 
     function applySeekFraction(frac) {
@@ -2551,8 +2553,8 @@
   function navigateImmersivePlayer(direction) {
     const nextIndex = pvFeedIndex + direction;
 
-    // Swipe down (direction -1) at the first video → close
-    if (direction < 0 && nextIndex < 0) {
+    // Swipe down (direction -1) at the first video, or when feed index is invalid → close
+    if (direction < 0 && (pvFeedIndex < 0 || nextIndex < 0)) {
       closeImmersivePlayer();
       return;
     }
