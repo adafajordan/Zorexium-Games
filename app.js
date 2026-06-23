@@ -840,7 +840,7 @@
     }, true);
 
     document.addEventListener('click', function (event) {
-      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, [data-action], .post-detail-modal')) {
+      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, [data-action], .post-detail-modal, .post-video-shell')) {
         return;
       }
       const article = event.target.closest && event.target.closest('[data-post-id]');
@@ -1981,7 +1981,8 @@
         });
       }
 
-      video.addEventListener('click', function () {
+      video.addEventListener('click', function (event) {
+        event.stopPropagation();
         if (isInFullscreen()) return;
         enterFullscreenAndPlay();
       });
