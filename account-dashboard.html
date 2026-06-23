@@ -1317,6 +1317,99 @@
       .new-post-date-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
       .new-post-meta-panel { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
       .new-post-poll-options { display: grid; gap: 8px; margin-top: 8px; }
+      /* ── New Post Composer (NPC) ──────────────── */
+      .npc-panel{width:min(560px,100%);max-height:90vh;overflow-y:auto}
+      .npc-audience-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+      .npc-audience-label{font-size:11px;color:var(--text-soft)}
+      .npc-audience-pill{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit}
+      .npc-compose-area{position:relative}
+      .npc-textarea{width:100%;min-height:100px;max-height:300px;resize:none;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 52px 10px 10px;background:#fff;color:var(--text);font-family:inherit;font-size:15px;line-height:1.5;box-sizing:border-box}
+      .npc-textarea:focus{outline:2px solid var(--focus);border-color:var(--focus)}
+      .npc-char-counter{position:absolute;bottom:10px;right:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+      .npc-ring-svg{position:absolute;width:36px;height:36px;transform:rotate(-90deg)}
+      .npc-ring-bg{stroke:var(--border)}
+      .npc-ring-fill{stroke:var(--accent);transition:stroke-dashoffset .15s,stroke .15s}
+      .npc-ring-fill.over{stroke:#e02020}
+      .npc-char-label{position:relative;font-size:10px;color:var(--text-muted);font-weight:700;z-index:1}
+      .npc-char-label.over{color:#e02020}
+      .npc-mention-dropdown{position:absolute;top:100%;left:0;z-index:410;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.12);min-width:220px;max-height:200px;overflow-y:auto}
+      .npc-mention-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer}
+      .npc-mention-item:hover,.npc-mention-item.kbd-active{background:var(--surface)}
+      .npc-mention-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+      .npc-mention-meta{display:flex;flex-direction:column}
+      .npc-mention-name{font-size:13px;font-weight:600;color:var(--text)}
+      .npc-mention-handle{font-size:11px;color:var(--text-soft)}
+      .npc-media-preview{margin-top:10px;border-radius:10px;overflow:hidden}
+      .npc-img-grid{display:grid;gap:3px;border-radius:10px;overflow:hidden}
+      .npc-img-grid.g1{grid-template-columns:1fr}
+      .npc-img-grid.g2{grid-template-columns:1fr 1fr}
+      .npc-img-grid.g3,.npc-img-grid.g4{grid-template-columns:1fr 1fr}
+      .npc-img-item{position:relative;overflow:hidden;background:var(--surface)}
+      .npc-img-grid.g3 .npc-img-item:first-child{grid-row:1/3}
+      .npc-img-item img,.npc-img-item video{width:100%;height:160px;object-fit:cover;display:block}
+      .npc-img-grid.g1 .npc-img-item img,.npc-img-grid.g1 .npc-img-item video{height:280px}
+      .npc-img-grid.g3 .npc-img-item:first-child img{height:323px}
+      .npc-img-remove{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;z-index:2}
+      .npc-img-remove:hover{background:rgba(0,0,0,.8)}
+      .npc-poll-panel{margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+      .npc-poll-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border)}
+      .npc-poll-head-title{font-size:13px;font-weight:600;color:var(--text-muted)}
+      .npc-poll-remove-btn{background:none;border:none;cursor:pointer;color:var(--text-soft);font-size:14px;padding:0 4px;line-height:1}
+      .npc-poll-choices{padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+      .npc-poll-choice-row{display:flex;align-items:center;gap:6px}
+      .npc-poll-choice-input{flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;background:#fff;color:var(--text);font-family:inherit}
+      .npc-poll-choice-input:focus{outline:2px solid var(--focus);border-color:var(--focus)}
+      .npc-poll-choice-del{background:none;border:none;cursor:pointer;color:var(--text-soft);font-size:16px;padding:2px 4px;line-height:1}
+      .npc-poll-add-btn{display:block;width:calc(100% - 24px);margin:0 12px 8px;font-size:12px;color:var(--accent);background:none;border:1px dashed var(--border-strong);border-radius:6px;padding:6px 10px;cursor:pointer;font-family:inherit;text-align:left}
+      .npc-poll-add-btn:hover{background:var(--surface)}
+      .npc-poll-add-btn:disabled{opacity:.4;cursor:default}
+      .npc-poll-footer{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);background:var(--surface)}
+      .npc-poll-dur-label{font-size:12px;color:var(--text-muted)}
+      .npc-poll-dur-select{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);font-family:inherit}
+      .npc-toolbar{display:flex;align-items:center;gap:2px;padding:8px 0 2px;border-top:1px solid var(--border);margin-top:10px;flex-wrap:nowrap}
+      .npc-tool-btn{width:34px;height:34px;border-radius:50%;border:none;background:none;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+      .npc-tool-btn svg{width:20px;height:20px}
+      .npc-tool-btn:hover{background:var(--surface)}
+      .npc-tool-btn:disabled{opacity:.4;cursor:default}
+      .npc-toolbar-spacer{flex:1;min-width:4px}
+      .npc-schedule-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);font-weight:600;padding:2px 8px;border:1px solid var(--border);border-radius:20px;background:var(--surface);white-space:nowrap;cursor:pointer;flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+      .npc-schedule-badge:hover{background:var(--surface-soft)}
+      .npc-submit-btn{padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em;flex-shrink:0}
+      .npc-submit-btn:disabled{opacity:.4;cursor:default}
+      .npc-sub-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px}
+      .npc-sub-modal.open{display:flex}
+      .npc-sub-panel{background:#fff;border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.2);padding:18px;width:min(480px,100%);max-height:80vh;overflow-y:auto;position:relative}
+      .npc-sub-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;border:none;background:var(--surface);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+      .npc-sub-title{font-size:16px;font-weight:700;color:var(--accent);margin:0 0 14px;padding-right:30px}
+      .npc-gif-search-row{display:flex;gap:8px;margin-bottom:10px}
+      .npc-gif-search-input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:14px;background:#fff;color:var(--text);outline:none}
+      .npc-gif-search-input:focus{border-color:var(--focus)}
+      .npc-gif-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+      .npc-gif-tab{padding:4px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;background:var(--surface);color:var(--text-muted);font-family:inherit}
+      .npc-gif-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+      .npc-gif-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+      .npc-gif-cell{border-radius:6px;overflow:hidden;cursor:pointer;background:var(--surface);aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px}
+      .npc-gif-cell img{width:100%;height:100%;object-fit:cover}
+      .npc-gif-cell:hover{opacity:.8}
+      .npc-gif-url-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+      .npc-gif-url-label{font-size:12px;color:var(--text-soft);margin-bottom:6px}
+      .npc-gif-url-inputs{display:flex;gap:8px}
+      .npc-gif-url-input{flex:1;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:inherit;font-size:13px;background:#fff;color:var(--text);outline:none}
+      .npc-gif-url-input:focus{border-color:var(--focus)}
+      .npc-gif-url-btn{padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+      .npc-emoji-picker{position:fixed;z-index:420;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:10px;width:300px;max-height:280px;overflow-y:auto}
+      .npc-emoji-cats{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+      .npc-emoji-cat-btn{padding:2px 8px;border:1px solid var(--border);border-radius:12px;font-size:11px;cursor:pointer;background:none;color:var(--text-muted);font-family:inherit}
+      .npc-emoji-cat-btn.active{background:var(--surface);border-color:var(--accent);color:var(--accent)}
+      .npc-emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+      .npc-emoji-btn{font-size:20px;line-height:1.4;border:none;background:none;cursor:pointer;border-radius:6px;padding:2px;text-align:center}
+      .npc-emoji-btn:hover{background:var(--surface)}
+      .npc-schedule-modal-note{font-size:12px;color:var(--text-soft);margin-bottom:10px}
+      .npc-sched-label{font-size:13px;color:var(--text-muted);margin-bottom:6px;display:block}
+      .npc-sched-input{width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:inherit;font-size:14px;background:#fff;color:var(--text);box-sizing:border-box}
+      .npc-sched-input:focus{outline:2px solid var(--focus);border-color:var(--focus)}
+      .npc-sched-btn{margin-top:12px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+      .npc-sched-clear{margin-top:6px;padding:8px 20px;background:var(--surface);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;display:block}.npc-badge-close{font-size:10px;opacity:.7}
       .post-poll {
         display: grid;
         gap: 8px;
@@ -1579,52 +1672,88 @@
       </div>
     </div>
 
-    <!-- New post modal -->
+    <!-- New Post Composer modal -->
     <div id="new-post-modal" class="auth-modal" aria-hidden="true">
-      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
+      <div class="auth-panel npc-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
         <button id="new-post-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
         <h2 id="new-post-title" class="auth-title">Create Post</h2>
+
+        <div class="npc-audience-row">
+          <span class="npc-audience-label">Reply audience:</span>
+          <select id="npc-audience-select" class="npc-audience-pill" aria-label="Who can reply">
+            <option value="everyone">&#127760; Everyone</option>
+            <option value="following">&#128101; People you follow</option>
+            <option value="mentioned">&#64; Only people you mention</option>
+          </select>
+        </div>
+
         <form id="new-post-form" novalidate>
-          <div class="auth-field">
-            <label for="new-post-text">Post</label>
-            <textarea id="new-post-text" class="new-post-textarea" placeholder="What's on your mind?" rows="4" aria-describedby="new-post-requirements"></textarea>
-            <div id="new-post-requirements" class="new-post-helper">Add text, photos, a GIF, a two-option poll, or a video to publish your post. Text is optional when media or a poll is attached.</div>
-          </div>
-          <div class="new-post-media-panel">
-            <div class="auth-field">
-              <label for="new-post-images">Pictures</label>
-              <input id="new-post-images" class="new-post-file-input" type="file" accept="image/*" multiple aria-describedby="new-post-images-helper" />
-              <div id="new-post-images-helper" class="new-post-helper">Upload up to 10 pictures with a maximum size of 10MB each.</div>
-            </div>
-            <div class="auth-field">
-              <label for="new-post-video">Video</label>
-              <input id="new-post-video" class="new-post-file-input" type="file" accept="video/*" aria-describedby="new-post-video-helper" />
-              <div id="new-post-video-helper" class="new-post-helper">Upload one video up to 10 minutes long.</div>
+          <div class="npc-compose-area">
+            <textarea id="new-post-text" class="npc-textarea" placeholder="What&#39;s on your mind?" rows="3" aria-label="Post text"></textarea>
+            <div id="npc-mention-dropdown" class="npc-mention-dropdown" hidden role="listbox" aria-label="Suggested mentions"></div>
+            <div class="npc-char-counter" id="npc-char-counter" aria-hidden="true">
+              <svg class="npc-ring-svg" viewBox="0 0 36 36">
+                <circle class="npc-ring-bg" cx="18" cy="18" r="15.9" fill="none" stroke-width="3"/>
+                <circle id="npc-ring-fill" class="npc-ring-fill" cx="18" cy="18" r="15.9" fill="none" stroke-width="3" stroke-dasharray="100 100" stroke-dashoffset="100" stroke-linecap="round"/>
+              </svg>
+              <span id="npc-char-label" class="npc-char-label"></span>
             </div>
           </div>
-          <div class="new-post-meta-panel">
-            <div class="auth-field">
-              <label for="new-post-gif-url">GIF URL</label>
-              <input id="new-post-gif-url" class="new-post-text-input" type="url" inputmode="url" placeholder="https://example.com/reaction.gif" aria-describedby="new-post-gif-helper" />
-              <div id="new-post-gif-helper" class="new-post-helper">Paste a direct GIF link to add it to your post.</div>
+
+          <div id="npc-media-preview" class="npc-media-preview" hidden></div>
+
+          <div id="npc-poll-panel" class="npc-poll-panel" hidden>
+            <div class="npc-poll-head">
+              <span class="npc-poll-head-title">Poll</span>
+              <button type="button" id="npc-poll-remove-btn" class="npc-poll-remove-btn" aria-label="Remove poll">&#10005;</button>
             </div>
-            <div class="auth-field">
-              <label for="new-post-poll-question">Poll</label>
-              <input id="new-post-poll-question" class="new-post-text-input" type="text" maxlength="120" placeholder="Ask a question…" aria-describedby="new-post-poll-helper" />
-              <div id="new-post-poll-helper" class="new-post-helper">Polls currently support two answer options.</div>
-              <div class="new-post-poll-options">
-                <input id="new-post-poll-option-1" class="new-post-text-input" type="text" maxlength="80" placeholder="Option 1" />
-                <input id="new-post-poll-option-2" class="new-post-text-input" type="text" maxlength="80" placeholder="Option 2" />
-              </div>
-            </div>
-            <div class="auth-field">
-              <label for="new-post-schedule">Schedule post</label>
-              <input id="new-post-schedule" class="new-post-date-input" type="datetime-local" aria-describedby="new-post-schedule-helper" />
-              <div id="new-post-schedule-helper" class="new-post-helper">Leave blank to publish immediately.</div>
+            <div id="npc-poll-choices" class="npc-poll-choices"></div>
+            <button type="button" id="npc-poll-add-btn" class="npc-poll-add-btn">+ Add option</button>
+            <div class="npc-poll-footer">
+              <label for="new-post-poll-duration" class="npc-poll-dur-label">Duration:</label>
+              <select id="new-post-poll-duration" class="npc-poll-dur-select">
+                <option value="1440">1 day</option>
+                <option value="2880">2 days</option>
+                <option value="4320">3 days</option>
+                <option value="10080">7 days</option>
+                <option value="60">1 hour</option>
+                <option value="360">6 hours</option>
+                <option value="720">12 hours</option>
+              </select>
             </div>
           </div>
-          <button class="auth-submit" type="submit" style="margin-top:8px;">Post</button>
+
+          <div class="npc-toolbar">
+            <input id="new-post-images" type="file" accept="image/*,video/*" multiple style="display:none" aria-hidden="true" tabindex="-1" />
+            <input id="new-post-video" type="hidden" />
+            <input id="new-post-gif-url" type="hidden" />
+            <input id="new-post-poll-question" type="hidden" />
+            <input id="new-post-poll-option-1" type="hidden" />
+            <input id="new-post-poll-option-2" type="hidden" />
+            <input id="new-post-schedule" type="hidden" />
+
+            <button type="button" class="npc-tool-btn" id="npc-media-btn" title="Add photo or video" aria-label="Add photo or video">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-gif-btn" title="Add GIF" aria-label="Add GIF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="3"/><text x="5.5" y="15.5" font-size="7" font-weight="800" fill="currentColor" stroke="none" font-family="sans-serif">GIF</text></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-poll-btn" title="Create poll" aria-label="Create poll">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-emoji-btn" title="Add emoji" aria-label="Add emoji">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-schedule-btn" title="Schedule post" aria-label="Schedule post">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+
+            <div class="npc-toolbar-spacer"></div>
+            <span id="npc-schedule-badge" class="npc-schedule-badge" hidden></span>
+            <button id="npc-submit-btn" class="npc-submit-btn" type="submit" disabled>Post</button>
+          </div>
         </form>
+
         <p id="new-post-status" class="auth-status" aria-live="polite"></p>
       </div>
     </div>
@@ -1698,6 +1827,7 @@
         if (form) form.reset();
         const status = document.getElementById('new-post-status');
         if (status) status.textContent = '';
+        if (typeof window.npcResetState === 'function') window.npcResetState();
       }
       window.closeNewPostModal = closeNewPostModal;
       function handlePlusClick() {
