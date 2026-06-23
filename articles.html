@@ -1687,6 +1687,7 @@
             companionPost.gifUrl = '';
             companionPost.poll = null;
             companionPost.scheduledAt = null;
+            companionPost.createdAt = now;
             return putRecord(POSTS_STORE, companionPost).then(function () {
               if (posts.length > 1) {
                 return Promise.all(posts.slice(1).map(function (post) { return deleteRecord(POSTS_STORE, post.id); }));
