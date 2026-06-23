@@ -97,17 +97,6 @@
         outline: none;
       }
       .header-search .search-bar-input:focus { border-color: var(--accent); background: #fff; }
-      .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border: 0;
-      }
       .btn { border: 1px solid var(--border-strong); background: var(--surface-soft); color: var(--text); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
       .btn:hover { background: var(--surface); }
       .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -568,7 +557,7 @@
     <!-- Header -->
     <header>
       <div class="header-left">
-        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write article"><span aria-hidden="true">+</span><span class="sr-only">Write article</span></button>
+        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write article"><span aria-hidden="true">+</span></button>
       </div>
       <div class="header-center">
         <a class="brand" href="index.html">
@@ -1033,6 +1022,7 @@
             el.style.top = '-9999px';
             document.body.appendChild(el);
             el.select();
+            // Fallback for environments without Clipboard API support.
             var copied = document.execCommand('copy');
             document.body.removeChild(el);
             if (copied) resolve();
@@ -1041,6 +1031,11 @@
             reject(err);
           }
         });
+      }
+
+      function confirmArticleDelete(article) {
+        var targetTitle = article && article.title ? ('\n\nTitle: ' + article.title) : '';
+        return window.confirm('Permanently delete this article? This cannot be undone.' + targetTitle);
       }
 
       function buildArticleMenu(article) {
@@ -1116,8 +1111,7 @@
         deleteBtn.type = 'button';
         deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', function () {
-          var targetTitle = article.title ? ('\n\nTitle: ' + article.title) : '';
-          if (!window.confirm('Permanently delete this article? This cannot be undone.' + targetTitle)) return;
+          if (!confirmArticleDelete(article)) return;
           deleteArticleWithCompanion(article.id).then(function () {
             return renderFeed();
           });
@@ -1993,8 +1987,7 @@
             delBtn.className = 'mgmt-action-btn danger';
             delBtn.textContent = 'Delete';
             delBtn.addEventListener('click', function () {
-              var targetTitle = article.title ? ('\n\nTitle: ' + article.title) : '';
-              if (!window.confirm('Permanently delete this article? This cannot be undone.' + targetTitle)) return;
+              if (!confirmArticleDelete(article)) return;
               deleteArticleWithCompanion(article.id).then(function () {
                 renderMgmtList();
                 renderFeed();
