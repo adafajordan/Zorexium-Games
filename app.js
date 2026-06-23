@@ -2543,7 +2543,7 @@
     }
 
     if (options.length < 2) {
-      throw new Error('Polls currently require two answer options.');
+      throw new Error('Polls require exactly two answer options.');
     }
 
     return {
@@ -2569,7 +2569,7 @@
     if (!Number.isFinite(timestamp)) {
       throw new Error('Choose a valid schedule date and time.');
     }
-    if (timestamp <= Date.now()) {
+    if (timestamp < Date.now()) {
       throw new Error('Scheduled posts must be set in the future.');
     }
     return timestamp;
