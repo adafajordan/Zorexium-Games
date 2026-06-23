@@ -723,6 +723,7 @@
         border-radius: 14px;
         overflow: hidden;
         background: #000;
+        cursor: pointer;
       }
       .post-video {
         width: 100%;
@@ -734,22 +735,6 @@
         max-height: 420px;
         aspect-ratio: 16 / 9;
       }
-      .post-video-center-play {
-        position: absolute;
-        inset: 50% auto auto 50%;
-        transform: translate(-50%, -50%);
-        width: 56px;
-        height: 56px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        background: rgba(0, 0, 0, 0.6);
-        color: #fff;
-        font-size: 24px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-      }
       .post-video-controls {
         position: absolute;
         left: 0;
@@ -758,13 +743,12 @@
         z-index: 2;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         padding: 8px 10px 10px;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
-        opacity: 1;
-        transition: opacity 0.18s ease;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 70%, rgba(0, 0, 0, 0) 100%);
       }
       .post-video-seek {
+        display: none;
         width: 100%;
         margin: 0;
         accent-color: #1d9bf0;
@@ -775,9 +759,9 @@
         gap: 8px;
       }
       .post-video-control {
-        border: 1px solid rgba(255, 255, 255, 0.22);
+        border: none;
         border-radius: 999px;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.45);
         color: #fff;
         min-width: 30px;
         height: 30px;
@@ -785,11 +769,15 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
+      }
+      .post-video-control[data-control="play"] {
+        display: none;
+      }
+      .post-video-control[data-control="fullscreen"] {
+        display: none;
       }
       .post-video-control:hover {
-        background: rgba(255, 255, 255, 0.16);
-        border-color: rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.2);
       }
       .post-video-time {
         margin-left: auto;
@@ -798,28 +786,14 @@
         font-size: 12px;
         font-variant-numeric: tabular-nums;
       }
-      .post-video-shell.is-playing .post-video-center-play {
-        opacity: 0;
-        pointer-events: none;
-      }
-      .post-video-shell.is-playing .post-video-controls {
-        opacity: 0;
-      }
-      .post-video-shell:hover .post-video-controls,
-      .post-video-shell:focus-within .post-video-controls,
-      .post-video-shell:not(.is-playing) .post-video-controls {
-        opacity: 1;
-      }
-      .post-video-shell:hover .post-video-center-play,
-      .post-video-shell:focus-within .post-video-center-play,
-      .post-video-shell:not(.is-playing) .post-video-center-play {
-        opacity: 1;
-        pointer-events: auto;
-      }
-      .post-video-shell:fullscreen {
+      /* ── Fullscreen overrides ───────────────────────────────── */
+      .post-video-shell:fullscreen,
+      .post-video-shell:-webkit-full-screen {
         border-radius: 0;
+        cursor: default;
       }
-      .post-video-shell:fullscreen .post-video {
+      .post-video-shell:fullscreen .post-video,
+      .post-video-shell:-webkit-full-screen .post-video {
         width: 100vw;
         height: 100vh;
         max-height: none;
@@ -827,8 +801,99 @@
         border-radius: 0;
         object-fit: contain;
       }
-      .post-video-shell:fullscreen .post-video-controls {
-        padding: 16px;
+      .post-video-shell:fullscreen .post-video-controls,
+      .post-video-shell:-webkit-full-screen .post-video-controls {
+        padding: 16px 20px 20px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0) 100%);
+        gap: 10px;
+      }
+      .post-video-shell:fullscreen .post-video-seek,
+      .post-video-shell:-webkit-full-screen .post-video-seek {
+        display: block;
+      }
+      .post-video-shell:fullscreen .post-video-control[data-control="play"],
+      .post-video-shell:-webkit-full-screen .post-video-control[data-control="play"] {
+        display: inline-flex;
+      }
+      .post-video-shell:fullscreen .post-video-control[data-control="fullscreen"],
+      .post-video-shell:-webkit-full-screen .post-video-control[data-control="fullscreen"] {
+        display: inline-flex;
+      }
+      /* ── Fullscreen post-info overlay ───────────────────────── */
+      .post-video-fs-info {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        padding-bottom: 4px;
+      }
+      .post-video-shell:fullscreen .post-video-fs-info,
+      .post-video-shell:-webkit-full-screen .post-video-fs-info {
+        display: flex;
+      }
+      .post-video-fs-user-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .post-video-fs-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        text-transform: uppercase;
+      }
+      .post-video-fs-user-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .post-video-fs-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .post-video-fs-handle {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.65);
+      }
+      .post-video-fs-text {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.5;
+        max-height: 3.6em;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+      .post-video-fs-actions {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .post-video-fs-action-btn {
+        background: none;
+        border: none;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        padding: 0;
+        opacity: 0.9;
+      }
+      .post-video-fs-action-btn:hover {
+        opacity: 1;
+      }
+      .post-video-fs-action-count {
+        font-size: 13px;
+        color: #fff;
       }
       .post-media-toolbar {
         display: flex;
