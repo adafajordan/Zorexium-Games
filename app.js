@@ -17,6 +17,12 @@
   const MAX_MEDIA_SCALE = 4;
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
+  const DEFAULT_POST_VIDEO_VOLUME = 0.5;
+  const VIDEO_ICON_PLAY = '▶';
+  const VIDEO_ICON_PAUSE = '❚❚';
+  const VIDEO_ICON_MUTED = '🔇';
+  const VIDEO_ICON_UNMUTED = '🔊';
+  const VIDEO_ICON_FULLSCREEN = '⛶';
   const PASSWORD_ITERATIONS = 600000;
   const PROFILE_NAME_MIN_LENGTH = 2;
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
@@ -737,10 +743,6 @@
         videoShellClone.querySelectorAll('.post-video-center-play, .post-video-controls').forEach(function (node) {
           node.remove();
         });
-        const clonedVideo = videoShellClone.querySelector('.post-video');
-        if (clonedVideo) {
-          clonedVideo.removeAttribute('data-player-ready');
-        }
         postContainer.appendChild(videoShellClone);
       }
       const actionsClone = article.querySelector('.post-actions');
@@ -1775,7 +1777,7 @@
     } else {
       video.setAttribute('aria-label', originalLabel);
     }
-    video.setAttribute('data-previous-volume', String(Number(video.volume) || 0.5));
+    video.setAttribute('data-previous-volume', String(Number(video.volume) || DEFAULT_POST_VIDEO_VOLUME));
   }
 
   function pauseOtherPostVideos(activeVideo) {
@@ -1792,16 +1794,15 @@
     article.querySelectorAll('.post-video-shell').forEach(function (shell) {
       const video = shell.querySelector('.post-video');
       if (!video) return;
-      if (video.getAttribute('data-player-ready') === 'true') return;
+      if (shell.getAttribute('data-video-enhanced') === 'true') return;
       shell.setAttribute('data-video-enhanced', 'true');
-      video.setAttribute('data-player-ready', 'true');
       shell.style.position = 'relative';
 
       const centerPlayButton = document.createElement('button');
       centerPlayButton.className = 'post-video-center-play';
       centerPlayButton.type = 'button';
       centerPlayButton.setAttribute('aria-label', 'Play video');
-      centerPlayButton.innerHTML = '<span aria-hidden="true">▶</span>';
+      centerPlayButton.innerHTML = '<span aria-hidden="true">' + VIDEO_ICON_PLAY + '</span>';
       shell.appendChild(centerPlayButton);
 
       const controls = document.createElement('div');
@@ -1824,14 +1825,14 @@
       playButton.type = 'button';
       playButton.setAttribute('data-control', 'play');
       playButton.setAttribute('aria-label', 'Pause video');
-      playButton.textContent = '❚❚';
+      playButton.textContent = VIDEO_ICON_PAUSE;
 
       const muteButton = document.createElement('button');
       muteButton.className = 'post-video-control';
       muteButton.type = 'button';
       muteButton.setAttribute('data-control', 'mute');
       muteButton.setAttribute('aria-label', 'Unmute video');
-      muteButton.textContent = '🔇';
+      muteButton.textContent = VIDEO_ICON_MUTED;
 
       const timeLabel = document.createElement('span');
       timeLabel.className = 'post-video-time';
@@ -1842,7 +1843,7 @@
       fullscreenButton.type = 'button';
       fullscreenButton.setAttribute('data-control', 'fullscreen');
       fullscreenButton.setAttribute('aria-label', 'Fullscreen');
-      fullscreenButton.textContent = '⛶';
+      fullscreenButton.textContent = VIDEO_ICON_FULLSCREEN;
 
       controlsRow.appendChild(playButton);
       controlsRow.appendChild(muteButton);
@@ -1860,10 +1861,10 @@
         const currentTime = Math.max(0, video.currentTime || 0);
         const isPlaying = !video.paused && !video.ended;
         shell.classList.toggle('is-playing', isPlaying);
-        playButton.textContent = isPlaying ? '❚❚' : '▶';
+        playButton.textContent = isPlaying ? VIDEO_ICON_PAUSE : VIDEO_ICON_PLAY;
         playButton.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
         const isMuted = video.muted || video.volume === 0;
-        muteButton.textContent = isMuted ? '🔇' : '🔊';
+        muteButton.textContent = isMuted ? VIDEO_ICON_MUTED : VIDEO_ICON_UNMUTED;
         muteButton.setAttribute('aria-label', isMuted ? 'Unmute video' : 'Mute video');
         if (!isSeeking) {
           seek.value = duration > 0 ? String(Math.min(1000, Math.round((currentTime / duration) * 1000))) : '0';
@@ -1892,11 +1893,11 @@
         togglePlayback();
       });
       muteButton.addEventListener('click', function () {
-        const previousVolume = Number(video.getAttribute('data-previous-volume') || '0.5');
+        const previousVolume = Number(video.getAttribute('data-previous-volume') || String(DEFAULT_POST_VIDEO_VOLUME));
         if (video.muted || video.volume === 0) {
           video.muted = false;
           if (video.volume === 0) {
-            video.volume = previousVolume > 0 ? previousVolume : 0.5;
+            video.volume = previousVolume > 0 ? previousVolume : DEFAULT_POST_VIDEO_VOLUME;
           }
         } else {
           video.setAttribute('data-previous-volume', String(video.volume));
