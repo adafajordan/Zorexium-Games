@@ -1857,7 +1857,8 @@
         // Mgmt tabs
         document.querySelectorAll('.mgmt-tab-btn').forEach(function (btn) {
           btn.addEventListener('click', function () {
-            activeMgmtTab = btn.getAttribute('data-mgmt-tab') || 'published';
+            var tab = btn.getAttribute('data-mgmt-tab');
+            activeMgmtTab = (tab === 'published' || tab === 'draft') ? tab : 'published';
             document.querySelectorAll('.mgmt-tab-btn').forEach(function (b) {
               b.classList.toggle('active', b === btn);
             });
