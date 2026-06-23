@@ -18,11 +18,15 @@
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const DEFAULT_POST_VIDEO_VOLUME = 0.5;
-  const VIDEO_ICON_PLAY = '▶';
-  const VIDEO_ICON_PAUSE = '❚❚';
-  const VIDEO_ICON_MUTED = '🔇';
-  const VIDEO_ICON_UNMUTED = '🔊';
-  const VIDEO_ICON_FULLSCREEN = '⛶';
+  const VIDEO_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+  const VIDEO_ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  const VIDEO_ICON_MUTED = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+  const VIDEO_ICON_UNMUTED = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+  const VIDEO_ICON_EXIT_FULLSCREEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/></svg>';
+  const VIDEO_FS_ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  const VIDEO_FS_ICON_REPOST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+  const VIDEO_FS_ICON_LIKE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+  const VIDEO_FS_ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   const VIDEO_SEEK_MAX_VALUE = 1000;
   const PASSWORD_ITERATIONS = 600000;
   const PROFILE_NAME_MIN_LENGTH = 2;
@@ -1765,6 +1769,7 @@
   function configurePostVideoElement(video) {
     if (!video) return;
     video.autoplay = true;
+    video.loop = true;
     video.muted = true;
     video.defaultMuted = true;
     video.controls = false;
@@ -1799,16 +1804,90 @@
       if (!video) return;
       shell.style.position = 'relative';
 
-      const centerPlayButton = document.createElement('button');
-      centerPlayButton.className = 'post-video-center-play';
-      centerPlayButton.type = 'button';
-      centerPlayButton.setAttribute('aria-label', 'Play video');
-      centerPlayButton.innerHTML = '<span aria-hidden="true">' + VIDEO_ICON_PLAY + '</span>';
-      shell.appendChild(centerPlayButton);
-
       const controls = document.createElement('div');
       controls.className = 'post-video-controls';
 
+      // ── Fullscreen post-info overlay ─────────────────────────────
+      const fsInfo = document.createElement('div');
+      fsInfo.className = 'post-video-fs-info';
+
+      const articleAvatar = article.querySelector('.post-avatar');
+      const articleUsername = article.querySelector('.post-username');
+      const articleHandle = article.querySelector('.post-handle');
+      const articleBody = article.querySelector('.post-body');
+
+      const fsUserRow = document.createElement('div');
+      fsUserRow.className = 'post-video-fs-user-row';
+
+      if (articleAvatar) {
+        const fsAvatar = document.createElement('div');
+        fsAvatar.className = 'post-video-fs-avatar';
+        fsAvatar.style.cssText = articleAvatar.style.cssText;
+        fsAvatar.textContent = articleAvatar.textContent;
+        fsUserRow.appendChild(fsAvatar);
+      }
+
+      const fsUserMeta = document.createElement('div');
+      fsUserMeta.className = 'post-video-fs-user-meta';
+      if (articleUsername) {
+        const fsName = document.createElement('span');
+        fsName.className = 'post-video-fs-name';
+        fsName.textContent = articleUsername.textContent;
+        fsUserMeta.appendChild(fsName);
+      }
+      if (articleHandle) {
+        const rawHandle = articleHandle.textContent.split('·')[0].trim();
+        const fsHandle = document.createElement('span');
+        fsHandle.className = 'post-video-fs-handle';
+        fsHandle.textContent = rawHandle;
+        fsUserMeta.appendChild(fsHandle);
+      }
+      fsUserRow.appendChild(fsUserMeta);
+      fsInfo.appendChild(fsUserRow);
+
+      if (articleBody && articleBody.textContent.trim()) {
+        const fsText = document.createElement('div');
+        fsText.className = 'post-video-fs-text';
+        fsText.textContent = articleBody.textContent.trim();
+        fsInfo.appendChild(fsText);
+      }
+
+      const fsActions = document.createElement('div');
+      fsActions.className = 'post-video-fs-actions';
+      const fsBtnDefs = [
+        { action: 'comment', label: 'Comment', svg: VIDEO_FS_ICON_COMMENT },
+        { action: 'repost', label: 'Repost', svg: VIDEO_FS_ICON_REPOST },
+        { action: 'like', label: 'Like', svg: VIDEO_FS_ICON_LIKE },
+        { action: 'save', label: 'Save', svg: VIDEO_FS_ICON_SAVE },
+      ];
+      fsBtnDefs.forEach(function (def) {
+        const articleBtn = article.querySelector('.post-action[data-action="' + def.action + '"]');
+        if (!articleBtn) return;
+        const btn = document.createElement('button');
+        btn.className = 'post-video-fs-action-btn';
+        btn.type = 'button';
+        btn.setAttribute('aria-label', def.label);
+        btn.innerHTML = def.svg;
+        const countEl = articleBtn.querySelector('.post-action-count');
+        let countSpan = null;
+        if (countEl) {
+          countSpan = document.createElement('span');
+          countSpan.className = 'post-video-fs-action-count';
+          countSpan.textContent = countEl.textContent || '';
+          btn.appendChild(countSpan);
+        }
+        btn.addEventListener('click', function () {
+          articleBtn.click();
+          if (countSpan) {
+            const updated = articleBtn.querySelector('.post-action-count');
+            if (updated) countSpan.textContent = updated.textContent;
+          }
+        });
+        fsActions.appendChild(btn);
+      });
+      fsInfo.appendChild(fsActions);
+
+      // ── Seek bar ─────────────────────────────────────────────────
       const seek = document.createElement('input');
       seek.className = 'post-video-seek';
       seek.type = 'range';
@@ -1818,6 +1897,7 @@
       seek.value = '0';
       seek.setAttribute('aria-label', 'Seek video');
 
+      // ── Controls row ─────────────────────────────────────────────
       const controlsRow = document.createElement('div');
       controlsRow.className = 'post-video-controls-row';
 
@@ -1826,30 +1906,31 @@
       playButton.type = 'button';
       playButton.setAttribute('data-control', 'play');
       playButton.setAttribute('aria-label', 'Pause video');
-      playButton.textContent = VIDEO_ICON_PAUSE;
+      playButton.innerHTML = VIDEO_ICON_PAUSE;
 
       const muteButton = document.createElement('button');
       muteButton.className = 'post-video-control';
       muteButton.type = 'button';
       muteButton.setAttribute('data-control', 'mute');
       muteButton.setAttribute('aria-label', 'Unmute video');
-      muteButton.textContent = VIDEO_ICON_MUTED;
+      muteButton.innerHTML = VIDEO_ICON_MUTED;
 
       const timeLabel = document.createElement('span');
       timeLabel.className = 'post-video-time';
-      timeLabel.textContent = '0:00 / 0:00';
+      timeLabel.textContent = '0:00';
 
       const fullscreenButton = document.createElement('button');
       fullscreenButton.className = 'post-video-control';
       fullscreenButton.type = 'button';
       fullscreenButton.setAttribute('data-control', 'fullscreen');
-      fullscreenButton.setAttribute('aria-label', 'Fullscreen');
-      fullscreenButton.textContent = VIDEO_ICON_FULLSCREEN;
+      fullscreenButton.setAttribute('aria-label', 'Exit fullscreen');
+      fullscreenButton.innerHTML = VIDEO_ICON_EXIT_FULLSCREEN;
 
       controlsRow.appendChild(playButton);
       controlsRow.appendChild(muteButton);
       controlsRow.appendChild(timeLabel);
       controlsRow.appendChild(fullscreenButton);
+      controls.appendChild(fsInfo);
       controls.appendChild(seek);
       controls.appendChild(controlsRow);
       shell.appendChild(controls);
@@ -1857,20 +1938,25 @@
       configurePostVideoElement(video);
       let isSeeking = false;
 
+      function isInFullscreen() {
+        return document.fullscreenElement === shell || document.webkitFullscreenElement === shell;
+      }
+
       function updateControls() {
         const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
         const currentTime = Math.max(0, video.currentTime || 0);
         const isPlaying = !video.paused && !video.ended;
         shell.classList.toggle('is-playing', isPlaying);
-        playButton.textContent = isPlaying ? VIDEO_ICON_PAUSE : VIDEO_ICON_PLAY;
+        playButton.innerHTML = isPlaying ? VIDEO_ICON_PAUSE : VIDEO_ICON_PLAY;
         playButton.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
         const isMuted = video.muted || video.volume === 0;
-        muteButton.textContent = isMuted ? VIDEO_ICON_MUTED : VIDEO_ICON_UNMUTED;
+        muteButton.innerHTML = isMuted ? VIDEO_ICON_MUTED : VIDEO_ICON_UNMUTED;
         muteButton.setAttribute('aria-label', isMuted ? 'Unmute video' : 'Mute video');
         if (!isSeeking) {
           seek.value = duration > 0 ? String(Math.min(VIDEO_SEEK_MAX_VALUE, Math.round((currentTime / duration) * VIDEO_SEEK_MAX_VALUE))) : '0';
         }
-        timeLabel.textContent = formatVideoDuration(currentTime) + ' / ' + formatVideoDuration(duration);
+        const remaining = duration > 0 ? Math.max(0, duration - currentTime) : 0;
+        timeLabel.textContent = '-' + formatVideoDuration(remaining);
       }
 
       function togglePlayback() {
@@ -1884,11 +1970,15 @@
         video.pause();
       }
 
-      centerPlayButton.addEventListener('click', function () {
-        togglePlayback();
-      });
+      function enterFullscreenAndPlay() {
+        requestElementFullscreen(shell).catch(function (error) {
+          console.debug('Fullscreen request was blocked by the browser.', error);
+        });
+      }
+
       video.addEventListener('click', function () {
-        togglePlayback();
+        if (isInFullscreen()) return;
+        enterFullscreenAndPlay();
       });
       playButton.addEventListener('click', function () {
         togglePlayback();
@@ -1921,15 +2011,31 @@
       });
 
       fullscreenButton.addEventListener('click', function () {
-        requestElementFullscreen(shell).catch(function (error) {
-          console.debug('Fullscreen request was blocked by the browser.', error);
-        });
+        if (isInFullscreen()) {
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(function () {});
+        } else {
+          requestElementFullscreen(shell).catch(function (error) {
+            console.debug('Fullscreen request was blocked by the browser.', error);
+          });
+        }
       });
-      video.addEventListener('dblclick', function () {
-        requestElementFullscreen(shell).catch(function (error) {
-          console.debug('Fullscreen request was blocked by the browser.', error);
-        });
-      });
+
+      function onFullscreenChange() {
+        if (isInFullscreen()) {
+          if (video.muted) {
+            video.muted = false;
+            const prevVol = Number(video.getAttribute('data-previous-volume') || String(DEFAULT_POST_VIDEO_VOLUME));
+            if (video.volume === 0) {
+              video.volume = prevVol > 0 ? prevVol : DEFAULT_POST_VIDEO_VOLUME;
+            }
+          }
+          pauseOtherPostVideos(video);
+          video.play().catch(function () {});
+        }
+        updateControls();
+      }
+      document.addEventListener('fullscreenchange', onFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
       video.addEventListener('loadedmetadata', updateControls);
       video.addEventListener('timeupdate', updateControls);
