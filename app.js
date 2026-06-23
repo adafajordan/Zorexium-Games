@@ -1716,8 +1716,13 @@
           await result;
         }
       } catch (error) {
-        setInterfaceStatus('Fullscreen mode could not be opened.', 'error');
-        throw error;
+        // Native API failed (e.g. iOS 16+ exposes requestFullscreen but rejects it for
+        // container elements such as the video shell div inside WKWebView) — fall back to
+        // CSS-simulated fullscreen so the video still fills the screen on mobile instead
+        // of silently doing nothing.
+        element.classList.add('is-simfullscreen');
+        document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: element } }));
+        return;
       }
       return;
     }
@@ -2033,6 +2038,7 @@
 
       let simEscListener = null;
       let savedBodyOverflow = '';
+      let wasInNativeFullscreen = false;
 
       function exitSimulatedFullscreen() {
         shell.classList.remove('is-simfullscreen');
@@ -2047,6 +2053,19 @@
       function onFullscreenChange() {
         const inFullscreen = isInFullscreen();
         const isSimulated = shell.classList.contains('is-simfullscreen');
+        const isNativeFullscreen = document.fullscreenElement === shell ||
+          document.webkitFullscreenElement === shell ||
+          document.mozFullScreenElement === shell;
+
+        // On web, track when this shell owns native fullscreen so we can close the post
+        // detail modal when the user exits — returning them to the original feed context.
+        if (isNativeFullscreen) {
+          wasInNativeFullscreen = true;
+        } else if (wasInNativeFullscreen) {
+          wasInNativeFullscreen = false;
+          closePostDetailModal();
+        }
+
         if (isSimulated && inFullscreen && !simEscListener) {
           savedBodyOverflow = document.body.style.overflow;
           document.body.style.overflow = 'hidden';
