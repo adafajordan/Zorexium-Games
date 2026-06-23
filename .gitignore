@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Capacitor native platform projects
+# These are generated locally by running:
+#   npm run cap:add:ios    (requires macOS + Xcode)
+#   npm run cap:add:android (requires Android Studio / SDK)
+ios/
+android/
+
+# npm lock files (optional — uncomment if you want to commit the lockfile)
+# package-lock.json

@@ -1,0 +1,8 @@
+{
+  "appId": "com.adafajordan.neter",
+  "appName": "Neter",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  }
+}
