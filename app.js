@@ -1,6 +1,6 @@
 (function () {
   const DB_NAME = 'zorexium-app-db';
-  const DB_VERSION = 4;
+  const DB_VERSION = 4; // v4: added ARTICLES_STORE
   const ACCOUNTS_STORE = 'accounts';
   const POSTS_STORE = 'posts';
   const SESSION_STORE = 'session';
@@ -2631,7 +2631,7 @@
         generatedMediaUrls.push(url);
         const img = document.createElement('img');
         img.className = 'article-companion-cover';
-        img.src = url;
+        if (isSafeMediaUrl(url)) img.src = url;
         img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
         img.loading = 'lazy';
         card.appendChild(img);

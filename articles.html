@@ -666,7 +666,7 @@
 
       /* ── Constants ──────────────────────────────────────────── */
       var DB_NAME = 'zorexium-app-db';
-      var DB_VERSION = 4;
+      var DB_VERSION = 4; // Must match DB_VERSION in app.js — update both together
       var ARTICLES_STORE = 'articles';
       var POSTS_STORE = 'posts';
       var ACCOUNTS_STORE = 'accounts';
@@ -688,7 +688,8 @@
         articleId: null,
         coverMediaId: null,
         coverObjectUrl: null,
-        isDraft: true
+        isDraft: true,
+        createdAt: null
       };
       var autosaveTimerId = null;
       var generatedUrls = [];
@@ -790,6 +791,10 @@
 
       function escapeHtml(str) {
         return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function isSafeObjectUrl(url) {
+        return typeof url === 'string' && /^blob:/i.test(url);
       }
 
       var AVATAR_COLORS = ['#e53935','#8e24aa','#1e88e5','#00897b','#f4511e','#c62828','#6a1b9a','#0277bd'];
@@ -913,7 +918,7 @@
             if (!url) return;
             var img = document.createElement('img');
             img.className = 'article-card-cover';
-            img.src = url;
+            if (isSafeObjectUrl(url)) { img.src = url; }
             img.alt = article.title || 'Article cover';
             img.loading = 'lazy';
             coverWrapper.appendChild(img);
@@ -1015,10 +1020,7 @@
             filtered = published;
           }
 
-          // Remove user-generated article cards
-          var toRemove = Array.from(feed.querySelectorAll('[data-article-id]'));
-          toRemove.forEach(function (n) { n.remove(); });
-
+          // Clear and rebuild the feed
           feed.innerHTML = '';
 
           if (!filtered.length) {
@@ -1089,6 +1091,7 @@
         editorState.coverMediaId = existingArticle ? (existingArticle.coverMediaId || null) : null;
         editorState.coverObjectUrl = null;
         editorState.isDraft = existingArticle ? existingArticle.status === 'draft' : true;
+        editorState.createdAt = existingArticle ? (existingArticle.createdAt || null) : null;
 
         var titleInput = document.getElementById('title-input');
         var canvas = document.getElementById('editor-canvas');
@@ -1106,7 +1109,7 @@
             editorState.coverObjectUrl = url;
             var img = coverSlot.querySelector('img');
             if (!img) { img = document.createElement('img'); coverSlot.appendChild(img); }
-            img.src = url;
+            if (isSafeObjectUrl(url)) { img.src = url; }
             coverSlot.classList.add('has-cover');
           });
         } else if (coverSlot) {
@@ -1183,7 +1186,7 @@
               editorState.coverObjectUrl = url;
               var img = coverSlot.querySelector('img');
               if (!img) { img = document.createElement('img'); coverSlot.appendChild(img); }
-              img.src = url;
+              if (isSafeObjectUrl(url)) { img.src = url; }
               coverSlot.classList.add('has-cover');
             });
           }
@@ -1226,17 +1229,20 @@
           coverInput.addEventListener('change', function () {
             var file = coverInput.files && coverInput.files[0];
             if (!file || !file.type.startsWith('image/')) return;
-            var url = URL.createObjectURL(file);
-            generatedUrls.push(url);
-            editorState.coverObjectUrl = url;
+            var tmpUrl = URL.createObjectURL(file);
+            generatedUrls.push(tmpUrl);
+            editorState.coverObjectUrl = tmpUrl;
+            coverSlot.classList.add('has-cover');
             putMediaFile(file).then(function (id) {
               editorState.coverMediaId = id;
               scheduleAutosave();
+              return getMediaObjectUrl(id);
+            }).then(function (mediaUrl) {
+              if (!mediaUrl) return;
+              var img = coverSlot.querySelector('img');
+              if (!img) { img = document.createElement('img'); coverSlot.insertBefore(img, coverSlot.firstChild); }
+              if (isSafeObjectUrl(mediaUrl)) { img.src = mediaUrl; }
             });
-            var img = coverSlot.querySelector('img');
-            if (!img) { img = document.createElement('img'); coverSlot.insertBefore(img, coverSlot.firstChild); }
-            img.src = url;
-            coverSlot.classList.add('has-cover');
           });
         }
 
@@ -1291,16 +1297,18 @@
           inlineImgInput.addEventListener('change', function () {
             var file = inlineImgInput.files && inlineImgInput.files[0];
             if (!file || !file.type.startsWith('image/')) return;
-            var url = URL.createObjectURL(file);
-            generatedUrls.push(url);
+            var mediaId;
             putMediaFile(file).then(function (id) {
+              mediaId = id;
+              return getMediaObjectUrl(id);
+            }).then(function (mediaUrl) {
               var canvas = document.getElementById('editor-canvas');
-              if (!canvas) return;
+              if (!canvas || !mediaUrl) return;
               canvas.focus();
               var img = document.createElement('img');
               img.className = 'inline-img';
-              img.src = url;
-              img.setAttribute('data-media-id', id);
+              if (isSafeObjectUrl(mediaUrl)) { img.src = mediaUrl; }
+              img.setAttribute('data-media-id', mediaId);
               img.alt = 'Inline image';
               insertNodeAtCaret(canvas, img);
               scheduleAutosave();
@@ -1430,7 +1438,7 @@
           tmp.innerHTML = data.body;
           return (tmp.textContent || '').trim();
         }());
-        if (!bodyText && !data.title) return Promise.reject(new Error('Please add some content before publishing.'));
+        if (!bodyText) return Promise.reject(new Error('Please add some content before publishing.'));
 
         var now = Date.now();
         var articleId = editorState.articleId || generateId('article');
@@ -1489,11 +1497,12 @@
           coverMediaId: editorState.coverMediaId || null,
           status: 'draft',
           replyAudience: 'everyone',
-          createdAt: now,
+          createdAt: editorState.createdAt || now,
           publishedAt: null
         };
         editorState.articleId = articleId;
         editorState.isDraft = true;
+        if (!editorState.createdAt) editorState.createdAt = now;
         return saveArticle(article);
       }
 
@@ -1544,7 +1553,7 @@
             if (article.coverMediaId) {
               getMediaObjectUrl(article.coverMediaId).then(function (url) {
                 if (!url) return;
-                coverImg.src = url;
+                if (isSafeObjectUrl(url)) { coverImg.src = url; }
                 coverImg.alt = article.title || 'Article cover';
                 coverImg.hidden = false;
               });
@@ -1634,7 +1643,12 @@
           if (!filtered.length) {
             var empty = document.createElement('div');
             empty.className = 'empty-state';
-            empty.innerHTML = '<h3>No ' + activeMgmtTab + ' articles</h3><p>' + (activeMgmtTab === 'published' ? 'Your published articles will appear here.' : 'Your saved drafts will appear here.') + '</p>';
+            var emptyH3 = document.createElement('h3');
+            emptyH3.textContent = 'No ' + (activeMgmtTab === 'published' ? 'published' : 'draft') + ' articles';
+            var emptyP = document.createElement('p');
+            emptyP.textContent = activeMgmtTab === 'published' ? 'Your published articles will appear here.' : 'Your saved drafts will appear here.';
+            empty.appendChild(emptyH3);
+            empty.appendChild(emptyP);
             listEl.appendChild(empty);
             return;
           }
@@ -1653,7 +1667,7 @@
                 if (!url) return;
                 var img = document.createElement('img');
                 img.className = 'mgmt-item-thumb';
-                img.src = url;
+                if (isSafeObjectUrl(url)) { img.src = url; }
                 img.alt = '';
                 item.replaceChild(img, thumb);
               });
