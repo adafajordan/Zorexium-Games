@@ -97,6 +97,17 @@
         outline: none;
       }
       .header-search .search-bar-input:focus { border-color: var(--accent); background: #fff; }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
       .btn { border: 1px solid var(--border-strong); background: var(--surface-soft); color: var(--text); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
       .btn:hover { background: var(--surface); }
       .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -557,7 +568,7 @@
     <!-- Header -->
     <header>
       <div class="header-left">
-        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write article">+</button>
+        <button id="header-write-btn" class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write an article" title="Write article"><span aria-hidden="true">+</span><span class="sr-only">Write article</span></button>
       </div>
       <div class="header-center">
         <a class="brand" href="index.html">
@@ -789,6 +800,7 @@
       };
       var autosaveTimerId = null;
       var generatedUrls = [];
+      var articleMenusOpen = false;
 
       /* ── IDB helpers ────────────────────────────────────────── */
       function openDb() {
@@ -995,9 +1007,39 @@
       }
 
       function closeArticleMenus(except) {
+        var anyOpen = false;
         document.querySelectorAll('.article-card-menu.open').forEach(function (menu) {
-          if (except && menu === except) return;
-          menu.classList.remove('open');
+          if (except && menu === except) {
+            anyOpen = true;
+            return;
+          }
+          if (menu.classList.contains('open')) {
+            menu.classList.remove('open');
+          }
+        });
+        articleMenusOpen = anyOpen;
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+          try {
+            var el = document.createElement('textarea');
+            el.value = text;
+            el.setAttribute('readonly', '');
+            el.style.position = 'fixed';
+            el.style.top = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            var copied = document.execCommand('copy');
+            document.body.removeChild(el);
+            if (copied) resolve();
+            else reject(new Error('Copy command failed'));
+          } catch (err) {
+            reject(err);
+          }
         });
       }
 
@@ -1016,6 +1058,7 @@
           e.stopPropagation();
           closeArticleMenus(wrap);
           wrap.classList.toggle('open');
+          articleMenusOpen = wrap.classList.contains('open');
         });
         wrap.appendChild(trigger);
 
@@ -1029,14 +1072,13 @@
         copyBtn.textContent = 'Copy link';
         copyBtn.addEventListener('click', function () {
           var link = window.location.origin + window.location.pathname + '?read=' + encodeURIComponent(article.id);
-          if (navigator.clipboard) {
-            navigator.clipboard.writeText(link).then(function () {
-              copyBtn.textContent = 'Copied!';
-              setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1800);
-            });
-          } else {
-            window.prompt('Copy link:', link);
-          }
+          copyText(link).then(function () {
+            copyBtn.textContent = 'Copied!';
+            setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1800);
+          }).catch(function () {
+            copyBtn.textContent = 'Copy failed';
+            setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1800);
+          });
           closeArticleMenus();
         });
         panel.appendChild(copyBtn);
@@ -1074,7 +1116,8 @@
         deleteBtn.type = 'button';
         deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', function () {
-          if (!window.confirm('Permanently delete "' + (article.title || 'this article') + '"? This cannot be undone.')) return;
+          var targetTitle = article.title ? ('\n\nTitle: ' + article.title) : '';
+          if (!window.confirm('Permanently delete this article? This cannot be undone.' + targetTitle)) return;
           deleteArticleWithCompanion(article.id).then(function () {
             return renderFeed();
           });
@@ -1950,7 +1993,8 @@
             delBtn.className = 'mgmt-action-btn danger';
             delBtn.textContent = 'Delete';
             delBtn.addEventListener('click', function () {
-              if (!window.confirm('Permanently delete "' + (article.title || 'this article') + '"? This cannot be undone.')) return;
+              var targetTitle = article.title ? ('\n\nTitle: ' + article.title) : '';
+              if (!window.confirm('Permanently delete this article? This cannot be undone.' + targetTitle)) return;
               deleteArticleWithCompanion(article.id).then(function () {
                 renderMgmtList();
                 renderFeed();
@@ -2142,7 +2186,7 @@
         });
 
         document.addEventListener('click', function () {
-          if (document.querySelector('.article-card-menu.open')) closeArticleMenus();
+          if (articleMenusOpen) closeArticleMenus();
         });
       }
 
