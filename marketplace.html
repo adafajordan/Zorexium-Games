@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Zorexium" />
+    <link rel="manifest" href="manifest.json" />
+    <title>Marketplace — Zorexium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f5f5f5;
+        --surface-soft: #eeeeee;
+        --text: #111111;
+        --text-muted: #333333;
+        --text-soft: #666666;
+        --text-placeholder: #999999;
+        --border: #e0e0e0;
+        --border-strong: #cccccc;
+        --focus: #e02020;
+        --accent: #cc2222;
+        --sticky-footer-height: 62px;
+        --sticky-footer-padding-x: 6px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding-bottom: var(--sticky-footer-height);
+      }
+
+      /* ── Top anchor (header + control bar as one sticky unit) ── */
+      .mkp-top {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--border);
+      }
+
+      /* ── Header ──────────────────────────────────────────────── */
+      header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+      }
+      .header-left,
+      .header-center,
+      .header-right {
+        display: flex;
+        align-items: center;
+      }
+      .header-center { justify-content: center; min-width: 0; }
+      .header-right { justify-content: flex-end; gap: 8px; min-width: 0; }
+      .header-icon-btn {
+        background: none;
+        border: none;
+        color: var(--text);
+        font-size: 20px;
+        cursor: pointer;
+        padding: 6px 8px;
+        border-radius: 6px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .header-icon-btn:hover {
+        background: var(--surface-soft);
+        color: var(--accent);
+      }
+      .header-icon-btn-plus { font-size: 28px; font-weight: 700; padding: 2px 8px; }
+      .header-icon-btn-lg svg { width: 22px; height: 22px; stroke-width: 2.5; }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+        text-decoration: none;
+      }
+      .brand-logo {
+        width: auto;
+        height: clamp(36px, 7vw, 60px);
+        max-width: min(100%, 360px);
+        object-fit: contain;
+        display: block;
+      }
+
+      /* ── Marketplace control bar (search + filter pills) ─────── */
+      .mkp-controls {
+        padding: 8px 12px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        border-top: 1px solid var(--border);
+      }
+
+      /* Search placeholder */
+      .mkp-search-wrap {
+        width: 100%;
+      }
+      .mkp-search-placeholder {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        padding: 9px 12px;
+        background: var(--surface);
+        color: var(--text-placeholder);
+        font-size: 14px;
+        cursor: default;
+        user-select: none;
+      }
+      .mkp-search-placeholder svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+      }
+
+      /* Filter pills row */
+      .mkp-filter-pills {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+      }
+      .mkp-filter-pills::-webkit-scrollbar { display: none; }
+      .mkp-pill {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        padding: 5px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-muted);
+        background: var(--surface);
+        cursor: default;
+        user-select: none;
+        height: 30px;
+      }
+
+      /* ── Product grid ─────────────────────────────────────────── */
+      .mkp-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 10px 8px 16px;
+      }
+
+      /* ── Product card ─────────────────────────────────────────── */
+      .mkp-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* 1:1 image placeholder block */
+      .mkp-card-img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background: #E0E0E0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+      .mkp-card-img-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+      .mkp-card-img-inner svg {
+        width: 32px;
+        height: 32px;
+        stroke: #aaaaaa;
+        fill: none;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .mkp-card-img-label {
+        font-size: 9px;
+        color: #aaaaaa;
+        text-align: center;
+        line-height: 1.4;
+        letter-spacing: 0.02em;
+      }
+
+      /* Fixed-height text block */
+      .mkp-card-body {
+        padding: 8px 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        /* Pre-allocate height for: price + 2 title lines + location + gaps + padding */
+        min-height: 78px;
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+
+      /* Skeleton bar base */
+      .mkp-skel {
+        background: #F0F0F0;
+        border-radius: 4px;
+        flex-shrink: 0;
+      }
+
+      /* Price bar: shorter width, taller height (bold-weight equivalent) */
+      .mkp-skel-price {
+        width: 52%;
+        height: 13px;
+      }
+
+      /* Title bars: full-width and slightly shorter */
+      .mkp-skel-title {
+        width: 100%;
+        height: 9px;
+      }
+      .mkp-skel-title-b {
+        width: 78%;
+        height: 9px;
+      }
+
+      /* Location bar */
+      .mkp-skel-location {
+        width: 65%;
+        height: 9px;
+      }
+
+      /* ── Sticky footer ────────────────────────────────────────── */
+      .sticky-footer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 90;
+        height: var(--sticky-footer-height);
+        background: rgba(255, 255, 255, 0.97);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 var(--sticky-footer-padding-x);
+        backdrop-filter: blur(8px);
+      }
+      .sticky-footer-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-soft);
+        width: 44px;
+        height: 44px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: none;
+      }
+      .sticky-footer-item:hover,
+      .sticky-footer-item.active { color: var(--accent); }
+      .sticky-footer-item svg {
+        width: 24px;
+        height: 24px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ── Auth modal ───────────────────────────────────────────── */
+      .auth-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0, 0, 0, 0.4);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .auth-modal.open { display: flex; }
+      .auth-panel {
+        width: min(520px, 100%);
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+        padding: 22px;
+        position: relative;
+      }
+      .auth-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        font-size: 18px;
+        line-height: 1;
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .auth-close:hover { background: #f0e8e8; border-color: #d08080; }
+      .auth-title { margin: 0 0 14px; color: var(--accent); }
+      .auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+      .auth-tab,
+      .auth-submit {
+        border: 1px solid var(--border-strong);
+        background: var(--surface-soft);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .auth-tab:hover,
+      .auth-submit:hover,
+      .auth-close:hover { background: #f0e8e8; border-color: #d08080; }
+      .auth-tab.active,
+      .auth-submit {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .auth-form { display: none; }
+      .auth-form.active { display: block; }
+      .auth-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .auth-field input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        font-family: inherit;
+      }
+      .auth-field input:focus {
+        outline: 2px solid var(--focus);
+        border-color: var(--focus);
+      }
+      .auth-status {
+        min-height: 18px;
+        margin: 10px 0 0;
+        font-size: 13px;
+      }
+      .auth-status.error { color: #b42318; }
+      .auth-status.success { color: #166534; }
+
+      /* ── New Post Composer (minimal – required by app.js) ─────── */
+      .npc-panel { width: min(560px, 100%); max-height: 90vh; overflow-y: auto; }
+      .npc-audience-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+      .npc-audience-label { font-size: 11px; color: var(--text-soft); }
+      .npc-audience-pill { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text); cursor: pointer; font-family: inherit; }
+      .npc-textarea { width: 100%; min-height: 100px; max-height: 300px; resize: none; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 10px 52px 10px 10px; background: #fff; color: var(--text); font-family: inherit; font-size: 15px; line-height: 1.5; box-sizing: border-box; }
+      .npc-textarea:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
+      .npc-toolbar { display: flex; align-items: center; gap: 2px; padding: 8px 0 2px; border-top: 1px solid var(--border); margin-top: 10px; flex-wrap: nowrap; }
+      .npc-tool-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: none; color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
+      .npc-tool-btn svg { width: 20px; height: 20px; }
+      .npc-tool-btn:hover { background: var(--surface); }
+      .npc-tool-btn:disabled { opacity: .4; cursor: default; }
+      .npc-toolbar-spacer { flex: 1; min-width: 4px; }
+      .npc-submit-btn { padding: 7px 20px; background: var(--accent); color: #fff; border: none; border-radius: 20px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; letter-spacing: .02em; flex-shrink: 0; }
+      .npc-submit-btn:disabled { opacity: .4; cursor: default; }
+      .npc-compose-area { position: relative; }
+      .npc-char-counter { position: absolute; bottom: 10px; right: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+      .npc-ring-svg { position: absolute; width: 36px; height: 36px; transform: rotate(-90deg); }
+      .npc-ring-bg { stroke: var(--border); }
+      .npc-ring-fill { stroke: var(--accent); transition: stroke-dashoffset .15s, stroke .15s; }
+      .npc-ring-fill.over { stroke: #e02020; }
+      .npc-char-label { position: relative; font-size: 10px; color: var(--text-muted); font-weight: 700; z-index: 1; }
+      .npc-char-label.over { color: #e02020; }
+      .npc-mention-dropdown { position: absolute; top: 100%; left: 0; z-index: 410; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.12); min-width: 220px; max-height: 200px; overflow-y: auto; }
+      .npc-schedule-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--accent); font-weight: 600; padding: 2px 8px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); white-space: nowrap; cursor: pointer; flex-shrink: 0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+      .npc-media-preview { margin-top: 10px; border-radius: 10px; overflow: hidden; }
+      .npc-poll-panel { margin-top: 10px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+      .npc-poll-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+      .npc-poll-head-title { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+      .npc-poll-remove-btn { background: none; border: none; cursor: pointer; color: var(--text-soft); font-size: 14px; padding: 0 4px; line-height: 1; }
+      .npc-poll-choices { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+      .npc-poll-choice-row { display: flex; align-items: center; gap: 6px; }
+      .npc-poll-choice-input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; background: #fff; color: var(--text); font-family: inherit; }
+      .npc-poll-choice-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
+      .npc-poll-choice-del { background: none; border: none; cursor: pointer; color: var(--text-soft); font-size: 16px; padding: 2px 4px; line-height: 1; }
+      .npc-poll-add-btn { display: block; width: calc(100% - 24px); margin: 0 12px 8px; font-size: 12px; color: var(--accent); background: none; border: 1px dashed var(--border-strong); border-radius: 6px; padding: 6px 10px; cursor: pointer; font-family: inherit; text-align: left; }
+      .npc-poll-add-btn:hover { background: var(--surface); }
+      .npc-poll-add-btn:disabled { opacity: .4; cursor: default; }
+      .npc-poll-footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface); }
+      .npc-poll-dur-label { font-size: 12px; color: var(--text-muted); }
+      .npc-poll-dur-select { font-size: 12px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); font-family: inherit; }
+      .npc-sub-modal { display: none; position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.45); align-items: center; justify-content: center; padding: 20px; }
+      .npc-sub-modal.open { display: flex; }
+      .npc-sub-panel { background: #fff; border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.2); padding: 18px; width: min(480px,100%); max-height: 80vh; overflow-y: auto; position: relative; }
+      .npc-sub-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+      .npc-sub-title { font-size: 16px; font-weight: 700; color: var(--accent); margin: 0 0 14px; padding-right: 30px; }
+      .npc-gif-search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+      .npc-gif-search-input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: inherit; font-size: 14px; background: #fff; color: var(--text); outline: none; }
+      .npc-gif-search-input:focus { border-color: var(--focus); }
+      .npc-gif-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+      .npc-gif-tab { padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--surface); color: var(--text-muted); font-family: inherit; }
+      .npc-gif-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .npc-gif-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+      .npc-gif-cell { border-radius: 6px; overflow: hidden; cursor: pointer; background: var(--surface); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+      .npc-gif-cell img { width: 100%; height: 100%; object-fit: cover; }
+      .npc-gif-cell:hover { opacity: .8; }
+      .npc-gif-url-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+      .npc-gif-url-label { font-size: 12px; color: var(--text-soft); margin-bottom: 6px; }
+      .npc-gif-url-inputs { display: flex; gap: 8px; }
+      .npc-gif-url-input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--text); outline: none; }
+      .npc-gif-url-input:focus { border-color: var(--focus); }
+      .npc-gif-url-btn { padding: 7px 14px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
+      .npc-emoji-picker { position: fixed; z-index: 420; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.15); padding: 10px; width: 300px; max-height: 280px; overflow-y: auto; }
+      .npc-emoji-cats { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+      .npc-emoji-cat-btn { padding: 2px 8px; border: 1px solid var(--border); border-radius: 12px; font-size: 11px; cursor: pointer; background: none; color: var(--text-muted); font-family: inherit; }
+      .npc-emoji-cat-btn.active { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+      .npc-emoji-grid { display: grid; grid-template-columns: repeat(8,1fr); gap: 3px; }
+      .npc-emoji-btn { font-size: 20px; line-height: 1.4; border: none; background: none; cursor: pointer; border-radius: 6px; padding: 2px; text-align: center; }
+      .npc-emoji-btn:hover { background: var(--surface); }
+      .npc-schedule-modal-note { font-size: 12px; color: var(--text-soft); margin-bottom: 10px; }
+      .npc-sched-label { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: block; }
+      .npc-sched-input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 14px; background: #fff; color: var(--text); box-sizing: border-box; }
+      .npc-sched-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
+      .npc-sched-btn { margin-top: 12px; padding: 8px 20px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
+      .npc-sched-clear { margin-top: 6px; padding: 8px 20px; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; display: block; }
+      .npc-badge-close { font-size: 10px; opacity: .7; }
+      .npc-img-grid { display: grid; gap: 3px; border-radius: 10px; overflow: hidden; }
+      .npc-img-grid.g1 { grid-template-columns: 1fr; }
+      .npc-img-grid.g2 { grid-template-columns: 1fr 1fr; }
+      .npc-img-grid.g3, .npc-img-grid.g4 { grid-template-columns: 1fr 1fr; }
+      .npc-img-item { position: relative; overflow: hidden; background: var(--surface); }
+      .npc-img-grid.g3 .npc-img-item:first-child { grid-row: 1/3; }
+      .npc-img-item img, .npc-img-item video { width: 100%; height: 160px; object-fit: cover; display: block; }
+      .npc-img-grid.g1 .npc-img-item img, .npc-img-grid.g1 .npc-img-item video { height: 280px; }
+      .npc-img-grid.g3 .npc-img-item:first-child img { height: 323px; }
+      .npc-img-remove { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; border: none; font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; }
+      .npc-img-remove:hover { background: rgba(0,0,0,.8); }
+      .npc-mention-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; }
+      .npc-mention-item:hover, .npc-mention-item.kbd-active { background: var(--surface); }
+      .npc-mention-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+      .npc-mention-meta { display: flex; flex-direction: column; }
+      .npc-mention-name { font-size: 13px; font-weight: 600; color: var(--text); }
+      .npc-mention-handle { font-size: 11px; color: var(--text-soft); }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Sticky top: header + control bar ───────────────────── -->
+    <div class="mkp-top">
+      <header>
+        <div class="header-left">
+          <button class="header-icon-btn header-icon-btn-plus" type="button" aria-label="Write a post" title="New post" onclick="handlePlusClick()">&#43;</button>
+        </div>
+        <div class="header-center">
+          <a class="brand" href="index.html">
+            <img
+              class="brand-logo"
+              src="https://github.com/user-attachments/assets/8f82f840-59fb-4dd2-857d-499d9e79266d"
+              alt="Zorexium logo"
+            />
+          </a>
+        </div>
+        <div class="header-right">
+          <button id="header-profile-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Profile" title="Profile">
+            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+          <button id="header-notifications-btn" class="header-icon-btn header-icon-btn-lg" type="button" aria-label="Notifications" title="Notifications">
+            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Search placeholder + filter pills -->
+      <div class="mkp-controls" aria-label="Marketplace search and filters">
+        <div class="mkp-search-wrap">
+          <div class="mkp-search-placeholder" aria-label="Search marketplace coming soon" aria-hidden="true">
+            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search marketplace…
+          </div>
+        </div>
+        <div class="mkp-filter-pills" aria-label="Filter options (coming soon)">
+          <span class="mkp-pill">Category</span>
+          <span class="mkp-pill">Price</span>
+          <span class="mkp-pill">Location</span>
+          <span class="mkp-pill">Condition</span>
+          <span class="mkp-pill">Sort By</span>
+        </div>
+      </div>
+    </div><!-- /.mkp-top -->
+
+    <!-- ── Product grid ────────────────────────────────────────── -->
+    <main aria-label="Marketplace listings">
+      <div class="mkp-grid" role="list">
+
+        <!-- Card 1 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 4 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 5 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 6 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 7 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+        <!-- Card 8 -->
+        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
+          <div class="mkp-card-img" aria-hidden="true">
+            <div class="mkp-card-img-inner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+            </div>
+          </div>
+          <div class="mkp-card-body" aria-hidden="true">
+            <div class="mkp-skel mkp-skel-price"></div>
+            <div class="mkp-skel mkp-skel-title"></div>
+            <div class="mkp-skel mkp-skel-title-b"></div>
+            <div class="mkp-skel mkp-skel-location"></div>
+          </div>
+        </article>
+
+      </div><!-- /.mkp-grid -->
+    </main>
+
+    <!-- ── Sticky footer navigation ───────────────────────────── -->
+    <footer class="sticky-footer" aria-label="Quick navigation">
+      <a class="sticky-footer-item" href="index.html" aria-label="Home">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </a>
+      <a class="sticky-footer-item" href="articles.html" aria-label="Articles">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg>
+      </a>
+      <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+      <button id="sticky-footer-notifications" class="sticky-footer-item" type="button" aria-label="Notifications">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button id="sticky-footer-marketplace" class="sticky-footer-item active" type="button" aria-label="Marketplace">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 7h18l-1.5 13a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2z"/><path d="M8 7a4 4 0 0 1 8 0"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/></svg>
+      </button>
+    </footer>
+
+    <!-- ── Auth modal ──────────────────────────────────────────── -->
+    <div id="auth-modal" class="auth-modal" aria-hidden="true">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button id="auth-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="auth-title" class="auth-title">Welcome back</h2>
+        <div class="auth-tabs" role="tablist" aria-label="Authentication views">
+          <button id="auth-tab-login" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="login-form" data-auth-view="login">Login</button>
+          <button id="auth-tab-register" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="register-form" data-auth-view="register">Sign Up</button>
+        </div>
+        <form id="login-form" class="auth-form active" novalidate>
+          <div class="auth-field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+          </div>
+          <button class="auth-submit" type="submit">Log In</button>
+        </form>
+        <form id="register-form" class="auth-form" novalidate>
+          <div class="auth-field">
+            <label for="register-name">Name</label>
+            <input id="register-name" name="name" type="text" autocomplete="name" minlength="2" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-username">Username</label>
+            <input id="register-username" name="username" type="text" autocomplete="username" minlength="3" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-email">Email</label>
+            <input id="register-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-password">Password</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+          </div>
+          <div class="auth-field">
+            <label for="register-confirm-password">Confirm Password</label>
+            <input id="register-confirm-password" name="confirm-password" type="password" autocomplete="new-password" minlength="8" required />
+          </div>
+          <label><input id="accept-terms" type="checkbox" required /> I agree to the terms and privacy policy</label>
+          <button class="auth-submit" type="submit">Create Account</button>
+        </form>
+        <p id="auth-status" class="auth-status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <!-- ── New Post Composer modal ─────────────────────────────── -->
+    <div id="new-post-modal" class="auth-modal" aria-hidden="true">
+      <div class="auth-panel npc-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
+        <button id="new-post-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
+        <h2 id="new-post-title" class="auth-title">Create Post</h2>
+
+        <div class="npc-audience-row">
+          <span class="npc-audience-label">Reply audience:</span>
+          <select id="npc-audience-select" class="npc-audience-pill" aria-label="Who can reply">
+            <option value="everyone">&#127760; Everyone</option>
+            <option value="following">&#128101; People you follow</option>
+            <option value="mentioned">&#64; Only people you mention</option>
+          </select>
+        </div>
+
+        <form id="new-post-form" novalidate>
+          <div class="npc-compose-area">
+            <textarea id="new-post-text" class="npc-textarea" placeholder="What&#39;s on your mind?" rows="3" aria-label="Post text"></textarea>
+            <div id="npc-mention-dropdown" class="npc-mention-dropdown" hidden role="listbox" aria-label="Suggested mentions"></div>
+            <div class="npc-char-counter" id="npc-char-counter" aria-hidden="true">
+              <svg class="npc-ring-svg" viewBox="0 0 36 36">
+                <circle class="npc-ring-bg" cx="18" cy="18" r="15.9" fill="none" stroke-width="3"/>
+                <circle id="npc-ring-fill" class="npc-ring-fill" cx="18" cy="18" r="15.9" fill="none" stroke-width="3" stroke-dasharray="100 100" stroke-dashoffset="100" stroke-linecap="round"/>
+              </svg>
+              <span id="npc-char-label" class="npc-char-label"></span>
+            </div>
+          </div>
+
+          <div id="npc-media-preview" class="npc-media-preview" hidden></div>
+
+          <div id="npc-poll-panel" class="npc-poll-panel" hidden>
+            <div class="npc-poll-head">
+              <span class="npc-poll-head-title">Poll</span>
+              <button type="button" id="npc-poll-remove-btn" class="npc-poll-remove-btn" aria-label="Remove poll">&#10005;</button>
+            </div>
+            <div id="npc-poll-choices" class="npc-poll-choices"></div>
+            <button type="button" id="npc-poll-add-btn" class="npc-poll-add-btn">+ Add option</button>
+            <div class="npc-poll-footer">
+              <label for="new-post-poll-duration" class="npc-poll-dur-label">Duration:</label>
+              <select id="new-post-poll-duration" class="npc-poll-dur-select">
+                <option value="1440">1 day</option>
+                <option value="2880">2 days</option>
+                <option value="4320">3 days</option>
+                <option value="10080">7 days</option>
+                <option value="60">1 hour</option>
+                <option value="360">6 hours</option>
+                <option value="720">12 hours</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="npc-toolbar">
+            <input id="new-post-images" type="file" accept="image/*,video/*" multiple style="display:none" aria-hidden="true" tabindex="-1" />
+            <input id="new-post-video" type="hidden" />
+            <input id="new-post-gif-url" type="hidden" />
+            <input id="new-post-poll-question" type="hidden" />
+            <input id="new-post-poll-option-1" type="hidden" />
+            <input id="new-post-poll-option-2" type="hidden" />
+            <input id="new-post-schedule" type="hidden" />
+
+            <button type="button" class="npc-tool-btn" id="npc-media-btn" title="Add photo or video" aria-label="Add photo or video">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-gif-btn" title="Add GIF" aria-label="Add GIF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="3"/><text x="5.5" y="15.5" font-size="7" font-weight="800" fill="currentColor" stroke="none" font-family="sans-serif">GIF</text></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-poll-btn" title="Create poll" aria-label="Create poll">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-emoji-btn" title="Add emoji" aria-label="Add emoji">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </button>
+            <button type="button" class="npc-tool-btn" id="npc-schedule-btn" title="Schedule post" aria-label="Schedule post">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+
+            <div class="npc-toolbar-spacer"></div>
+            <span id="npc-schedule-badge" class="npc-schedule-badge" hidden></span>
+            <button id="npc-submit-btn" class="npc-submit-btn" type="submit" disabled>Post</button>
+          </div>
+        </form>
+
+        <p id="new-post-status" class="auth-status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <script>
+      function openAuthModal(view) {
+        var modal = document.getElementById('auth-modal');
+        var title = document.getElementById('auth-title');
+        var loginForm = document.getElementById('login-form');
+        var registerForm = document.getElementById('register-form');
+        var tabs = document.querySelectorAll('.auth-tab');
+        var isLogin = (view || 'login') === 'login';
+        loginForm.classList.toggle('active', isLogin);
+        registerForm.classList.toggle('active', !isLogin);
+        title.textContent = isLogin ? 'Welcome back' : 'Create your account';
+        tabs.forEach(function (tab) {
+          var sel = tab.getAttribute('data-auth-view') === (view || 'login');
+          tab.classList.toggle('active', sel);
+          tab.setAttribute('aria-selected', sel ? 'true' : 'false');
+        });
+        document.getElementById('auth-status').textContent = '';
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeAuthModal() {
+        var modal = document.getElementById('auth-modal');
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.getElementById('auth-status').textContent = '';
+      }
+      window.openAuthModal = openAuthModal;
+      window.closeAuthModal = closeAuthModal;
+
+      function openNewPost() {
+        var modal = document.getElementById('new-post-modal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        var ta = document.getElementById('new-post-text');
+        if (ta) ta.focus();
+      }
+      function closeNewPostModal() {
+        var modal = document.getElementById('new-post-modal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        var form = document.getElementById('new-post-form');
+        if (form) form.reset();
+        var status = document.getElementById('new-post-status');
+        if (status) status.textContent = '';
+        if (typeof window.npcResetState === 'function') window.npcResetState();
+      }
+      function handlePlusClick() {
+        if (document.body.getAttribute('data-authenticated') !== 'true') {
+          openAuthModal('login');
+          return;
+        }
+        openNewPost();
+      }
+      window.openNewPost = openNewPost;
+      window.closeNewPostModal = closeNewPostModal;
+
+      document.getElementById('auth-close').addEventListener('click', closeAuthModal);
+      document.querySelectorAll('.auth-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          openAuthModal(tab.getAttribute('data-auth-view'));
+        });
+      });
+      document.getElementById('auth-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeAuthModal();
+      });
+      document.getElementById('new-post-close').addEventListener('click', closeNewPostModal);
+      document.getElementById('new-post-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeNewPostModal();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          if (document.getElementById('auth-modal').classList.contains('open')) closeAuthModal();
+          var npm = document.getElementById('new-post-modal');
+          if (npm && npm.classList.contains('open')) closeNewPostModal();
+        }
+      });
+    </script>
+    <script src="app.js"></script>
+  </body>
+</html>

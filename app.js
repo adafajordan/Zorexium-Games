@@ -11,6 +11,7 @@
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const NOTIFICATIONS_PAGE_PATH = 'notifications.html';
+  const MARKETPLACE_PAGE_PATH = 'marketplace.html';
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -3482,11 +3483,9 @@
       openAuthModal('login');
       return;
     }
-    if (isDashboardPage()) {
-      setDashboardTab('marketplace');
-      return;
+    if (getCurrentPageName() !== MARKETPLACE_PAGE_PATH) {
+      window.location.href = MARKETPLACE_PAGE_PATH;
     }
-    window.location.href = ACCOUNT_DASHBOARD_PATH + '#marketplace';
   }
 
   function attachAuthenticatedClickGuard(button, onAuthenticatedClick) {
