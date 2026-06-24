@@ -1745,6 +1745,12 @@
 
   function getBlobFromMediaRecord(record) {
     if (!record || typeof record !== 'object') return null;
+    // New format: raw ArrayBuffer with explicit MIME type (cross-platform safe for IDB).
+    if (record.data instanceof ArrayBuffer) {
+      const type = String(record.type || '').trim() || 'application/octet-stream';
+      return new Blob([record.data], { type: type });
+    }
+    // Legacy format: Blob/File stored directly in IDB.
     if (record.blob instanceof Blob) return record.blob;
     if (record.file instanceof Blob) return record.file;
     return null;
@@ -1796,23 +1802,27 @@
     appDbPromise = null;
   }
 
-  async function normalizeMediaBlob(file) {
+  async function putMediaFile(file) {
     if (!(file instanceof Blob)) {
       throw new Error('The selected media file is invalid.');
     }
-    const normalizedType = String(file.type || '').trim();
-    if (normalizedType) return file;
-    return file.slice(0, file.size);
-  }
-
-  async function putMediaFile(file) {
-    const mediaBlob = await normalizeMediaBlob(file);
+    // Read into an ArrayBuffer so the record is always structured-cloneable.
+    // Storing a raw Blob/File object in IndexedDB fails on iOS/WKWebView (Capacitor)
+    // with "Error preparing Blob/File data to be stored in object store".
+    let data;
+    try {
+      data = await file.arrayBuffer();
+    } catch (err) {
+      throw new Error('Unable to read the selected media file. Please try selecting it again.');
+    }
+    const type = String(file.type || '').trim() || 'application/octet-stream';
+    const name = (file instanceof File) ? (file.name || '') : '';
     const record = {
       id: generateId('media'),
-      blob: mediaBlob,
-      name: file.name,
-      type: mediaBlob.type,
-      size: mediaBlob.size,
+      data: data,
+      type: type,
+      name: name,
+      size: file.size,
       createdAt: Date.now()
     };
     try {
