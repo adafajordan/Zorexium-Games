@@ -1928,13 +1928,13 @@
           ].join(' ').toLowerCase();
           var badgeText = listingType === 'job' ? 'Job' : 'Event';
           var eventPrivacy = String(data.privacy || 'Public').trim() || 'Public';
-          eventPrivacy = eventPrivacy.charAt(0).toUpperCase() + eventPrivacy.slice(1);
+          eventPrivacy = eventPrivacy.toLowerCase().replace(/\b[a-z]/g, function (letter) { return letter.toUpperCase(); });
           var eventTimeLabel = 'Upcoming';
           if (data.eventStart) {
             var parsedEventStart = new Date(data.eventStart);
             if (!isNaN(parsedEventStart.getTime())) {
-              var formattedDate = parsedEventStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-              var formattedTime = parsedEventStart.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+              var formattedDate = parsedEventStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              var formattedTime = parsedEventStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
               eventTimeLabel = formattedDate + ' · ' + formattedTime;
             }
           }
