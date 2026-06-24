@@ -1889,15 +1889,27 @@
           try {
             if (window.crypto && typeof window.crypto.randomUUID === 'function') {
               rand = window.crypto.randomUUID();
-            } else {
+            } else if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
               var arr = new Uint8Array(8);
               window.crypto.getRandomValues(arr);
               rand = Array.prototype.map.call(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+            } else {
+              throw new Error('crypto unavailable');
             }
           } catch (e) {
             rand = Date.now().toString(36) + Math.random().toString(36).slice(2);
           }
           return (prefix || 'listing') + '-' + rand;
+        }
+
+        function extractCoverDataUrl(elementId) {
+          var el = document.getElementById(elementId);
+          if (!el) return '';
+          var img = el.querySelector('img');
+          if (img && img.src) return img.src;
+          var bg = el.style.backgroundImage || '';
+          var match = bg.match(/^url\(["']?([\s\S]*?)["']?\)$/);
+          return match ? match[1] : '';
         }
 
         function addListingCardToFeed(data) {
@@ -2476,10 +2488,7 @@
               payType: document.getElementById('pay-type').value,
               minPay: String(document.getElementById('minimum-pay').value || '').trim(),
               maxPay: String(document.getElementById('maximum-pay').value || '').trim(),
-              coverDataUrl: (function () {
-                var img = document.querySelector('#job-cover-preview img');
-                return img ? img.src : '';
-              }())
+              coverDataUrl: extractCoverDataUrl('job-cover-preview')
             };
             var postText = '📋 New Job: ' + jobData.title +
               (jobData.jobType ? ' (' + jobData.jobType + ')' : '') +
@@ -2523,14 +2532,7 @@
               location: viewState.logistics.mode === 'person'
                 ? (viewState.logistics.inPersonLocation || '')
                 : 'Virtual',
-              coverDataUrl: (function () {
-                var el = document.getElementById('event-cover-preview');
-                if (!el) return '';
-                var img = el.querySelector('img');
-                if (img && img.src) return img.src;
-                var bg = el.style.backgroundImage || '';
-                return bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '') || '';
-              }())
+              coverDataUrl: extractCoverDataUrl('event-cover-preview')
             };
             var postText = '📅 New Event: ' + eventData.title +
               (eventData.eventStart ? ' · ' + eventData.eventStart : '') +
