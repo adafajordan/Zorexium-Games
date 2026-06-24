@@ -571,14 +571,28 @@
       /* Hero cover image — width: 100vw + negative left-margin breaks the image
          out of the constrained reader-inner container and stretches it edge-to-edge.
          overflow-x: hidden on .reader-scroll clips any sub-pixel overrun. */
-      .reader-cover {
+      .reader-cover-slot {
         width: 100vw;
         max-height: 56vh;
-        object-fit: contain;
+        aspect-ratio: 5 / 2;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 0;
+        overflow: hidden;
         display: block;
         /* Shift left by (50vw − half-container-width) to align with viewport left edge */
         margin: 0 0 24px calc(-50vw + 50%);
+      }
+      .reader-cover-slot.empty {
+        background: var(--surface-soft);
+        border-color: var(--border);
+      }
+      .reader-cover {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 0;
+        display: block;
       }
 
       /* Large title */
@@ -1035,7 +1049,9 @@
       <div class="reader-scroll" id="reader-scroll">
         <div class="reader-inner">
           <!-- Hero cover image -->
-          <img id="reader-cover-img" class="reader-cover" alt="Article cover" hidden />
+          <div id="reader-cover-slot" class="reader-cover-slot empty">
+            <img id="reader-cover-img" class="reader-cover" alt="Article cover" hidden />
+          </div>
 
           <!-- Large article title -->
           <h1 id="reader-title" class="reader-title"></h1>
@@ -1350,14 +1366,22 @@
       function getMediaObjectUrl(id) {
         if (!id) return Promise.resolve(null);
         return getRecord(MEDIA_STORE, id).then(function (rec) {
-          if (!rec || !(rec.blob instanceof Blob)) return null;
+          if (!rec) return null;
+          if (typeof rec.dataUrl === 'string' && isSafeObjectUrl(rec.dataUrl)) {
+            return rec.dataUrl;
+          }
+          if (typeof rec.url === 'string' && isSafeObjectUrl(rec.url)) {
+            return rec.url;
+          }
+          var blob = rec.blob instanceof Blob ? rec.blob : (rec.file instanceof Blob ? rec.file : null);
+          if (!blob) return null;
           return new Promise(function (resolve) {
             var reader = new FileReader();
             reader.onload = function () { resolve(reader.result); };
             reader.onerror = function () {
-              try { resolve(URL.createObjectURL(rec.blob)); } catch (e) { resolve(null); }
+              try { resolve(URL.createObjectURL(blob)); } catch (e) { resolve(null); }
             };
-            reader.readAsDataURL(rec.blob);
+            reader.readAsDataURL(blob);
           });
         });
       }
@@ -2522,9 +2546,13 @@
 
           // Cover image
           var coverImg = document.getElementById('reader-cover-img');
+          var coverSlot = document.getElementById('reader-cover-slot');
           if (overlay) {
             overlay.classList.remove('has-cover');
             overlay.classList.add('no-cover');
+          }
+          if (coverSlot) {
+            coverSlot.classList.add('empty');
           }
           if (coverImg) {
             coverImg.hidden = true;
@@ -2535,6 +2563,9 @@
                 if (isSafeObjectUrl(url)) { coverImg.src = url; }
                 coverImg.alt = article.title || 'Article cover';
                 coverImg.hidden = false;
+                if (coverSlot) {
+                  coverSlot.classList.remove('empty');
+                }
                 if (overlay) {
                   overlay.classList.add('has-cover');
                   overlay.classList.remove('no-cover');

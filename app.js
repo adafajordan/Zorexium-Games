@@ -310,14 +310,16 @@
   async function putRecord(storeName, record) {
     const database = await openAppDb();
     const transaction = database.transaction(storeName, 'readwrite');
-    transaction.objectStore(storeName).put(record);
+    const request = transaction.objectStore(storeName).put(record);
+    await requestToPromise(request);
     await transactionDone(transaction);
   }
 
   async function deleteRecord(storeName, key) {
     const database = await openAppDb();
     const transaction = database.transaction(storeName, 'readwrite');
-    transaction.objectStore(storeName).delete(key);
+    const request = transaction.objectStore(storeName).delete(key);
+    await requestToPromise(request);
     await transactionDone(transaction);
   }
 
@@ -1107,6 +1109,7 @@
     if (!value) return false;
     if (/^blob:/i.test(value)) return true;
     if (/^data:image\//i.test(value)) return true;
+    if (/^data:video\//i.test(value)) return true;
     try {
       const parsed = new URL(value, window.location.href);
       return parsed.protocol === 'https:';
@@ -1740,16 +1743,90 @@
     closeAuthModal();
   }
 
+  function getBlobFromMediaRecord(record) {
+    if (!record || typeof record !== 'object') return null;
+    if (record.blob instanceof Blob) return record.blob;
+    if (record.file instanceof Blob) return record.file;
+    return null;
+  }
+
+  async function getRenderableMediaSource(record, options) {
+    const preferDataUrl = Boolean(options && options.preferDataUrl);
+    const blob = getBlobFromMediaRecord(record);
+    if (preferDataUrl && blob) {
+      const dataUrl = await blobToDataUrl(blob);
+      if (isSafeMediaUrl(dataUrl)) return { url: dataUrl, isObjectUrl: false };
+    }
+    if (blob) {
+      try {
+        const objectUrl = URL.createObjectURL(blob);
+        if (isSafeMediaUrl(objectUrl)) return { url: objectUrl, isObjectUrl: true };
+        URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        // Fall through to a data URL fallback for environments that reject blob: URLs.
+      }
+      const fallbackDataUrl = await blobToDataUrl(blob);
+      if (isSafeMediaUrl(fallbackDataUrl)) return { url: fallbackDataUrl, isObjectUrl: false };
+    }
+    const legacyDataUrl = String((record && record.dataUrl) || '').trim();
+    if (isSafeMediaUrl(legacyDataUrl)) return { url: legacyDataUrl, isObjectUrl: false };
+    const legacyUrl = String((record && record.url) || '').trim();
+    if (isSafeMediaUrl(legacyUrl)) return { url: legacyUrl, isObjectUrl: false };
+    return null;
+  }
+
+  // Retry with a fresh IDB connection when writes fail due to stale/closing
+  // transaction state errors that are commonly recoverable on the next attempt.
+  function isRetryableMediaWriteError(error) {
+    const name = error && error.name ? error.name : '';
+    return name === 'InvalidStateError' || name === 'TransactionInactiveError' || name === 'AbortError';
+  }
+
+  async function resetAppDbConnection() {
+    if (!appDbPromise) return;
+    try {
+      const database = await appDbPromise;
+      if (database && typeof database.close === 'function') {
+        database.close();
+      }
+    } catch (error) {
+      // Ignore close failures (already-closed connections or active transactions can
+      // throw here) and force a fresh connection on the next DB operation anyway.
+    }
+    appDbPromise = null;
+  }
+
+  async function normalizeMediaBlob(file) {
+    if (!(file instanceof Blob)) {
+      throw new Error('The selected media file is invalid.');
+    }
+    const normalizedType = String(file.type || '').trim();
+    if (normalizedType) return file;
+    return file.slice(0, file.size);
+  }
+
   async function putMediaFile(file) {
+    const mediaBlob = await normalizeMediaBlob(file);
     const record = {
       id: generateId('media'),
-      blob: file,
+      blob: mediaBlob,
       name: file.name,
-      type: file.type,
-      size: file.size,
+      type: mediaBlob.type,
+      size: mediaBlob.size,
       createdAt: Date.now()
     };
-    await putRecord(MEDIA_STORE, record);
+    try {
+      await putRecord(MEDIA_STORE, record);
+    } catch (error) {
+      if (error && error.name === 'QuotaExceededError') {
+        throw new Error('Storage quota exceeded for this application. Please free up space and try again.');
+      }
+      if (!isRetryableMediaWriteError(error)) {
+        throw error;
+      }
+      await resetAppDbConnection();
+      await putRecord(MEDIA_STORE, record);
+    }
     return record.id;
   }
 
@@ -2648,18 +2725,14 @@
 
     if (post.articleCoverMediaId) {
       const mediaRecord = await getMediaRecord(post.articleCoverMediaId);
-      if (mediaRecord && mediaRecord.blob instanceof Blob) {
-        // blobToDataUrl returns a data URL (plain string, no system resource).
-        // Data URLs do not need to be tracked in generatedMediaUrls for cleanup.
-        const url = await blobToDataUrl(mediaRecord.blob);
-        if (url) {
-          const img = document.createElement('img');
-          img.className = 'article-companion-cover';
-          if (isSafeMediaUrl(url)) img.src = url;
-          img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
-          img.loading = 'lazy';
-          card.appendChild(img);
-        }
+      const mediaSource = await getRenderableMediaSource(mediaRecord, { preferDataUrl: true });
+      if (mediaSource && mediaSource.url) {
+        const img = document.createElement('img');
+        img.className = 'article-companion-cover';
+        if (isSafeMediaUrl(mediaSource.url)) img.src = mediaSource.url;
+        img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
+        img.loading = 'lazy';
+        card.appendChild(img);
       }
     }
 
@@ -2724,11 +2797,12 @@
 
       for (let index = 0; index < imageIds.length; index += 1) {
         const mediaRecord = await getMediaRecord(imageIds[index]);
-        if (!mediaRecord || !(mediaRecord.blob instanceof Blob)) {
+        const mediaSource = await getRenderableMediaSource(mediaRecord);
+        if (!mediaSource || !mediaSource.url) {
           continue;
         }
-        const mediaUrl = URL.createObjectURL(mediaRecord.blob);
-        generatedMediaUrls.push(mediaUrl);
+        const mediaUrl = mediaSource.url;
+        if (mediaSource.isObjectUrl) generatedMediaUrls.push(mediaUrl);
 
         const item = document.createElement('div');
         item.className = 'post-media-item';
@@ -2758,9 +2832,10 @@
 
     if (post.videoMediaId) {
       const mediaRecord = await getMediaRecord(post.videoMediaId);
-      if (mediaRecord && mediaRecord.blob instanceof Blob) {
-        const mediaUrl = URL.createObjectURL(mediaRecord.blob);
-        generatedMediaUrls.push(mediaUrl);
+      const mediaSource = await getRenderableMediaSource(mediaRecord);
+      if (mediaSource && mediaSource.url) {
+        const mediaUrl = mediaSource.url;
+        if (mediaSource.isObjectUrl) generatedMediaUrls.push(mediaUrl);
 
         const wrapper = document.createElement('div');
         wrapper.className = 'post-video-shell';
