@@ -18,6 +18,9 @@
   const MAX_MEDIA_SCALE = 4;
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
+  const FEED_TALL_IMAGE_RATIO = 1.9;
+  const MEDIA_VIEWER_SWIPE_THRESHOLD = 70;
+  const MEDIA_VIEWER_DISMISS_THRESHOLD = 110;
   const DEFAULT_POST_VIDEO_VOLUME = 0.5;
   const VIDEO_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
   const VIDEO_ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
@@ -89,6 +92,9 @@
   const mediaViewerFitButton = document.getElementById('media-viewer-fit');
   const mediaViewerFullscreenButton = document.getElementById('media-viewer-fullscreen');
   const mediaViewerCloseButton = document.getElementById('media-viewer-close');
+  const mediaViewerPrevButton = document.getElementById('media-viewer-prev');
+  const mediaViewerNextButton = document.getElementById('media-viewer-next');
+  const mediaViewerPagination = document.getElementById('media-viewer-pagination');
   const notificationsList = document.getElementById('notifications-list');
 
   let currentUser = null;
@@ -116,9 +122,19 @@
   };
   let mediaViewerState = {
     scale: 1,
+    items: [],
+    index: 0,
     type: null,
     src: '',
     label: ''
+  };
+  let mediaViewerGestureState = {
+    active: false,
+    startX: 0,
+    startY: 0,
+    deltaX: 0,
+    deltaY: 0,
+    axis: ''
   };
 
   function requestToPromise(request) {
@@ -1992,6 +2008,85 @@
     return button;
   }
 
+  function getMediaViewerCurrentItem() {
+    const items = Array.isArray(mediaViewerState.items) ? mediaViewerState.items : [];
+    if (!items.length) return null;
+    const index = Math.max(0, Math.min(items.length - 1, Number(mediaViewerState.index) || 0));
+    return items[index] || null;
+  }
+
+  function resetMediaViewerDragState() {
+    mediaViewerGestureState.active = false;
+    mediaViewerGestureState.startX = 0;
+    mediaViewerGestureState.startY = 0;
+    mediaViewerGestureState.deltaX = 0;
+    mediaViewerGestureState.deltaY = 0;
+    mediaViewerGestureState.axis = '';
+    const shell = mediaViewerContent ? mediaViewerContent.querySelector('.media-viewer-media-shell') : null;
+    if (shell) {
+      shell.style.transform = '';
+      shell.style.opacity = '';
+    }
+  }
+
+  function setMediaViewerDragOffset(deltaX, deltaY) {
+    const shell = mediaViewerContent ? mediaViewerContent.querySelector('.media-viewer-media-shell') : null;
+    if (!shell) return;
+    shell.style.transform = 'translate3d(' + Math.round(deltaX) + 'px, ' + Math.round(deltaY) + 'px, 0)';
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      shell.style.opacity = String(Math.max(0.45, 1 - Math.min(0.55, Math.abs(deltaY) / 260)));
+    } else {
+      shell.style.opacity = '';
+    }
+  }
+
+  function updateMediaViewerChrome() {
+    const item = getMediaViewerCurrentItem();
+    const total = Array.isArray(mediaViewerState.items) ? mediaViewerState.items.length : 0;
+    const isImage = item && item.type === 'image';
+    if (mediaViewerTitle) {
+      if (total > 1) {
+        mediaViewerTitle.textContent = 'Image ' + (mediaViewerState.index + 1) + ' of ' + total;
+      } else {
+        mediaViewerTitle.textContent = item && item.label ? item.label : 'Media viewer';
+      }
+    }
+    if (mediaViewerZoomInButton) {
+      mediaViewerZoomInButton.disabled = !isImage;
+    }
+    if (mediaViewerZoomOutButton) {
+      mediaViewerZoomOutButton.disabled = !isImage;
+    }
+    if (mediaViewerFitButton) {
+      mediaViewerFitButton.disabled = !isImage;
+    }
+    if (mediaViewerPrevButton) {
+      const hasPrevious = total > 1 && mediaViewerState.index > 0;
+      mediaViewerPrevButton.hidden = total <= 1;
+      mediaViewerPrevButton.disabled = !hasPrevious;
+    }
+    if (mediaViewerNextButton) {
+      const hasNext = total > 1 && mediaViewerState.index < total - 1;
+      mediaViewerNextButton.hidden = total <= 1;
+      mediaViewerNextButton.disabled = !hasNext;
+    }
+    if (mediaViewerPagination) {
+      mediaViewerPagination.innerHTML = '';
+      if (total > 1) {
+        mediaViewerState.items.forEach(function (_, index) {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = 'media-viewer-dot' + (index === mediaViewerState.index ? ' active' : '');
+          dot.setAttribute('aria-label', 'Show image ' + (index + 1) + ' of ' + total);
+          dot.addEventListener('click', function () {
+            goToMediaViewerIndex(index);
+          });
+          mediaViewerPagination.appendChild(dot);
+        });
+      }
+    }
+  }
+
   function setMediaViewerScale(scale) {
     if (!mediaViewerContent) return;
     const nextScale = Math.min(MAX_MEDIA_SCALE, Math.max(MIN_MEDIA_SCALE, scale));
@@ -2000,8 +2095,83 @@
     if (!mediaElement || mediaViewerState.type !== 'image') {
       return;
     }
-    mediaElement.style.transform = 'scale(' + nextScale + ')';
-    mediaElement.style.transformOrigin = 'center center';
+    mediaElement.style.width = nextScale > 1 ? (nextScale * 100) + '%' : '';
+    mediaElement.style.maxWidth = nextScale > 1 ? 'none' : '100%';
+    mediaElement.style.maxHeight = nextScale > 1 ? 'none' : '';
+    if (nextScale === 1) {
+      mediaViewerContent.scrollLeft = 0;
+      mediaViewerContent.scrollTop = 0;
+    }
+  }
+
+  function renderCurrentMediaViewerItem() {
+    if (!mediaViewerModal || !mediaViewerContent) return;
+    const item = getMediaViewerCurrentItem();
+    mediaViewerContent.innerHTML = '';
+    if (!item) {
+      updateMediaViewerChrome();
+      return;
+    }
+    mediaViewerState.type = item.type;
+    mediaViewerState.src = item.src;
+    mediaViewerState.label = item.label || 'Media viewer';
+
+    const shell = document.createElement('div');
+    shell.className = 'media-viewer-media-shell';
+
+    const mediaElement = document.createElement(item.type === 'video' ? 'video' : 'img');
+    mediaElement.className = 'media-viewer-media';
+    mediaElement.src = item.src;
+    if (item.type === 'video') {
+      mediaElement.controls = true;
+      mediaElement.preload = 'metadata';
+      mediaElement.setAttribute('playsinline', 'true');
+      mediaElement.setAttribute('aria-label', mediaViewerState.label);
+    } else {
+      mediaElement.alt = mediaViewerState.label;
+      mediaElement.addEventListener('dblclick', function () {
+        setMediaViewerScale(mediaViewerState.scale > 1 ? 1 : 2);
+      });
+    }
+    shell.appendChild(mediaElement);
+    mediaViewerContent.appendChild(shell);
+    mediaViewerContent.scrollLeft = 0;
+    mediaViewerContent.scrollTop = 0;
+    resetMediaViewerDragState();
+    updateMediaViewerChrome();
+    setMediaViewerScale(1);
+  }
+
+  function goToMediaViewerIndex(index) {
+    const items = Array.isArray(mediaViewerState.items) ? mediaViewerState.items : [];
+    if (!items.length) return;
+    const nextIndex = Math.max(0, Math.min(items.length - 1, Number(index) || 0));
+    if (nextIndex === mediaViewerState.index) {
+      resetMediaViewerDragState();
+      return;
+    }
+    const currentVideo = mediaViewerContent ? mediaViewerContent.querySelector('video') : null;
+    if (currentVideo) {
+      currentVideo.pause();
+    }
+    mediaViewerState.index = nextIndex;
+    mediaViewerState.scale = 1;
+    renderCurrentMediaViewerItem();
+  }
+
+  function normalizeMediaViewerInput(entryOrType, src, label) {
+    if (Array.isArray(entryOrType)) {
+      return {
+        items: entryOrType.filter(function (item) {
+          return item && (item.type === 'image' || item.type === 'video') && isSafeMediaUrl(item.src);
+        }),
+        index: typeof src === 'number' ? src : 0
+      };
+    }
+    return {
+      items: isSafeMediaUrl(src) ? [{ type: entryOrType, src: src, label: label || 'Media viewer' }] : [],
+      index: 0
+    };
   }
 
   function closeMediaViewer() {
@@ -2013,8 +2183,15 @@
     mediaViewerContent.innerHTML = '';
     mediaViewerModal.classList.remove('open');
     mediaViewerModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('media-viewer-open');
+    resetMediaViewerDragState();
+    if (mediaViewerPagination) {
+      mediaViewerPagination.innerHTML = '';
+    }
     mediaViewerState = {
       scale: 1,
+      items: [],
+      index: 0,
       type: null,
       src: '',
       label: ''
@@ -2047,46 +2224,25 @@
     document.dispatchEvent(new CustomEvent('simfullscreenchange', { detail: { element: element } }));
   }
 
-  function openMediaViewer(type, src, label) {
+  function openMediaViewer(entryOrType, src, label) {
     if (!mediaViewerModal || !mediaViewerContent) return;
-    mediaViewerState = {
-      scale: 1,
-      type: type,
-      src: src,
-      label: label || 'Media viewer'
-    };
-    if (!isSafeMediaUrl(src)) {
+    const payload = normalizeMediaViewerInput(entryOrType, src, label);
+    if (!payload.items.length) {
       setInterfaceStatus('This media could not be opened safely.', 'error');
       return;
     }
-    mediaViewerContent.innerHTML = '';
-    if (mediaViewerTitle) {
-      mediaViewerTitle.textContent = mediaViewerState.label;
-    }
-    const mediaElement = document.createElement(type === 'video' ? 'video' : 'img');
-    mediaElement.className = 'media-viewer-media';
-    mediaElement.src = src;
-    if (type === 'video') {
-      mediaElement.controls = true;
-      mediaElement.preload = 'metadata';
-      mediaElement.setAttribute('playsinline', 'true');
-      mediaElement.setAttribute('aria-label', mediaViewerState.label);
-    } else {
-      mediaElement.alt = mediaViewerState.label;
-    }
-    mediaViewerContent.appendChild(mediaElement);
+    mediaViewerState = {
+      scale: 1,
+      items: payload.items,
+      index: Math.max(0, Math.min(payload.items.length - 1, payload.index || 0)),
+      type: null,
+      src: '',
+      label: ''
+    };
     mediaViewerModal.classList.add('open');
     mediaViewerModal.setAttribute('aria-hidden', 'false');
-    setMediaViewerScale(1);
-    if (mediaViewerZoomInButton) {
-      mediaViewerZoomInButton.disabled = type !== 'image';
-    }
-    if (mediaViewerZoomOutButton) {
-      mediaViewerZoomOutButton.disabled = type !== 'image';
-    }
-    if (mediaViewerFitButton) {
-      mediaViewerFitButton.disabled = type !== 'image';
-    }
+    document.body.classList.add('media-viewer-open');
+    renderCurrentMediaViewerItem();
   }
 
   function configurePostVideoElement(video) {
@@ -2777,7 +2933,7 @@
 
     if (hasGifUrl(post) && isSafeMediaUrl(post.gifUrl)) {
       const gifGrid = document.createElement('div');
-      gifGrid.className = 'post-media-grid single';
+      gifGrid.className = 'post-media-grid g1 single';
 
       const gifItem = document.createElement('div');
       gifItem.className = 'post-media-item';
@@ -2792,7 +2948,7 @@
       gifTrigger.type = 'button';
       gifTrigger.setAttribute('aria-label', 'Open ' + gifImage.alt + ' in fullscreen viewer');
       gifTrigger.addEventListener('click', function () {
-        openMediaViewer('image', post.gifUrl, gifImage.alt);
+        openMediaViewer([{ type: 'image', src: post.gifUrl, label: gifImage.alt }], 0);
       });
 
       gifTrigger.appendChild(gifImage);
@@ -2802,9 +2958,7 @@
     }
 
     if (imageIds.length) {
-      const grid = document.createElement('div');
-      grid.className = 'post-media-grid' + (imageIds.length === 1 ? ' single' : '');
-
+      const mediaItems = [];
       for (let index = 0; index < imageIds.length; index += 1) {
         const mediaRecord = await getMediaRecord(imageIds[index]);
         const mediaSource = await getRenderableMediaSource(mediaRecord);
@@ -2813,29 +2967,60 @@
         }
         const mediaUrl = mediaSource.url;
         if (mediaSource.isObjectUrl) generatedMediaUrls.push(mediaUrl);
-
-        const item = document.createElement('div');
-        item.className = 'post-media-item';
-
-        const image = document.createElement('img');
-        image.src = mediaUrl;
-        image.alt = altBase + ' (image ' + (index + 1) + ' of ' + imageIds.length + ')';
-        image.loading = 'lazy';
-
-        const trigger = document.createElement('button');
-        trigger.className = 'post-media-button';
-        trigger.type = 'button';
-        trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
-        trigger.addEventListener('click', function () {
-          openMediaViewer('image', mediaUrl, image.alt);
+        mediaItems.push({
+          type: 'image',
+          src: mediaUrl,
+          label: altBase + ' (image ' + (mediaItems.length + 1) + ' of ' + imageIds.length + ')'
         });
-
-        trigger.appendChild(image);
-        item.appendChild(trigger);
-        grid.appendChild(item);
       }
 
-      if (grid.children.length) {
+      if (mediaItems.length) {
+        const visibleMediaItems = mediaItems.slice(0, 4);
+        const layoutCount = visibleMediaItems.length;
+        const grid = document.createElement('div');
+        grid.className = 'post-media-grid g' + layoutCount + (layoutCount === 1 ? ' single' : '');
+
+        visibleMediaItems.forEach(function (mediaItem, index) {
+          const item = document.createElement('div');
+          item.className = 'post-media-item';
+
+          const image = document.createElement('img');
+          image.className = 'post-media-image';
+          image.src = mediaItem.src;
+          image.alt = mediaItem.label;
+          image.loading = 'lazy';
+
+          const trigger = document.createElement('button');
+          trigger.className = 'post-media-button';
+          trigger.type = 'button';
+          trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
+          trigger.addEventListener('click', function () {
+            openMediaViewer(mediaItems, index);
+          });
+
+          if (layoutCount === 1) {
+            const tallIndicator = document.createElement('span');
+            tallIndicator.className = 'post-media-tall-indicator';
+            tallIndicator.textContent = 'Show full image';
+            tallIndicator.hidden = true;
+            const applySingleImageLayout = function () {
+              if (!image.naturalWidth || !image.naturalHeight) return;
+              const isTall = image.naturalHeight / image.naturalWidth >= FEED_TALL_IMAGE_RATIO;
+              item.classList.toggle('is-tall', isTall);
+              tallIndicator.hidden = !isTall;
+            };
+            if (image.complete) {
+              applySingleImageLayout();
+            } else {
+              image.addEventListener('load', applySingleImageLayout, { once: true });
+            }
+            trigger.appendChild(tallIndicator);
+          }
+
+          trigger.appendChild(image);
+          item.appendChild(trigger);
+          grid.appendChild(item);
+        });
         fragment.appendChild(grid);
       }
     }
@@ -3068,6 +3253,9 @@
   }
 
   async function validatePostMedia(images, video) {
+    if (images.length && video) {
+      throw new Error('Posts can include photos or one video, but not both at the same time.');
+    }
     if (images.length > MAX_IMAGE_COUNT) {
       throw new Error('You can upload up to 10 pictures per post.');
     }
@@ -3502,6 +3690,16 @@
     if (mediaViewerCloseButton) {
       mediaViewerCloseButton.addEventListener('click', closeMediaViewer);
     }
+    if (mediaViewerPrevButton) {
+      mediaViewerPrevButton.addEventListener('click', function () {
+        goToMediaViewerIndex(mediaViewerState.index - 1);
+      });
+    }
+    if (mediaViewerNextButton) {
+      mediaViewerNextButton.addEventListener('click', function () {
+        goToMediaViewerIndex(mediaViewerState.index + 1);
+      });
+    }
     mediaViewerModal.addEventListener('click', function (event) {
       if (event.target === mediaViewerModal) {
         closeMediaViewer();
@@ -3530,8 +3728,13 @@
       });
     }
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && mediaViewerModal.classList.contains('open')) {
+      if (!mediaViewerModal.classList.contains('open')) return;
+      if (event.key === 'Escape') {
         closeMediaViewer();
+      } else if (event.key === 'ArrowLeft') {
+        goToMediaViewerIndex(mediaViewerState.index - 1);
+      } else if (event.key === 'ArrowRight') {
+        goToMediaViewerIndex(mediaViewerState.index + 1);
       }
     });
     mediaViewerModal.addEventListener('wheel', function (event) {
@@ -3544,6 +3747,57 @@
       event.preventDefault();
       setMediaViewerScale(mediaViewerState.scale + (event.deltaY < 0 ? MEDIA_ZOOM_INCREMENT : -MEDIA_ZOOM_INCREMENT));
     }, { passive: false });
+    if (mediaViewerContent) {
+      mediaViewerContent.addEventListener('touchstart', function (event) {
+        if (mediaViewerState.type !== 'image' || mediaViewerState.scale !== 1 || event.touches.length !== 1) {
+          return;
+        }
+        const touch = event.touches[0];
+        mediaViewerGestureState.active = true;
+        mediaViewerGestureState.startX = touch.clientX;
+        mediaViewerGestureState.startY = touch.clientY;
+        mediaViewerGestureState.deltaX = 0;
+        mediaViewerGestureState.deltaY = 0;
+        mediaViewerGestureState.axis = '';
+      }, { passive: true });
+      mediaViewerContent.addEventListener('touchmove', function (event) {
+        if (!mediaViewerGestureState.active || event.touches.length !== 1) {
+          return;
+        }
+        const touch = event.touches[0];
+        mediaViewerGestureState.deltaX = touch.clientX - mediaViewerGestureState.startX;
+        mediaViewerGestureState.deltaY = touch.clientY - mediaViewerGestureState.startY;
+        if (!mediaViewerGestureState.axis) {
+          if (Math.abs(mediaViewerGestureState.deltaX) > 14 || Math.abs(mediaViewerGestureState.deltaY) > 14) {
+            mediaViewerGestureState.axis = Math.abs(mediaViewerGestureState.deltaX) > Math.abs(mediaViewerGestureState.deltaY) ? 'x' : 'y';
+          } else {
+            return;
+          }
+        }
+        if (mediaViewerGestureState.axis === 'x' && mediaViewerState.items.length > 1) {
+          event.preventDefault();
+          setMediaViewerDragOffset(mediaViewerGestureState.deltaX, 0);
+        } else if (mediaViewerGestureState.axis === 'y') {
+          event.preventDefault();
+          setMediaViewerDragOffset(0, mediaViewerGestureState.deltaY);
+        }
+      }, { passive: false });
+      mediaViewerContent.addEventListener('touchend', function () {
+        if (!mediaViewerGestureState.active) return;
+        const deltaX = mediaViewerGestureState.deltaX;
+        const deltaY = mediaViewerGestureState.deltaY;
+        const axis = mediaViewerGestureState.axis;
+        resetMediaViewerDragState();
+        if (axis === 'x' && Math.abs(deltaX) >= MEDIA_VIEWER_SWIPE_THRESHOLD && mediaViewerState.items.length > 1) {
+          goToMediaViewerIndex(mediaViewerState.index + (deltaX < 0 ? 1 : -1));
+          return;
+        }
+        if (axis === 'y' && Math.abs(deltaY) >= MEDIA_VIEWER_DISMISS_THRESHOLD) {
+          closeMediaViewer();
+        }
+      });
+      mediaViewerContent.addEventListener('touchcancel', resetMediaViewerDragState);
+    }
   }
 
   function initAuthTabs() {
@@ -3656,6 +3910,7 @@
     npcHidePollPanel();
     npcUpdateCharCounter();
     npcUpdateSubmitButton();
+    npcUpdateMediaButtonState();
     npcHideScheduleBadge();
     const dropdown = document.getElementById('npc-mention-dropdown');
     if (dropdown) dropdown.hidden = true;
@@ -3812,9 +4067,16 @@
 
   function npcUpdateMediaButtonState() {
     const btn = document.getElementById('npc-media-btn');
+    const input = document.getElementById('new-post-images');
     if (!btn) return;
-    const total = npcState.images.length + (npcState.videoFile ? 1 : 0);
-    btn.disabled = total >= NPC_MAX_IMAGES;
+    const hasImages = npcState.images.length > 0;
+    const hasVideo = Boolean(npcState.videoFile);
+    if (input) {
+      input.accept = hasVideo ? 'video/*' : (hasImages ? 'image/*' : 'image/*,video/*');
+    }
+    btn.disabled = hasVideo || npcState.images.length >= NPC_MAX_IMAGES;
+    btn.title = hasVideo ? 'Remove the current video before adding photos.' : (hasImages ? 'Add more photos' : 'Add photo or video');
+    btn.setAttribute('aria-label', hasVideo ? 'Photo or video picker disabled while a video is attached' : (hasImages ? 'Add more photos' : 'Add photo or video'));
   }
 
   function npcHidePollPanel() {
@@ -4361,22 +4623,49 @@
     const mediaInput = document.getElementById('new-post-images');
     if (mediaBtn && mediaInput) {
       mediaBtn.addEventListener('click', function () {
+        if (mediaBtn.disabled) {
+          return;
+        }
         mediaInput.value = '';
         mediaInput.click();
       });
       mediaInput.addEventListener('change', function () {
         const files = Array.from(mediaInput.files || []);
-        files.forEach(function (file) {
-          if (file.type.startsWith('video/')) {
-            if (!npcState.videoFile) {
-              npcState.videoFile = file;
-            }
-          } else if (file.type.startsWith('image/')) {
-            if (npcState.images.length < NPC_MAX_IMAGES) {
-              npcState.images.push(file);
-            }
-          }
+        const selectedImages = files.filter(function (file) {
+          return file.type.startsWith('image/');
         });
+        const selectedVideos = files.filter(function (file) {
+          return file.type.startsWith('video/');
+        });
+        if (selectedImages.length && selectedVideos.length) {
+          setNewPostStatus('Choose photos or one video for a post, not both together.', 'error');
+          npcUpdateMediaButtonState();
+          return;
+        }
+        if (selectedVideos.length) {
+          if (npcState.images.length) {
+            setNewPostStatus('Remove the selected photos before adding a video.', 'error');
+            npcUpdateMediaButtonState();
+            return;
+          }
+          npcState.videoFile = selectedVideos[0];
+          setNewPostStatus(selectedVideos.length > 1 ? 'Only the first selected video was added.' : '', selectedVideos.length > 1 ? 'error' : '');
+        } else if (selectedImages.length) {
+          if (npcState.videoFile) {
+            setNewPostStatus('Remove the selected video before adding photos.', 'error');
+            npcUpdateMediaButtonState();
+            return;
+          }
+          const openSlots = Math.max(0, NPC_MAX_IMAGES - npcState.images.length);
+          selectedImages.slice(0, openSlots).forEach(function (file) {
+            npcState.images.push(file);
+          });
+          if (selectedImages.length > openSlots) {
+            setNewPostStatus('You can attach up to ' + NPC_MAX_IMAGES + ' photos per post.', 'error');
+          } else {
+            setNewPostStatus('');
+          }
+        }
         npcRenderMediaPreview();
         npcUpdateSubmitButton();
         npcUpdateMediaButtonState();
