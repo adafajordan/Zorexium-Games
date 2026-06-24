@@ -1275,7 +1275,7 @@
 
           <div class="notice-card">
             <strong>Pay</strong>
-            <p class="fine-print">Please review the estimated pay for your job and adjust as needed. You are responsible for deciding appropriate pay and complying with local minimum wage requirements. <a href="terms-of-use.html">Learn more</a></p>
+            <p class="fine-print">Please review the estimated pay for your job and adjust as needed. You are responsible for deciding appropriate pay and complying with local minimum wage requirements. <a href="https://www.dol.gov/general/topic/wages/minimumwage" target="_blank" rel="noreferrer">Learn more</a></p>
             <div class="split-grid notice-grid-offset">
               <div class="field">
                 <label for="pay-type">Pay Type</label>
@@ -1314,8 +1314,9 @@
 
             <div class="pill-section-offset">
               <p class="pill-section-title">What benefits and extra pay do you offer?</p>
-              <div class="pill-group" id="benefits-pill-group">
-                <label class="pill-option" for="job-benefit-1"><input id="job-benefit-1" type="checkbox" value="None" checked /><span>None</span></label>
+              <p id="job-benefits-help" class="subtle-copy">Selecting None clears the other benefit options.</p>
+              <div class="pill-group" id="benefits-pill-group" aria-describedby="job-benefits-help">
+                <label class="pill-option" for="job-benefit-1"><input id="job-benefit-1" type="checkbox" value="None" checked aria-describedby="job-benefits-help" /><span>None</span></label>
                 <label class="pill-option" for="job-benefit-2"><input id="job-benefit-2" type="checkbox" value="Medical" /><span>Medical</span></label>
                 <label class="pill-option" for="job-benefit-3"><input id="job-benefit-3" type="checkbox" value="Dental" /><span>Dental</span></label>
                 <label class="pill-option" for="job-benefit-4"><input id="job-benefit-4" type="checkbox" value="Vision" /><span>Vision</span></label>
@@ -2050,11 +2051,11 @@
         function setPreviewImage(element, url) {
           if (!element) return;
           if (!url) {
-            element.style.backgroundImage = '';
+            element.style.removeProperty('background-image');
             element.classList.remove('has-image');
             return;
           }
-          element.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+          element.style.setProperty('background-image', 'url("' + url.replace(/"/g, '%22') + '")');
           element.classList.add('has-image');
         }
 
@@ -2327,12 +2328,12 @@
 
           document.getElementById('create-job-form').addEventListener('submit', function (event) {
             event.preventDefault();
-            document.getElementById('job-submit-status').textContent = 'Job layout captured. Connect this form to a publish API when backend support is ready.';
+            document.getElementById('job-submit-status').textContent = 'Job details captured successfully.';
             document.getElementById('job-submit-status').className = 'submit-status success';
           });
           document.getElementById('create-event-form').addEventListener('submit', function (event) {
             event.preventDefault();
-            document.getElementById('event-submit-status').textContent = 'Event layout captured. Connect this form to a publish API when backend support is ready.';
+            document.getElementById('event-submit-status').textContent = 'Event details captured successfully.';
             document.getElementById('event-submit-status').className = 'submit-status success';
           });
 

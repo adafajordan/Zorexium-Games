@@ -62,7 +62,6 @@
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
   const stickyFooterMarketplaceButton = document.getElementById('sticky-footer-marketplace');
   const JOBS_EVENTS_NAV_LABEL = 'Jobs and Events';
-  const JOBS_EVENTS_NAV_ICON = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>';
   const dashboardRoot = document.getElementById('account-dashboard-root');
   const profileBanner = document.getElementById('profile-banner');
   const profileAvatar = document.getElementById('profile-avatar');
@@ -123,10 +122,34 @@
     saved: [],
     marketplace: []
   };
+  function buildJobsEventsNavIcon() {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('viewBox', '0 0 24 24');
+
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('x', '3');
+    rect.setAttribute('y', '4');
+    rect.setAttribute('width', '18');
+    rect.setAttribute('height', '17');
+    rect.setAttribute('rx', '2');
+    svg.appendChild(rect);
+
+    ['M8 2v4M16 2v4M3 10h18', 'M8 14h3M13 14h3M8 18h5'].forEach(function (value) {
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', value);
+      svg.appendChild(path);
+    });
+
+    return svg;
+  }
+
   if (stickyFooterMarketplaceButton) {
     stickyFooterMarketplaceButton.setAttribute('aria-label', JOBS_EVENTS_NAV_LABEL);
     stickyFooterMarketplaceButton.setAttribute('title', JOBS_EVENTS_NAV_LABEL);
-    stickyFooterMarketplaceButton.innerHTML = JOBS_EVENTS_NAV_ICON;
+    stickyFooterMarketplaceButton.replaceChildren(buildJobsEventsNavIcon());
   }
 
   let mediaViewerState = {
