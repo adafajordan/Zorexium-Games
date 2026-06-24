@@ -460,6 +460,22 @@
         flex-direction: column;
         gap: 6px;
       }
+      .field-offset { margin-top: 12px; }
+      .notice-grid-offset { margin-top: 12px; }
+      .pill-section-offset { margin-top: 14px; }
+      .media-placeholder-copy {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 18px;
+      }
+      .event-cover-description { color: rgba(255, 255, 255, 0.82); margin-top: 6px; }
+      .sheet-offset { margin-top: 14px; }
+      .toggle-copy { flex: 1; }
+      .cohost-label-copy { display: inline-flex; flex-direction: column; gap: 2px; }
       .field label,
       .inline-label,
       .toggle-label {
@@ -1244,7 +1260,7 @@
                 </div>
               </div>
             </div>
-            <div class="field" style="margin-top:12px;">
+            <div class="field field-offset">
               <label for="job-category">Job category</label>
               <input id="job-category" class="form-control" type="text" placeholder="Job category" list="job-category-options" />
               <datalist id="job-category-options">
@@ -1259,8 +1275,8 @@
 
           <div class="notice-card">
             <strong>Pay</strong>
-            <p class="fine-print">Please review the estimated pay for your job and adjust as needed. You are responsible for deciding appropriate pay and complying with local minimum wage requirements. Learn more</p>
-            <div class="split-grid" style="margin-top:12px;">
+            <p class="fine-print">Please review the estimated pay for your job and adjust as needed. You are responsible for deciding appropriate pay and complying with local minimum wage requirements. <a href="terms-of-use.html">Learn more</a></p>
+            <div class="split-grid notice-grid-offset">
               <div class="field">
                 <label for="pay-type">Pay Type</label>
                 <select id="pay-type" class="form-select">
@@ -1288,7 +1304,7 @@
             <input id="job-cover-upload" type="file" accept="image/*" hidden />
             <button id="job-cover-trigger" type="button" class="job-media-card">
               <div id="job-cover-preview" class="media-preview-thumb">
-                <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;">
+                <div class="media-placeholder-copy">
                   <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/><path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10"/></svg>
                   <strong>Optional cover photo</strong>
                   <span class="subtle-copy">Add a square photo to make your listing stand out.</span>
@@ -1296,22 +1312,22 @@
               </div>
             </button>
 
-            <div style="margin-top:14px;">
+            <div class="pill-section-offset">
               <p class="pill-section-title">What benefits and extra pay do you offer?</p>
               <div class="pill-group" id="benefits-pill-group">
-                <label class="pill-option"><input type="checkbox" value="None" checked /><span>None</span></label>
-                <label class="pill-option"><input type="checkbox" value="Medical" /><span>Medical</span></label>
-                <label class="pill-option"><input type="checkbox" value="Dental" /><span>Dental</span></label>
-                <label class="pill-option"><input type="checkbox" value="Vision" /><span>Vision</span></label>
-                <label class="pill-option"><input type="checkbox" value="401K" /><span>401K</span></label>
-                <label class="pill-option"><input type="checkbox" value="Overtime" /><span>Overtime</span></label>
-                <label class="pill-option"><input type="checkbox" value="Tips" /><span>Tips</span></label>
+                <label class="pill-option" for="job-benefit-1"><input id="job-benefit-1" type="checkbox" value="None" checked /><span>None</span></label>
+                <label class="pill-option" for="job-benefit-2"><input id="job-benefit-2" type="checkbox" value="Medical" /><span>Medical</span></label>
+                <label class="pill-option" for="job-benefit-3"><input id="job-benefit-3" type="checkbox" value="Dental" /><span>Dental</span></label>
+                <label class="pill-option" for="job-benefit-4"><input id="job-benefit-4" type="checkbox" value="Vision" /><span>Vision</span></label>
+                <label class="pill-option" for="job-benefit-5"><input id="job-benefit-5" type="checkbox" value="401K" /><span>401K</span></label>
+                <label class="pill-option" for="job-benefit-6"><input id="job-benefit-6" type="checkbox" value="Overtime" /><span>Overtime</span></label>
+                <label class="pill-option" for="job-benefit-7"><input id="job-benefit-7" type="checkbox" value="Tips" /><span>Tips</span></label>
               </div>
             </div>
           </div>
 
           <div class="submit-panel">
-            <p class="fine-print">By tapping Accept and publish, you agree to the Facebook Marketplace Job Posting Terms.</p>
+            <p class="fine-print">By tapping Accept and publish, you agree to the <a href="terms-of-use.html">Facebook Marketplace Job Posting Terms</a>.</p>
             <button class="primary-btn" type="submit">Accept and publish</button>
             <p class="fine-print">Listings are public across Meta-style surfaces, intended for adult audiences, and may be reviewed for policy compliance before or after publication.</p>
             <p id="job-submit-status" class="submit-status" aria-live="polite"></p>
@@ -1334,7 +1350,7 @@
           <div id="event-cover-preview" class="event-cover-preview">
             <div class="event-cover-copy">
               <strong>Cover preview</strong>
-              <p class="create-view-copy" style="color:rgba(255,255,255,0.82);margin-top:6px;">Add a banner, GIF, or gallery image to anchor the event visually.</p>
+              <p class="create-view-copy event-cover-description">Add a banner, GIF, or gallery image to anchor the event visually.</p>
             </div>
             <div class="event-cover-toolbar">
               <button id="event-gif-btn" class="toolbar-action" type="button">GIF</button>
@@ -1508,13 +1524,13 @@
           <button id="logistics-tab-person" class="sheet-tab active" type="button">In Person</button>
           <button id="logistics-tab-virtual" class="sheet-tab" type="button">Virtual</button>
         </div>
-        <div id="logistics-person-panel" class="sheet-form-stack" style="margin-top:14px;">
+        <div id="logistics-person-panel" class="sheet-form-stack sheet-offset">
           <div class="field">
             <label for="event-in-person-location">Enter location</label>
             <input id="event-in-person-location" class="form-control" type="text" placeholder="Enter location" />
           </div>
         </div>
-        <div id="logistics-virtual-panel" class="sheet-form-stack" hidden style="margin-top:14px;">
+        <div id="logistics-virtual-panel" class="sheet-form-stack sheet-offset" hidden>
           <div class="radio-list">
             <div class="radio-row"><input id="virtual-facebook-live" name="virtual-type" type="radio" value="Facebook Live" checked /><label for="virtual-facebook-live">Facebook Live</label></div>
             <div class="radio-row"><input id="virtual-external-link" name="virtual-type" type="radio" value="External link" /><label for="virtual-external-link">External link</label></div>
@@ -1541,7 +1557,7 @@
           <label for="cohost-search">Search for people</label>
           <input id="cohost-search" class="form-control" type="search" placeholder="Search for people" />
         </div>
-        <div id="cohost-list" class="person-list" style="margin-top:14px;"></div>
+        <div id="cohost-list" class="person-list sheet-offset"></div>
         <div class="modal-actions">
           <button class="modal-cancel-btn" type="button" data-close-modal="cohosts-modal">Cancel</button>
           <button id="cohosts-modal-save" class="modal-save-btn" type="button">Save co-hosts</button>
@@ -1556,19 +1572,19 @@
         <p class="sheet-copy">Manage posting and moderation defaults for the event page.</p>
         <div class="toggle-list">
           <div class="toggle-row">
-            <div style="flex:1;">
+            <div class="toggle-copy">
               <div class="toggle-label">Only hosts can post</div>
             </div>
             <label class="switch"><input id="setting-hosts-post" type="checkbox" /><span class="switch-slider"></span></label>
           </div>
           <div class="toggle-row">
-            <div style="flex:1;">
+            <div class="toggle-copy">
               <div class="toggle-label">Posts must be approved by a host</div>
             </div>
             <label class="switch"><input id="setting-host-approval" type="checkbox" /><span class="switch-slider"></span></label>
           </div>
           <div class="toggle-row">
-            <div style="flex:1;">
+            <div class="toggle-copy">
               <div class="toggle-label">Posts and comments detected as potential spam</div>
             </div>
             <label class="switch"><input id="setting-spam-moderation" type="checkbox" checked /><span class="switch-slider"></span></label>
@@ -1973,13 +1989,13 @@
             });
             var label = document.createElement('label');
             label.htmlFor = checkbox.id;
+            label.className = 'cohost-label-copy';
             var strong = document.createElement('strong');
             strong.textContent = person.name;
             var handle = document.createElement('span');
             handle.className = 'row-summary';
             handle.textContent = '@' + person.username;
             label.appendChild(strong);
-            label.appendChild(document.createElement('br'));
             label.appendChild(handle);
             row.appendChild(avatar);
             row.appendChild(checkbox);
