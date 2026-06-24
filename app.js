@@ -18,7 +18,6 @@
   const MAX_MEDIA_SCALE = 4;
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
-  const FEED_TALL_IMAGE_RATIO = 1.9;
   const MEDIA_VIEWER_GESTURE_DEADZONE = 14;
   const MEDIA_VIEWER_SWIPE_THRESHOLD = 70;
   const MEDIA_VIEWER_DISMISS_THRESHOLD = 110;
@@ -129,6 +128,9 @@
     src: '',
     label: ''
   };
+  let mediaViewerReturnState = null;
+  let mediaViewerGalleryCounter = 0;
+  const mediaViewerGalleryMap = new Map();
   let mediaViewerGestureState = {
     active: false,
     startX: 0,
@@ -825,6 +827,20 @@
 
   function attachPostInteractionHandlers() {
     document.addEventListener('click', async function (event) {
+      const mediaTrigger = event.target.closest('.post-media-button');
+      if (mediaTrigger) {
+        const mediaGrid = mediaTrigger.closest('.post-media-grid');
+        const galleryId = mediaGrid ? mediaGrid.getAttribute('data-media-viewer-gallery') : '';
+        const mediaItems = galleryId ? mediaViewerGalleryMap.get(galleryId) : null;
+        if (Array.isArray(mediaItems) && mediaItems.length) {
+          const mediaIndex = Number(mediaTrigger.getAttribute('data-media-viewer-index') || '0');
+          event.preventDefault();
+          event.stopPropagation();
+          openMediaViewer(mediaItems, mediaIndex);
+          return;
+        }
+      }
+
       const pollButton = event.target.closest && event.target.closest('.post-poll-option');
       if (pollButton) {
         const article = pollButton.closest('[data-post-id]');
@@ -952,7 +968,8 @@
         closeBtn.addEventListener('click', closePostDetailModal);
       }
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && detailModal.classList.contains('open')) {
+        const isMediaViewerClosed = !mediaViewerModal || !mediaViewerModal.classList.contains('open');
+        if (event.key === 'Escape' && detailModal.classList.contains('open') && isMediaViewerClosed) {
           closePostDetailModal();
         }
       });
@@ -2119,6 +2136,11 @@
     mediaViewerState.type = item.type;
     mediaViewerState.src = item.src;
     mediaViewerState.label = item.label || 'Media viewer';
+    if (!isSafeMediaUrl(mediaViewerState.src)) {
+      closeMediaViewer();
+      setInterfaceStatus('This media could not be opened safely.', 'error');
+      return;
+    }
 
     const shell = document.createElement('div');
     shell.className = 'media-viewer-media-shell';
@@ -2178,6 +2200,18 @@
     };
   }
 
+  function canRestoreFocus(element) {
+    return !!(element && document.contains(element) && typeof element.focus === 'function');
+  }
+
+  function registerMediaViewerGallery(items) {
+    mediaViewerGalleryCounter += 1;
+    const galleryId = `media-gallery-${mediaViewerGalleryCounter}`;
+    // Fallback protects against unexpected callers while keeping registration resilient.
+    mediaViewerGalleryMap.set(galleryId, Array.isArray(items) ? items.slice() : []);
+    return galleryId;
+  }
+
   function closeMediaViewer() {
     if (!mediaViewerModal || !mediaViewerContent) return;
     const video = mediaViewerContent.querySelector('video');
@@ -2189,9 +2223,8 @@
     mediaViewerModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('media-viewer-open');
     resetMediaViewerDragState();
-    if (mediaViewerPagination) {
-      mediaViewerPagination.innerHTML = '';
-    }
+    const restoreState = mediaViewerReturnState;
+    mediaViewerReturnState = null;
     mediaViewerState = {
       scale: 1,
       items: [],
@@ -2200,6 +2233,22 @@
       src: '',
       label: ''
     };
+    if (restoreState) {
+      const detailModal = document.getElementById('post-detail-modal');
+      if (restoreState.detailWasOpen && detailModal && detailModal.classList.contains('open')) {
+        detailModal.scrollTop = restoreState.detailScrollTop;
+      } else {
+        window.scrollTo(restoreState.windowScrollX, restoreState.windowScrollY);
+      }
+      if (canRestoreFocus(restoreState.activeElement)) {
+        try {
+          restoreState.activeElement.focus({ preventScroll: true });
+        } catch (error) {
+          // Some older browsers do not support focus options.
+          restoreState.activeElement.focus();
+        }
+      }
+    }
   }
 
   async function requestElementFullscreen(element) {
@@ -2242,6 +2291,14 @@
       type: null,
       src: '',
       label: ''
+    };
+    const detailModal = document.getElementById('post-detail-modal');
+    mediaViewerReturnState = {
+      windowScrollX: window.scrollX || 0,
+      windowScrollY: window.scrollY || 0,
+      detailWasOpen: !!(detailModal && detailModal.classList.contains('open')),
+      detailScrollTop: detailModal ? detailModal.scrollTop : 0,
+      activeElement: canRestoreFocus(document.activeElement) ? document.activeElement : null
     };
     mediaViewerModal.classList.add('open');
     mediaViewerModal.setAttribute('aria-hidden', 'false');
@@ -2936,26 +2993,24 @@
     const altBase = post.text ? post.text.trim().replace(/\s+/g, ' ').split(' ').slice(0, 12).join(' ') : 'User upload';
 
     if (hasGifUrl(post) && isSafeMediaUrl(post.gifUrl)) {
+      const gifItems = [{ type: 'image', src: post.gifUrl, label: altBase + ' (GIF)' }];
       const gifGrid = document.createElement('div');
       gifGrid.className = 'post-media-grid g1 single';
+      gifGrid.setAttribute('data-media-viewer-gallery', registerMediaViewerGallery(gifItems));
 
       const gifItem = document.createElement('div');
       gifItem.className = 'post-media-item';
 
       const gifImage = document.createElement('img');
       gifImage.src = post.gifUrl;
-      gifImage.alt = altBase + ' (GIF)';
+      gifImage.alt = gifItems[0].label;
       gifImage.loading = 'lazy';
 
       const gifTrigger = document.createElement('button');
       gifTrigger.className = 'post-media-button';
       gifTrigger.type = 'button';
       gifTrigger.setAttribute('aria-label', 'Open ' + gifImage.alt + ' in fullscreen viewer');
-      gifTrigger.addEventListener('click', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        openMediaViewer([{ type: 'image', src: post.gifUrl, label: gifImage.alt }], 0);
-      });
+      gifTrigger.setAttribute('data-media-viewer-index', '0');
 
       gifTrigger.appendChild(gifImage);
       gifItem.appendChild(gifTrigger);
@@ -2985,6 +3040,7 @@
         const layoutCount = visibleMediaItems.length;
         const grid = document.createElement('div');
         grid.className = 'post-media-grid g' + layoutCount + (layoutCount === 1 ? ' single' : '');
+        grid.setAttribute('data-media-viewer-gallery', registerMediaViewerGallery(mediaItems));
 
         visibleMediaItems.forEach(function (mediaItem, index) {
           const item = document.createElement('div');
@@ -3000,30 +3056,7 @@
           trigger.className = 'post-media-button';
           trigger.type = 'button';
           trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
-          trigger.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            openMediaViewer(mediaItems, index);
-          });
-
-          if (layoutCount === 1) {
-            const tallIndicator = document.createElement('span');
-            tallIndicator.className = 'post-media-tall-indicator';
-            tallIndicator.textContent = 'Show full image';
-            tallIndicator.hidden = true;
-            const applySingleImageLayout = function () {
-              if (!image.naturalWidth || !image.naturalHeight) return;
-              const isTall = image.naturalHeight / image.naturalWidth >= FEED_TALL_IMAGE_RATIO;
-              item.classList.toggle('is-tall', isTall);
-              tallIndicator.hidden = !isTall;
-            };
-            if (image.complete) {
-              applySingleImageLayout();
-            } else {
-              image.addEventListener('load', applySingleImageLayout, { once: true });
-            }
-            trigger.appendChild(tallIndicator);
-          }
+          trigger.setAttribute('data-media-viewer-index', String(index));
 
           trigger.appendChild(image);
           item.appendChild(trigger);
@@ -3082,6 +3115,7 @@
   async function renderSavedPosts() {
     if (!postFeed) return;
     clearGeneratedMediaUrls();
+    mediaViewerGalleryMap.clear();
     postFeed.querySelectorAll('[data-user-generated="true"]').forEach(function (node) {
       node.remove();
     });
