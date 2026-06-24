@@ -2096,8 +2096,9 @@
     if (!mediaElement || mediaViewerState.type !== 'image') {
       return;
     }
-    // Width-based scaling keeps the image inside the stage's scrollable layout box,
-    // which lets touch/trackpad users pan around zoomed images without extra drag math.
+    // Width-based scaling replaces the old transform-only zoom because transformed
+    // images do not expand the scroll box, which prevented touch/trackpad panning.
+    // Keeping the zoomed image in normal layout flow makes overflow scrolling work.
     mediaElement.style.width = nextScale > 1 ? (nextScale * 100) + '%' : '';
     mediaElement.style.maxWidth = nextScale > 1 ? 'none' : '100%';
     mediaElement.style.maxHeight = nextScale > 1 ? 'none' : '';
@@ -4078,7 +4079,12 @@
       input.accept = hasVideo ? 'video/*' : (hasImages ? 'image/*' : 'image/*,video/*');
     }
     btn.disabled = hasVideo || npcState.images.length >= NPC_MAX_IMAGES;
-    const mediaButtonLabel = hasVideo ? 'Remove the current video before adding pictures.' : (hasImages ? 'Add more pictures' : 'Add picture or video');
+    let mediaButtonLabel = 'Add picture or video';
+    if (hasVideo) {
+      mediaButtonLabel = 'Remove the current video before adding pictures.';
+    } else if (hasImages) {
+      mediaButtonLabel = 'Add more pictures';
+    }
     btn.title = mediaButtonLabel;
     btn.setAttribute('aria-label', mediaButtonLabel);
   }
