@@ -1965,21 +1965,40 @@
           return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
+        function storeCoverMediaRecord(database, dataUrl) {
+          return new Promise(function (resolve) {
+            if (!database || !dataUrl || !/^data:image\//i.test(dataUrl)) { resolve(null); return; }
+            try {
+              var mimeMatch = dataUrl.match(/^data:(image\/[^;]+)/);
+              var mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+              var base64 = dataUrl.replace(/^data:[^,]+,/, '');
+              var binary = atob(base64);
+              var bytes = new Uint8Array(binary.length);
+              for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+              var mediaId = generateListingId('media');
+              var record = { id: mediaId, data: bytes.buffer, type: mimeType, name: '', size: bytes.length, createdAt: Date.now() };
+              putRecord(database, MEDIA_STORE, record).then(function () { resolve(mediaId); }).catch(function () { resolve(null); });
+            } catch (err) { resolve(null); }
+          });
+        }
+
         function publishToMainFeed(database, postText, coverDataUrl, userId) {
           return new Promise(function (resolve) {
             if (!database || !userId) { resolve(); return; }
-            var postRecord = {
-              id: generateListingId('post'),
-              userId: userId,
-              text: postText,
-              imageMediaIds: [],
-              videoMediaId: null,
-              gifUrl: coverDataUrl || '',
-              poll: null,
-              scheduledAt: null,
-              createdAt: Date.now()
-            };
-            putRecord(database, POSTS_STORE, postRecord).then(resolve).catch(resolve);
+            storeCoverMediaRecord(database, coverDataUrl).then(function (mediaId) {
+              var postRecord = {
+                id: generateListingId('post'),
+                userId: userId,
+                text: postText,
+                imageMediaIds: mediaId ? [mediaId] : [],
+                videoMediaId: null,
+                gifUrl: '',
+                poll: null,
+                scheduledAt: null,
+                createdAt: Date.now()
+              };
+              putRecord(database, POSTS_STORE, postRecord).then(resolve).catch(resolve);
+            });
           });
         }
 
@@ -2506,7 +2525,11 @@
                 : 'Virtual',
               coverDataUrl: (function () {
                 var el = document.getElementById('event-cover-preview');
-                return el ? (el.style.backgroundImage.replace(/^url\(["']?/, '').replace(/["']?\)$/, '') || '') : '';
+                if (!el) return '';
+                var img = el.querySelector('img');
+                if (img && img.src) return img.src;
+                var bg = el.style.backgroundImage || '';
+                return bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '') || '';
               }())
             };
             var postText = '📅 New Event: ' + eventData.title +
