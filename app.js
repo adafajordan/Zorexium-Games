@@ -1788,7 +1788,8 @@
         database.close();
       }
     } catch (error) {
-      // Ignore close failures and force a new connection on the next DB operation.
+      // Ignore close failures (already-closed connections or active transactions can
+      // throw here) and force a fresh connection on the next DB operation anyway.
     }
     appDbPromise = null;
   }
@@ -1797,8 +1798,8 @@
     if (!(file instanceof Blob)) {
       throw new Error('The selected media file is invalid.');
     }
-    const normalizedType = String(file.type || '').trim() || 'application/octet-stream';
-    return file.slice(0, file.size, normalizedType);
+    const normalizedType = String(file.type || '').trim();
+    return normalizedType ? file.slice(0, file.size, normalizedType) : file.slice(0, file.size);
   }
 
   async function putMediaFile(file) {
