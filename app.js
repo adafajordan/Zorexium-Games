@@ -3800,6 +3800,7 @@
           goToMediaViewerIndex(mediaViewerState.index + (deltaX < 0 ? 1 : -1));
           return;
         }
+        // Only downward swipe should dismiss on mobile to match fullscreen image UX.
         if (axis === 'y' && deltaY >= MEDIA_VIEWER_DISMISS_THRESHOLD) {
           closeMediaViewer();
         }

@@ -1299,10 +1299,14 @@
         border: 1px solid rgba(255, 255, 255, 0.22);
         background: rgba(17, 17, 17, 0.66);
         color: #fff;
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+      }
+      .media-viewer-close:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
       }
       .media-viewer-close svg {
         width: 20px;
