@@ -1768,9 +1768,9 @@
       const fallbackDataUrl = await blobToDataUrl(blob);
       if (isSafeMediaUrl(fallbackDataUrl)) return { url: fallbackDataUrl, isObjectUrl: false };
     }
-    const legacyDataUrl = String(record && record.dataUrl || '').trim();
+    const legacyDataUrl = String((record && record.dataUrl) || '').trim();
     if (isSafeMediaUrl(legacyDataUrl)) return { url: legacyDataUrl, isObjectUrl: false };
-    const legacyUrl = String(record && record.url || '').trim();
+    const legacyUrl = String((record && record.url) || '').trim();
     if (isSafeMediaUrl(legacyUrl)) return { url: legacyUrl, isObjectUrl: false };
     return null;
   }
