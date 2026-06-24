@@ -47,6 +47,9 @@
         color: var(--text);
         padding-bottom: var(--sticky-footer-height);
       }
+      body.media-viewer-open {
+        overflow: hidden;
+      }
 
       /* ── Sidebar ─────────────────────────────── */
       .sidebar-overlay {
@@ -599,14 +602,10 @@
           width: 100%;
         }
         .media-viewer-modal {
-          padding: 12px;
+          padding: 0;
         }
         .media-viewer-panel {
-          padding: 14px;
-        }
-        .media-viewer-header {
-          flex-direction: column;
-          align-items: stretch;
+          padding: 0;
         }
       }
       /* ── Post feed ───────────────────────────── */
@@ -690,19 +689,37 @@
       }
       .post-media-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
        width: min(100%, 560px);
+       border: 1px solid var(--border);
+       border-radius: 18px;
+       overflow: hidden;
+       background: #000;
+       gap: 2px;
+      }
+      .post-media-grid.g2,
+      .post-media-grid.g3,
+      .post-media-grid.g4 {
+       grid-template-columns: repeat(2, minmax(0, 1fr));
+       aspect-ratio: 16 / 9;
       }
       .post-media-grid.single {
-       grid-template-columns: 1fr;
-       width: min(100%, 420px);
+       display: block;
+      }
+      .post-media-grid.g3,
+      .post-media-grid.g4 {
+       grid-template-rows: repeat(2, minmax(0, 1fr));
+      }
+      .post-media-grid.g3 .post-media-item:first-child {
+       grid-row: 1 / 3;
+      }
+      .post-media-grid.g4 {
+       aspect-ratio: 1 / 1;
       }
       .post-media-item {
        min-width: 0;
-       border: 1px solid var(--border);
-       border-radius: 10px;
-       background: var(--surface-soft);
+       min-height: 0;
+       position: relative;
+       background: #000;
        overflow: hidden;
       }
       .post-media-button {
@@ -710,22 +727,55 @@
        display: block;
        border: none;
        padding: 0;
-       background: none;
+       background: #000;
        border-radius: 0;
+       cursor: pointer;
+       position: relative;
+       height: 100%;
       }
       .post-media-button:hover {
-       background: none;
+       background: #000;
        border: none;
       }
+      .post-media-image,
       .post-media-item img {
        width: 100%;
        display: block;
        background: #000;
        object-fit: cover;
-       height: clamp(var(--post-media-height-min), var(--post-media-height-ideal), var(--post-media-height-max));
+       height: 100%;
       }
+      .post-media-grid.single .post-media-image,
       .post-media-grid.single .post-media-item img {
-        height: clamp(var(--post-media-single-height-min), var(--post-media-single-height-ideal), var(--post-media-single-height-max));
+        height: auto;
+        max-height: min(540px, 72vh);
+        object-fit: contain;
+      }
+      .post-media-grid.single .post-media-item.is-tall {
+        height: min(520px, 72vh);
+      }
+      .post-media-grid.single .post-media-item.is-tall .post-media-button {
+        height: 100%;
+      }
+      .post-media-grid.single .post-media-item.is-tall .post-media-image {
+        height: 100%;
+        max-height: none;
+        object-fit: cover;
+        object-position: center top;
+      }
+      .post-media-tall-indicator {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        z-index: 1;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.72);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        pointer-events: none;
       }
       .post-video-shell {
         width: min(100%, 560px);
@@ -1224,8 +1274,8 @@
         position: fixed;
         inset: 0;
         z-index: 320;
-        background: rgba(0, 0, 0, 0.92);
-        padding: 20px;
+        background: #000;
+        padding: 0;
         align-items: center;
         justify-content: center;
       }
@@ -1233,27 +1283,34 @@
         display: flex;
       }
       .media-viewer-panel {
-        width: min(1100px, 100%);
-        max-height: 100%;
+        width: 100%;
+        height: 100%;
         background: #000;
-        border: 1px solid var(--border-strong);
-        border-radius: 16px;
-        padding: 18px;
+        border: none;
+        border-radius: 0;
+        padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 14px;
         overflow: hidden;
+        position: relative;
       }
       .media-viewer-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3;
+        padding: 18px 20px 0;
       }
       .media-viewer-title {
         margin: 0;
         font-size: 15px;
-        color: var(--text);
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
       }
       .media-viewer-actions {
         display: flex;
@@ -1264,23 +1321,97 @@
       .media-viewer-action {
         padding: 8px 12px;
         font-size: 12px;
+        background: rgba(17, 17, 17, 0.74);
+        border-color: rgba(255, 255, 255, 0.14);
+        color: #fff;
+      }
+      .media-viewer-action:hover {
+        background: rgba(32, 32, 32, 0.88);
+      }
+      .media-viewer-stage-shell {
+        flex: 1;
+        position: relative;
+        min-height: 0;
       }
       .media-viewer-stage {
-        min-height: 0;
+        min-height: 100%;
         overflow: auto;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 6px;
         background: #000;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y pinch-zoom;
+      }
+      .media-viewer-media-shell {
+        min-width: 100%;
+        min-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 72px 20px 92px;
+        transition: transform 0.18s ease, opacity 0.18s ease;
       }
       .media-viewer-media {
         max-width: 100%;
-        max-height: min(78vh, 820px);
+        max-height: min(88vh, 960px);
         object-fit: contain;
-        transition: transform 0.18s ease;
         background: #000;
-        border-radius: 12px;
+        border-radius: 0;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+      .media-viewer-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        width: 46px;
+        height: 46px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(17, 17, 17, 0.72);
+        color: #fff;
+        font-size: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .media-viewer-nav:hover:not(:disabled) {
+        background: rgba(32, 32, 32, 0.88);
+      }
+      .media-viewer-nav:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      .media-viewer-nav.prev {
+        left: 16px;
+      }
+      .media-viewer-nav.next {
+        right: 16px;
+      }
+      .media-viewer-pagination {
+        position: absolute;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .media-viewer-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        border: none;
+        padding: 0;
+        background: rgba(255, 255, 255, 0.36);
+        cursor: pointer;
+      }
+      .media-viewer-dot.active {
+        background: #fff;
       }
       .post-actions {
         display: flex;
@@ -2311,7 +2442,7 @@
             <input id="new-post-poll-option-2" type="hidden" />
             <input id="new-post-schedule" type="hidden" />
 
-            <button type="button" class="npc-tool-btn" id="npc-media-btn" title="Add photo or video" aria-label="Add photo or video">
+            <button type="button" class="npc-tool-btn" id="npc-media-btn" title="Add image or video" aria-label="Add image or video">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </button>
             <button type="button" class="npc-tool-btn" id="npc-gif-btn" title="Add GIF" aria-label="Add GIF">
@@ -2349,7 +2480,12 @@
             <button id="media-viewer-close" class="media-viewer-action" type="button">Close</button>
           </div>
         </div>
-        <div id="media-viewer-content" class="media-viewer-stage"></div>
+        <div class="media-viewer-stage-shell">
+          <button id="media-viewer-prev" class="media-viewer-nav prev" type="button" aria-label="Show previous image">&#10094;</button>
+          <div id="media-viewer-content" class="media-viewer-stage"></div>
+          <button id="media-viewer-next" class="media-viewer-nav next" type="button" aria-label="Show next image">&#10095;</button>
+        </div>
+        <div id="media-viewer-pagination" class="media-viewer-pagination" aria-label="Media gallery pagination"></div>
       </div>
     </div>
 
