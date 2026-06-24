@@ -304,6 +304,7 @@
         display: none;
         position: fixed;
         inset: 0;
+        height: 100dvh;
         z-index: 400;
         background: #fff;
         flex-direction: column;
@@ -321,7 +322,12 @@
       }
       .editor-topbar-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-soft); }
       .editor-autosave-badge { font-size: 11px; color: var(--text-soft); padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; }
-      .editor-scroll { flex: 1; overflow-y: auto; }
+      .editor-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: max(14px, env(safe-area-inset-bottom));
+      }
       .editor-inner { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
 
       /* Cover image slot */
@@ -397,6 +403,9 @@
         top: 0;
         background: #fff;
         z-index: 5;
+      }
+      .editor-overlay.keyboard-open .editor-toolbar {
+        box-shadow: 0 1px 0 var(--border), 0 4px 12px rgba(0,0,0,.04);
       }
       .toolbar-btn {
         width: 32px;
@@ -496,6 +505,18 @@
         position: relative;
       }
       .reader-topbar-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .reader-nav-btn {
+        border: none;
+        background: none;
+        color: var(--text);
+        padding: 6px 0;
+        font-size: 15px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .reader-nav-btn:hover { color: var(--accent); }
 
       /* More options menu */
       .reader-more-wrap { position: relative; flex-shrink: 0; }
@@ -542,17 +563,19 @@
       .reader-more-action:hover { background: var(--surface-soft); }
 
       /* Scrollable reader content */
-      .reader-scroll { flex: 1; overflow-y: auto; }
+      .reader-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
       .reader-inner { max-width: 720px; margin: 0 auto; padding: 28px 20px 80px; }
+      .reader-overlay.has-cover .reader-inner { padding-top: 0; }
+      .reader-overlay.no-cover .reader-inner { padding-top: 14px; }
 
       /* Hero cover image */
       .reader-cover {
         width: 100%;
         aspect-ratio: 5 / 2;
         object-fit: cover;
-        border-radius: 10px;
+        border-radius: 0;
         display: block;
-        margin-bottom: 24px;
+        margin: 0 calc(-50vw + 50%) 24px;
       }
 
       /* Large title */
@@ -991,7 +1014,7 @@
 
       <!-- Top navigation bar -->
       <div class="reader-topbar">
-        <button class="btn btn-sm" id="reader-close-btn" type="button" aria-label="Close reader">&#8592; Back</button>
+        <button class="reader-nav-btn" id="reader-close-btn" type="button" aria-label="Close reader">&#8592; Back</button>
         <span class="reader-topbar-title" id="reader-topbar-title">Article</span>
         <div class="reader-more-wrap" id="reader-more-wrap">
           <button class="reader-more-btn" id="reader-more-btn" type="button" aria-label="More options" title="More options">
@@ -1025,7 +1048,7 @@
 
           <!-- Discussion / comments section -->
           <div class="reader-discussion" id="reader-discussion">
-            <h2 class="reader-discussion-title">Discussion</h2>
+            <h2 class="reader-discussion-title">Comments</h2>
             <div id="reader-comment-composer" class="reader-comment-composer"></div>
             <div id="reader-comments-list" class="reader-comments-list"></div>
           </div>
@@ -1038,7 +1061,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           <span class="rf-count">0</span>
         </button>
-        <button class="reader-float-btn" id="reader-float-comment" type="button" aria-label="View discussion">
+        <button class="reader-float-btn" id="reader-float-comment" type="button" aria-label="View comments">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span class="rf-count">0</span>
         </button>
@@ -1094,10 +1117,17 @@
       var SESSION_STORE = 'session';
       var COMMENTS_STORE = 'comments';
       var NOTIFICATIONS_STORE = 'notifications';
+      var ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
       var SESSION_PREFIX = 'zorexium-session:';
       var DRAFT_KEY = 'zorexium-article-draft';
       var TITLE_MAX = 150;
       var AUTOSAVE_DEBOUNCE_MS = 1500;
+      var KEYBOARD_OPEN_THRESHOLD = 100;
+      // Keep enough vertical room for toolbar + editable body when the mobile keyboard is open.
+      var MIN_EDITOR_HEIGHT = 240;
+      var EDITOR_PUBLISHED_BADGE_TEXT = 'Editing published article';
+      var EDITOR_CLOSE_AUTOSAVE_PROMPT = 'Close editor? Unsaved changes will be autosaved as a draft.';
+      var EDITOR_CLOSE_DISCARD_PROMPT = 'Close editor? Unsaved changes to this published article will be discarded unless you publish or save draft.';
 
       /* ── State ─────────────────────────────────────────────── */
       var db = null;
@@ -1109,6 +1139,7 @@
         coverMediaId: null,
         coverObjectUrl: null,
         isDraft: true,
+        autosaveEnabled: true,
         createdAt: null
       };
       var autosaveTimerId = null;
@@ -1269,6 +1300,34 @@
         return text.length > maxLen ? text.slice(0, maxLen) + '\u2026' : text;
       }
 
+      function compactArticleBodyHtml(rawHtml) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = rawHtml || '';
+        tmp.querySelectorAll('img[data-media-id]').forEach(function (img) {
+          var src = String(img.getAttribute('src') || '');
+          if (/^(blob:|data:)/i.test(src)) {
+            img.removeAttribute('src');
+          }
+        });
+        return tmp.innerHTML;
+      }
+
+      function hydrateInlineMedia(container) {
+        if (!container) return Promise.resolve();
+        var tasks = [];
+        container.querySelectorAll('img[data-media-id]').forEach(function (img) {
+          var mediaId = img.getAttribute('data-media-id');
+          if (!mediaId) return;
+          tasks.push(getMediaObjectUrl(mediaId).then(function (url) {
+            if (!url || !isSafeObjectUrl(url)) return;
+            img.src = url;
+          }).catch(function (err) {
+            console.warn('Inline media hydration failed for media ID:', mediaId, err);
+          }));
+        });
+        return Promise.all(tasks);
+      }
+
       function revokeAllUrls() {
         generatedUrls.forEach(function (u) {
           try { URL.revokeObjectURL(u); } catch (e) {}
@@ -1306,6 +1365,29 @@
 
       function deleteArticleById(id) { return deleteRecord(ARTICLES_STORE, id); }
 
+      function buildCompanionPostPayload(article, existingPost, nowTs) {
+        var now = nowTs || Date.now();
+        var post = existingPost || {
+          id: generateId('post'),
+          createdAt: now
+        };
+        post.userId = article.userId;
+        post.type = 'article';
+        post.articleId = article.id;
+        post.articleTitle = article.title || 'Untitled Article';
+        post.articleExcerpt = getExcerpt(article.body || '', 120);
+        post.articleCoverMediaId = article.coverMediaId || null;
+        post.articleReadTime = calcReadTime(article.body || '');
+        post.text = '';
+        post.replyAudience = article.replyAudience || 'everyone';
+        post.imageMediaIds = [];
+        post.videoMediaId = null;
+        post.gifUrl = '';
+        post.poll = null;
+        post.scheduledAt = null;
+        return post;
+      }
+
       function findCompanionPosts(articleId) {
         if (!articleId) return Promise.resolve([]);
         return getAllRecords(POSTS_STORE).then(function (posts) {
@@ -1318,6 +1400,16 @@
       function deleteCompanionPosts(articleId) {
         return findCompanionPosts(articleId).then(function (posts) {
           return Promise.all(posts.map(function (post) { return deleteRecord(POSTS_STORE, post.id); }));
+        });
+      }
+
+      function ensureCompanionPostForArticle(article) {
+        if (!article || !article.id) return Promise.resolve(null);
+        return findCompanionPosts(article.id).then(function (posts) {
+          if (posts.length) return posts[0];
+          if (article.status !== 'published') return null;
+          var companionPost = buildCompanionPostPayload(article, null, article.publishedAt || Date.now());
+          return putRecord(POSTS_STORE, companionPost).then(function () { return companionPost; });
         });
       }
 
@@ -1700,6 +1792,7 @@
         editorState.coverMediaId = existingArticle ? (existingArticle.coverMediaId || null) : null;
         editorState.coverObjectUrl = null;
         editorState.isDraft = existingArticle ? existingArticle.status === 'draft' : true;
+        editorState.autosaveEnabled = !existingArticle || existingArticle.status === 'draft';
         editorState.createdAt = existingArticle ? (existingArticle.createdAt || null) : null;
 
         var titleInput = document.getElementById('title-input');
@@ -1709,6 +1802,7 @@
 
         if (titleInput) titleInput.value = existingArticle ? (existingArticle.title || '') : '';
         if (canvas) canvas.innerHTML = existingArticle ? (existingArticle.body || '') : '';
+        if (canvas) hydrateInlineMedia(canvas);
         if (topbarLabel) topbarLabel.textContent = existingArticle ? 'Edit Article' : 'New Article';
 
         // Cover image
@@ -1728,7 +1822,7 @@
         }
 
         updateTitleCharCount();
-        setAutosaveBadge('');
+        setAutosaveBadge(editorState.autosaveEnabled ? '' : EDITOR_PUBLISHED_BADGE_TEXT);
 
         // Restore draft from localStorage if no existing article
         if (!existingArticle) {
@@ -1736,6 +1830,7 @@
         }
 
         overlay.classList.add('open');
+        syncEditorViewport();
         overlay.scrollTop = 0;
         document.body.style.overflow = 'hidden';
         if (titleInput) setTimeout(function () { titleInput.focus(); }, 50);
@@ -1743,7 +1838,11 @@
 
       function closeEditor() {
         var overlay = document.getElementById('editor-overlay');
-        if (overlay) overlay.classList.remove('open');
+        if (overlay) {
+          overlay.classList.remove('open');
+          overlay.classList.remove('keyboard-open');
+          overlay.style.removeProperty('height');
+        }
         document.body.style.overflow = '';
         revokeAllUrls();
       }
@@ -1755,12 +1854,13 @@
       }
 
       function doAutosave() {
+        if (!editorState.autosaveEnabled) return;
         var titleInput = document.getElementById('title-input');
         var canvas = document.getElementById('editor-canvas');
         if (!titleInput || !canvas) return;
         var draft = {
           title: titleInput.value,
-          body: canvas.innerHTML,
+          body: compactArticleBodyHtml(canvas.innerHTML),
           coverMediaId: editorState.coverMediaId || null,
           savedAt: Date.now()
         };
@@ -1773,6 +1873,7 @@
       }
 
       function scheduleAutosave() {
+        if (!editorState.autosaveEnabled) return;
         clearTimeout(autosaveTimerId);
         setAutosaveBadge('Saving\u2026');
         autosaveTimerId = setTimeout(doAutosave, AUTOSAVE_DEBOUNCE_MS);
@@ -1787,6 +1888,7 @@
           var canvas = document.getElementById('editor-canvas');
           if (titleInput && draft.title) titleInput.value = draft.title;
           if (canvas && draft.body) canvas.innerHTML = draft.body;
+          if (canvas) hydrateInlineMedia(canvas);
           if (draft.coverMediaId && !editorState.coverMediaId) {
             editorState.coverMediaId = draft.coverMediaId;
             var coverSlot = document.getElementById('cover-slot');
@@ -2034,8 +2136,25 @@
         var canvas = document.getElementById('editor-canvas');
         return {
           title: titleInput ? titleInput.value.trim() : '',
-          body: canvas ? canvas.innerHTML : ''
+          body: canvas ? compactArticleBodyHtml(canvas.innerHTML) : ''
         };
+      }
+
+      function syncEditorViewport() {
+        var overlay = document.getElementById('editor-overlay');
+        if (!overlay || !overlay.classList.contains('open')) return;
+        var vv = window.visualViewport;
+        if (!vv) return;
+        var keyboardHeight = Math.max(0, Math.round(window.innerHeight - vv.height));
+        overlay.classList.toggle('keyboard-open', keyboardHeight > KEYBOARD_OPEN_THRESHOLD);
+        overlay.style.height = Math.max(MIN_EDITOR_HEIGHT, Math.round(vv.height)) + 'px';
+      }
+
+      function setupEditorViewportSync() {
+        if (!window.visualViewport) return;
+        window.visualViewport.addEventListener('resize', syncEditorViewport);
+        window.visualViewport.addEventListener('scroll', syncEditorViewport);
+        window.addEventListener('resize', syncEditorViewport);
       }
 
       function publishArticle(audience) {
@@ -2064,27 +2183,8 @@
         };
 
         return saveArticle(article).then(function () {
-          var excerpt = getExcerpt(data.body, 120);
-          var readTime = calcReadTime(data.body);
           return findCompanionPosts(articleId).then(function (posts) {
-            var companionPost = posts.length ? posts[0] : {
-              id: generateId('post'),
-              createdAt: now
-            };
-            companionPost.userId = currentUser.id;
-            companionPost.type = 'article';
-            companionPost.articleId = articleId;
-            companionPost.articleTitle = data.title;
-            companionPost.articleExcerpt = excerpt;
-            companionPost.articleCoverMediaId = editorState.coverMediaId || null;
-            companionPost.articleReadTime = readTime;
-            companionPost.text = '';
-            companionPost.replyAudience = audience || 'everyone';
-            companionPost.imageMediaIds = [];
-            companionPost.videoMediaId = null;
-            companionPost.gifUrl = '';
-            companionPost.poll = null;
-            companionPost.scheduledAt = null;
+            var companionPost = buildCompanionPostPayload(article, posts[0], now);
             return putRecord(POSTS_STORE, companionPost).then(function () {
               if (posts.length > 1) {
                 return Promise.all(posts.slice(1).map(function (post) { return deleteRecord(POSTS_STORE, post.id); }));
@@ -2095,6 +2195,7 @@
           clearDraft();
           editorState.articleId = articleId;
           editorState.isDraft = false;
+          editorState.autosaveEnabled = false;
         });
       }
 
@@ -2208,6 +2309,33 @@
         }).catch(function () {});
       }
 
+      function addCommentToPost(postId, text) {
+        if (!currentUser) return Promise.reject(new Error('You must be logged in to comment.'));
+        var commentText = String(text || '').trim();
+        if (!commentText) return Promise.reject(new Error('Please enter a comment.'));
+        var comment = {
+          id: generateId('comment'),
+          postId: postId,
+          userId: currentUser.id,
+          text: commentText,
+          createdAt: Date.now()
+        };
+        return putRecord(COMMENTS_STORE, comment).then(function () {
+          return getRecord(POSTS_STORE, postId);
+        }).then(function (post) {
+          if (!post || !post.userId || post.userId === currentUser.id || post.userId === '_static') return;
+          return putRecord(NOTIFICATIONS_STORE, {
+            id: generateId('notif'),
+            userId: post.userId,
+            actorId: currentUser.id,
+            type: 'comment',
+            message: (currentUser.name || currentUser.username) + ' commented on your post.',
+            postId: postId,
+            createdAt: Date.now()
+          });
+        });
+      }
+
       function buildReaderDiscussion(article) {
         var composerEl = document.getElementById('reader-comment-composer');
         var commentsList = document.getElementById('reader-comments-list');
@@ -2215,8 +2343,7 @@
 
         composerEl.innerHTML = '';
 
-        findCompanionPosts(article.id).then(function (posts) {
-          var companionPost = posts.length ? posts[0] : null;
+        ensureCompanionPostForArticle(article).then(function (companionPost) {
           var postId = companionPost ? companionPost.id : null;
 
           if (currentUser && postId) {
@@ -2230,19 +2357,12 @@
             var submitBtn = document.createElement('button');
             submitBtn.className = 'btn btn-accent btn-sm';
             submitBtn.type = 'button';
-            submitBtn.textContent = 'Reply';
+            submitBtn.textContent = 'Comment';
             submitBtn.addEventListener('click', function () {
               var text = textarea.value.trim().slice(0, 500);
               if (!text) return;
-              var comment = {
-                id: generateId('comment'),
-                postId: postId,
-                userId: currentUser.id,
-                text: text,
-                createdAt: Date.now()
-              };
               submitBtn.disabled = true;
-              putRecord(COMMENTS_STORE, comment).then(function () {
+              addCommentToPost(postId, text).then(function () {
                 textarea.value = '';
                 submitBtn.disabled = false;
                 if (commentsList) loadReaderComments(postId, commentsList);
@@ -2252,7 +2372,7 @@
           } else if (!currentUser) {
             var signInMsg = document.createElement('p');
             signInMsg.className = 'reader-comment-signin';
-            signInMsg.textContent = 'Sign in to join the discussion.';
+            signInMsg.textContent = 'Sign in to join the comments.';
             composerEl.appendChild(signInMsg);
           }
 
@@ -2288,9 +2408,9 @@
 
           // Body — set HTML and attach lightbox on inline images
           var bodyEl = document.getElementById('reader-body');
-          if (bodyEl) {
-            bodyEl.innerHTML = article.body || '';
-            bodyEl.querySelectorAll('img').forEach(function (img) {
+          function attachReaderImageLightboxHandlers(container) {
+            if (!container) return;
+            container.querySelectorAll('img').forEach(function (img) {
               img.setAttribute('tabindex', '0');
               img.setAttribute('role', 'button');
               img.setAttribute('aria-label', (img.alt ? img.alt + ' — ' : '') + 'Open image in fullscreen viewer');
@@ -2305,6 +2425,12 @@
               });
             });
           }
+          if (bodyEl) {
+            bodyEl.innerHTML = article.body || '';
+            hydrateInlineMedia(bodyEl).then(function () {
+              attachReaderImageLightboxHandlers(bodyEl);
+            });
+          }
 
           // Byline
           var bylineEl = document.getElementById('reader-byline');
@@ -2313,6 +2439,9 @@
             getRecord(ACCOUNTS_STORE, article.userId).then(function (user) {
               var avatarEl = document.createElement('div');
               avatarEl.className = 'reader-byline-avatar';
+              avatarEl.setAttribute('tabindex', '0');
+              avatarEl.setAttribute('role', 'button');
+              avatarEl.setAttribute('aria-label', 'Open author profile');
               avatarEl.style.background = getAvatarColor(user ? user.username : 'user');
               avatarEl.textContent = getInitials(user ? user.name : '', user ? user.username : '');
               bylineEl.appendChild(avatarEl);
@@ -2325,13 +2454,38 @@
 
               var nameEl = document.createElement('span');
               nameEl.className = 'reader-byline-name';
+              nameEl.setAttribute('tabindex', '0');
+              nameEl.setAttribute('role', 'button');
+              nameEl.setAttribute('aria-label', 'Open author profile');
               nameEl.textContent = user ? user.name : 'Unknown';
               nameRow.appendChild(nameEl);
 
               var handleEl = document.createElement('span');
               handleEl.className = 'reader-byline-handle';
+              handleEl.setAttribute('tabindex', '0');
+              handleEl.setAttribute('role', 'button');
+              handleEl.setAttribute('aria-label', 'Open author profile');
               handleEl.textContent = '@' + (user ? user.username : 'user');
               nameRow.appendChild(handleEl);
+
+              function goToAuthorDashboard(e) {
+                if (e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+                if (!currentUser) {
+                  openAuthModalPage('login');
+                  return;
+                }
+                window.location.href = ACCOUNT_DASHBOARD_PATH;
+              }
+              [avatarEl, nameEl, handleEl].forEach(function (node) {
+                node.style.cursor = 'pointer';
+                node.addEventListener('click', goToAuthorDashboard);
+                node.addEventListener('keydown', function (e) {
+                  if (e.key === 'Enter' || e.key === ' ') goToAuthorDashboard(e);
+                });
+              });
 
               // Follow button (UI-only; full follow graph not yet implemented)
               if (!currentUser || !user || currentUser.id !== user.id) {
@@ -2360,14 +2514,23 @@
 
           // Cover image
           var coverImg = document.getElementById('reader-cover-img');
+          if (overlay) {
+            overlay.classList.remove('has-cover');
+            overlay.classList.add('no-cover');
+          }
           if (coverImg) {
             coverImg.hidden = true;
+            coverImg.removeAttribute('src');
             if (article.coverMediaId) {
               getMediaObjectUrl(article.coverMediaId).then(function (url) {
                 if (!url) return;
                 if (isSafeObjectUrl(url)) { coverImg.src = url; }
                 coverImg.alt = article.title || 'Article cover';
                 coverImg.hidden = false;
+                if (overlay) {
+                  overlay.classList.add('has-cover');
+                  overlay.classList.remove('no-cover');
+                }
               });
             }
           }
@@ -2684,8 +2847,11 @@
         // Editor close
         var editorClose = document.getElementById('editor-close-btn');
         if (editorClose) editorClose.addEventListener('click', function () {
-          if (window.confirm('Close editor? Unsaved changes will be autosaved as a draft.')) {
-            doAutosave();
+          var prompt = editorState.autosaveEnabled
+            ? EDITOR_CLOSE_AUTOSAVE_PROMPT
+            : EDITOR_CLOSE_DISCARD_PROMPT;
+          if (window.confirm(prompt)) {
+            if (editorState.autosaveEnabled) doAutosave();
             closeEditor();
           }
         });
@@ -2839,7 +3005,11 @@
           var mgmtOverlay = document.getElementById('mgmt-overlay');
           var pubModal = document.getElementById('publish-modal');
           if (pubModal && pubModal.classList.contains('open')) { closePublishModal(); return; }
-          if (editorOverlay && editorOverlay.classList.contains('open')) { doAutosave(); closeEditor(); return; }
+          if (editorOverlay && editorOverlay.classList.contains('open')) {
+            if (editorState.autosaveEnabled) doAutosave();
+            closeEditor();
+            return;
+          }
           if (readerOverlay && readerOverlay.classList.contains('open')) { closeReader(); return; }
           if (mgmtOverlay && mgmtOverlay.classList.contains('open')) { closeMgmt(); return; }
         });
@@ -2862,6 +3032,7 @@
           setupTabs();
           setupCoverImage();
           setupToolbar();
+          setupEditorViewportSync();
           wireEvents();
 
           // Check for ?read= param to auto-open reader
@@ -2876,6 +3047,7 @@
           setupTabs();
           setupCoverImage();
           setupToolbar();
+          setupEditorViewportSync();
           wireEvents();
         });
       }
