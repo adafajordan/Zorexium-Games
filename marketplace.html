@@ -1821,6 +1821,7 @@
           allAccounts: [],
           currentUser: null
         };
+        var listingLocale = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
 
         function openDb() {
           return new Promise(function (resolve, reject) {
@@ -1919,7 +1920,6 @@
           var grid = document.getElementById('jobs-events-listing-grid');
           if (!grid) return;
           var listingType = String(data.type || '').toLowerCase() === 'event' ? 'event' : 'job';
-          var eventLocale = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
           var keywords = [
             listingType,
             data.title,
@@ -1928,14 +1928,14 @@
             data.category || ''
           ].join(' ').toLowerCase();
           var badgeText = listingType === 'job' ? 'Job' : 'Event';
-          var eventPrivacy = String(data.privacy || 'Public').trim() || 'Public';
+          var eventPrivacy = data.privacy || 'Public';
           eventPrivacy = toTitleCase(eventPrivacy);
           var eventTimeLabel = 'Upcoming';
           if (data.eventStart) {
             var parsedEventStart = new Date(data.eventStart);
             if (!isNaN(parsedEventStart.getTime())) {
-              var formattedDate = parsedEventStart.toLocaleDateString(eventLocale, { month: 'short', day: 'numeric' });
-              var formattedTime = parsedEventStart.toLocaleTimeString(eventLocale, { hour: 'numeric', minute: '2-digit' });
+              var formattedDate = parsedEventStart.toLocaleDateString(listingLocale, { month: 'short', day: 'numeric' });
+              var formattedTime = parsedEventStart.toLocaleTimeString(listingLocale, { hour: 'numeric', minute: '2-digit' });
               eventTimeLabel = formattedDate + ' · ' + formattedTime;
             }
           }
