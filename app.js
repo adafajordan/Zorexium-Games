@@ -129,6 +129,8 @@
     label: ''
   };
   let mediaViewerReturnState = null;
+  let mediaViewerGalleryCounter = 0;
+  const mediaViewerGalleryMap = new Map();
   let mediaViewerGestureState = {
     active: false,
     startX: 0,
@@ -825,22 +827,17 @@
 
   function attachPostInteractionHandlers() {
     document.addEventListener('click', async function (event) {
-      const mediaTrigger = event.target.closest && event.target.closest('.post-media-button');
+      const mediaTrigger = event.target.closest('.post-media-button');
       if (mediaTrigger) {
         const mediaGrid = mediaTrigger.closest('.post-media-grid');
-        const serializedItems = mediaGrid ? mediaGrid.getAttribute('data-media-viewer-items') : '';
-        if (serializedItems) {
-          try {
-            const mediaItems = JSON.parse(serializedItems);
-            if (Array.isArray(mediaItems) && mediaItems.length) {
-              const mediaIndex = Number(mediaTrigger.getAttribute('data-media-viewer-index') || '0');
-              event.preventDefault();
-              event.stopPropagation();
-              openMediaViewer(mediaItems, mediaIndex);
-              return;
-            }
-          } catch (error) {
-          }
+        const galleryId = mediaGrid ? mediaGrid.getAttribute('data-media-viewer-gallery') : '';
+        const mediaItems = galleryId ? mediaViewerGalleryMap.get(galleryId) : null;
+        if (Array.isArray(mediaItems) && mediaItems.length) {
+          const mediaIndex = Number(mediaTrigger.getAttribute('data-media-viewer-index') || '0');
+          event.preventDefault();
+          event.stopPropagation();
+          openMediaViewer(mediaItems, mediaIndex);
+          return;
         }
       }
 
@@ -971,7 +968,8 @@
         closeBtn.addEventListener('click', closePostDetailModal);
       }
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && detailModal.classList.contains('open') && (!mediaViewerModal || !mediaViewerModal.classList.contains('open'))) {
+        const isMediaViewerClosed = !mediaViewerModal || !mediaViewerModal.classList.contains('open');
+        if (event.key === 'Escape' && detailModal.classList.contains('open') && isMediaViewerClosed) {
           closePostDetailModal();
         }
       });
@@ -2138,6 +2136,11 @@
     mediaViewerState.type = item.type;
     mediaViewerState.src = item.src;
     mediaViewerState.label = item.label || 'Media viewer';
+    if (!isSafeMediaUrl(mediaViewerState.src)) {
+      closeMediaViewer();
+      setInterfaceStatus('This media could not be opened safely.', 'error');
+      return;
+    }
 
     const shell = document.createElement('div');
     shell.className = 'media-viewer-media-shell';
@@ -2197,6 +2200,18 @@
     };
   }
 
+  function canRestoreFocus(element) {
+    return !!(element && document.contains(element) && typeof element.focus === 'function');
+  }
+
+  function registerMediaViewerGallery(items) {
+    mediaViewerGalleryCounter += 1;
+    const galleryId = `media-gallery-${mediaViewerGalleryCounter}`;
+    // Fallback protects against unexpected callers while keeping registration resilient.
+    mediaViewerGalleryMap.set(galleryId, Array.isArray(items) ? items.slice() : []);
+    return galleryId;
+  }
+
   function closeMediaViewer() {
     if (!mediaViewerModal || !mediaViewerContent) return;
     const video = mediaViewerContent.querySelector('video');
@@ -2225,10 +2240,11 @@
       } else {
         window.scrollTo(restoreState.windowScrollX, restoreState.windowScrollY);
       }
-      if (restoreState.activeElement && document.contains(restoreState.activeElement) && typeof restoreState.activeElement.focus === 'function') {
+      if (canRestoreFocus(restoreState.activeElement)) {
         try {
           restoreState.activeElement.focus({ preventScroll: true });
         } catch (error) {
+          // Some older browsers do not support focus options.
           restoreState.activeElement.focus();
         }
       }
@@ -2282,7 +2298,7 @@
       windowScrollY: window.scrollY || 0,
       detailWasOpen: !!(detailModal && detailModal.classList.contains('open')),
       detailScrollTop: detailModal ? detailModal.scrollTop : 0,
-      activeElement: document.activeElement && typeof document.activeElement.focus === 'function' ? document.activeElement : null
+      activeElement: canRestoreFocus(document.activeElement) ? document.activeElement : null
     };
     mediaViewerModal.classList.add('open');
     mediaViewerModal.setAttribute('aria-hidden', 'false');
@@ -2980,7 +2996,7 @@
       const gifItems = [{ type: 'image', src: post.gifUrl, label: altBase + ' (GIF)' }];
       const gifGrid = document.createElement('div');
       gifGrid.className = 'post-media-grid g1 single';
-      gifGrid.setAttribute('data-media-viewer-items', JSON.stringify(gifItems));
+      gifGrid.setAttribute('data-media-viewer-gallery', registerMediaViewerGallery(gifItems));
 
       const gifItem = document.createElement('div');
       gifItem.className = 'post-media-item';
@@ -3024,7 +3040,7 @@
         const layoutCount = visibleMediaItems.length;
         const grid = document.createElement('div');
         grid.className = 'post-media-grid g' + layoutCount + (layoutCount === 1 ? ' single' : '');
-        grid.setAttribute('data-media-viewer-items', JSON.stringify(mediaItems));
+        grid.setAttribute('data-media-viewer-gallery', registerMediaViewerGallery(mediaItems));
 
         visibleMediaItems.forEach(function (mediaItem, index) {
           const item = document.createElement('div');
@@ -3099,6 +3115,7 @@
   async function renderSavedPosts() {
     if (!postFeed) return;
     clearGeneratedMediaUrls();
+    mediaViewerGalleryMap.clear();
     postFeed.querySelectorAll('[data-user-generated="true"]').forEach(function (node) {
       node.remove();
     });
