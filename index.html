@@ -1286,55 +1286,41 @@
         width: 100%;
         height: 100%;
         background: #000;
-        border: none;
-        border-radius: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
         position: relative;
       }
-      .media-viewer-header {
+      .media-viewer-close {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 3;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(17, 17, 17, 0.66);
+        color: #fff;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 3;
-        padding: 18px 20px 0;
+        justify-content: center;
+        cursor: pointer;
       }
-      .media-viewer-title {
-        margin: 0;
-        font-size: 15px;
-        color: #fff;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+      .media-viewer-close:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
       }
-      .media-viewer-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-      .media-viewer-action {
-        padding: 8px 12px;
-        font-size: 12px;
-        background: rgba(17, 17, 17, 0.74);
-        border-color: rgba(255, 255, 255, 0.14);
-        color: #fff;
-      }
-      .media-viewer-action:hover {
-        background: rgba(32, 32, 32, 0.88);
+      .media-viewer-close svg {
+        width: 20px;
+        height: 20px;
+        display: block;
       }
       .media-viewer-stage-shell {
-        flex: 1;
         position: relative;
-        min-height: 0;
+        width: 100%;
+        height: 100%;
       }
       .media-viewer-stage {
-        min-height: 100%;
+        width: 100%;
+        height: 100%;
         overflow: auto;
         display: flex;
         align-items: center;
@@ -1349,12 +1335,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 72px 20px 92px;
+        padding: 0;
         transition: transform 0.18s ease, opacity 0.18s ease;
       }
       .media-viewer-media {
-        max-width: 100%;
-        max-height: min(88vh, 960px);
+        max-width: 100vw;
+        max-height: 100vh;
         object-fit: contain;
         background: #000;
         border-radius: 0;
@@ -1394,7 +1380,7 @@
       .media-viewer-pagination {
         position: absolute;
         left: 50%;
-        bottom: 28px;
+        bottom: 22px;
         transform: translateX(-50%);
         z-index: 2;
         display: flex;
@@ -1412,6 +1398,11 @@
       }
       .media-viewer-dot.active {
         background: #fff;
+      }
+      @media (max-width: 700px) {
+        .media-viewer-nav {
+          display: none;
+        }
       }
       .post-actions {
         display: flex;
@@ -2469,17 +2460,13 @@
     </div>
 
     <div id="media-viewer-modal" class="media-viewer-modal" aria-hidden="true">
-      <div class="media-viewer-panel" role="dialog" aria-modal="true" aria-labelledby="media-viewer-title">
-        <div class="media-viewer-header">
-          <h2 id="media-viewer-title" class="media-viewer-title">Media viewer</h2>
-          <div class="media-viewer-actions">
-            <button id="media-viewer-zoom-out" class="media-viewer-action" type="button">Zoom out</button>
-            <button id="media-viewer-fit" class="media-viewer-action" type="button">Fit</button>
-            <button id="media-viewer-zoom-in" class="media-viewer-action" type="button">Zoom in</button>
-            <button id="media-viewer-fullscreen" class="media-viewer-action" type="button">Fullscreen</button>
-            <button id="media-viewer-close" class="media-viewer-action" type="button">Close</button>
-          </div>
-        </div>
+      <div class="media-viewer-panel" role="dialog" aria-modal="true" aria-label="Media viewer">
+        <button id="media-viewer-close" class="media-viewer-close" type="button" aria-label="Close media viewer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
         <div class="media-viewer-stage-shell">
           <button id="media-viewer-prev" class="media-viewer-nav prev" type="button" aria-label="Show previous image">&#10094;</button>
           <div id="media-viewer-content" class="media-viewer-stage"></div>
