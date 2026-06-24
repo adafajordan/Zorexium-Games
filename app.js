@@ -1757,6 +1757,13 @@
     return getRecord(MEDIA_STORE, id);
   }
 
+  // Converts a Blob to a base64 data URL using FileReader.
+  // Used for cover images instead of URL.createObjectURL() so that the result
+  // works in iOS WKWebView (Capacitor), where blob: URLs cannot be used as
+  // <img> src. Data URLs are plain strings — unlike blob: URLs they hold no
+  // system resource and do not require revocation.
+  // NOTE: articles.html contains equivalent inline logic in its own IIFE scope;
+  // the two files share no module system so the logic is intentionally local to each.
   function blobToDataUrl(blob) {
     return new Promise(function (resolve) {
       var reader = new FileReader();
@@ -2642,6 +2649,8 @@
     if (post.articleCoverMediaId) {
       const mediaRecord = await getMediaRecord(post.articleCoverMediaId);
       if (mediaRecord && mediaRecord.blob instanceof Blob) {
+        // blobToDataUrl returns a data URL (plain string, no system resource).
+        // Data URLs do not need to be tracked in generatedMediaUrls for cleanup.
         const url = await blobToDataUrl(mediaRecord.blob);
         if (url) {
           const img = document.createElement('img');
