@@ -1743,7 +1743,7 @@
     closeAuthModal();
   }
 
-  function getMediaBlobFromRecord(record) {
+  function getBlobFromMediaRecord(record) {
     if (!record || typeof record !== 'object') return null;
     if (record.blob instanceof Blob) return record.blob;
     if (record.file instanceof Blob) return record.file;
@@ -1752,7 +1752,7 @@
 
   async function getRenderableMediaSource(record, options) {
     const preferDataUrl = Boolean(options && options.preferDataUrl);
-    const blob = getMediaBlobFromRecord(record);
+    const blob = getBlobFromMediaRecord(record);
     if (preferDataUrl && blob) {
       const dataUrl = await blobToDataUrl(blob);
       if (isSafeMediaUrl(dataUrl)) return { url: dataUrl, isObjectUrl: false };
@@ -1775,6 +1775,8 @@
     return null;
   }
 
+  // Retry with a fresh IDB connection when writes fail due to stale/closing
+  // transaction state errors that are commonly recoverable on the next attempt.
   function isRetryableMediaWriteError(error) {
     const name = error && error.name ? error.name : '';
     return name === 'InvalidStateError' || name === 'TransactionInactiveError' || name === 'AbortError';
@@ -1799,7 +1801,8 @@
       throw new Error('The selected media file is invalid.');
     }
     const normalizedType = String(file.type || '').trim();
-    return normalizedType ? file.slice(0, file.size, normalizedType) : file.slice(0, file.size);
+    if (normalizedType) return file;
+    return file.slice(0, file.size);
   }
 
   async function putMediaFile(file) {
@@ -1816,7 +1819,7 @@
       await putRecord(MEDIA_STORE, record);
     } catch (error) {
       if (error && error.name === 'QuotaExceededError') {
-        throw new Error('Not enough device storage is available to save this media file.');
+        throw new Error('Storage quota exceeded for this application. Please free up space and try again.');
       }
       if (!isRetryableMediaWriteError(error)) {
         throw error;
