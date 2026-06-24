@@ -18,7 +18,6 @@
   const MAX_MEDIA_SCALE = 4;
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
-  const FEED_TALL_IMAGE_RATIO = 1.9;
   const MEDIA_VIEWER_GESTURE_DEADZONE = 14;
   const MEDIA_VIEWER_SWIPE_THRESHOLD = 70;
   const MEDIA_VIEWER_DISMISS_THRESHOLD = 110;
@@ -129,6 +128,7 @@
     src: '',
     label: ''
   };
+  let mediaViewerReturnState = null;
   let mediaViewerGestureState = {
     active: false,
     startX: 0,
@@ -825,6 +825,25 @@
 
   function attachPostInteractionHandlers() {
     document.addEventListener('click', async function (event) {
+      const mediaTrigger = event.target.closest && event.target.closest('.post-media-button');
+      if (mediaTrigger) {
+        const mediaGrid = mediaTrigger.closest('.post-media-grid');
+        const serializedItems = mediaGrid ? mediaGrid.getAttribute('data-media-viewer-items') : '';
+        if (serializedItems) {
+          try {
+            const mediaItems = JSON.parse(serializedItems);
+            if (Array.isArray(mediaItems) && mediaItems.length) {
+              const mediaIndex = Number(mediaTrigger.getAttribute('data-media-viewer-index') || '0');
+              event.preventDefault();
+              event.stopPropagation();
+              openMediaViewer(mediaItems, mediaIndex);
+              return;
+            }
+          } catch (error) {
+          }
+        }
+      }
+
       const pollButton = event.target.closest && event.target.closest('.post-poll-option');
       if (pollButton) {
         const article = pollButton.closest('[data-post-id]');
@@ -952,7 +971,7 @@
         closeBtn.addEventListener('click', closePostDetailModal);
       }
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && detailModal.classList.contains('open')) {
+        if (event.key === 'Escape' && detailModal.classList.contains('open') && (!mediaViewerModal || !mediaViewerModal.classList.contains('open'))) {
           closePostDetailModal();
         }
       });
@@ -2189,9 +2208,8 @@
     mediaViewerModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('media-viewer-open');
     resetMediaViewerDragState();
-    if (mediaViewerPagination) {
-      mediaViewerPagination.innerHTML = '';
-    }
+    const restoreState = mediaViewerReturnState;
+    mediaViewerReturnState = null;
     mediaViewerState = {
       scale: 1,
       items: [],
@@ -2200,6 +2218,21 @@
       src: '',
       label: ''
     };
+    if (restoreState) {
+      const detailModal = document.getElementById('post-detail-modal');
+      if (restoreState.detailWasOpen && detailModal && detailModal.classList.contains('open')) {
+        detailModal.scrollTop = restoreState.detailScrollTop;
+      } else {
+        window.scrollTo(restoreState.windowScrollX, restoreState.windowScrollY);
+      }
+      if (restoreState.activeElement && document.contains(restoreState.activeElement) && typeof restoreState.activeElement.focus === 'function') {
+        try {
+          restoreState.activeElement.focus({ preventScroll: true });
+        } catch (error) {
+          restoreState.activeElement.focus();
+        }
+      }
+    }
   }
 
   async function requestElementFullscreen(element) {
@@ -2242,6 +2275,14 @@
       type: null,
       src: '',
       label: ''
+    };
+    const detailModal = document.getElementById('post-detail-modal');
+    mediaViewerReturnState = {
+      windowScrollX: window.scrollX || 0,
+      windowScrollY: window.scrollY || 0,
+      detailWasOpen: !!(detailModal && detailModal.classList.contains('open')),
+      detailScrollTop: detailModal ? detailModal.scrollTop : 0,
+      activeElement: document.activeElement && typeof document.activeElement.focus === 'function' ? document.activeElement : null
     };
     mediaViewerModal.classList.add('open');
     mediaViewerModal.setAttribute('aria-hidden', 'false');
@@ -2936,26 +2977,24 @@
     const altBase = post.text ? post.text.trim().replace(/\s+/g, ' ').split(' ').slice(0, 12).join(' ') : 'User upload';
 
     if (hasGifUrl(post) && isSafeMediaUrl(post.gifUrl)) {
+      const gifItems = [{ type: 'image', src: post.gifUrl, label: altBase + ' (GIF)' }];
       const gifGrid = document.createElement('div');
       gifGrid.className = 'post-media-grid g1 single';
+      gifGrid.setAttribute('data-media-viewer-items', JSON.stringify(gifItems));
 
       const gifItem = document.createElement('div');
       gifItem.className = 'post-media-item';
 
       const gifImage = document.createElement('img');
       gifImage.src = post.gifUrl;
-      gifImage.alt = altBase + ' (GIF)';
+      gifImage.alt = gifItems[0].label;
       gifImage.loading = 'lazy';
 
       const gifTrigger = document.createElement('button');
       gifTrigger.className = 'post-media-button';
       gifTrigger.type = 'button';
       gifTrigger.setAttribute('aria-label', 'Open ' + gifImage.alt + ' in fullscreen viewer');
-      gifTrigger.addEventListener('click', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        openMediaViewer([{ type: 'image', src: post.gifUrl, label: gifImage.alt }], 0);
-      });
+      gifTrigger.setAttribute('data-media-viewer-index', '0');
 
       gifTrigger.appendChild(gifImage);
       gifItem.appendChild(gifTrigger);
@@ -2985,6 +3024,7 @@
         const layoutCount = visibleMediaItems.length;
         const grid = document.createElement('div');
         grid.className = 'post-media-grid g' + layoutCount + (layoutCount === 1 ? ' single' : '');
+        grid.setAttribute('data-media-viewer-items', JSON.stringify(mediaItems));
 
         visibleMediaItems.forEach(function (mediaItem, index) {
           const item = document.createElement('div');
@@ -3000,30 +3040,7 @@
           trigger.className = 'post-media-button';
           trigger.type = 'button';
           trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
-          trigger.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            openMediaViewer(mediaItems, index);
-          });
-
-          if (layoutCount === 1) {
-            const tallIndicator = document.createElement('span');
-            tallIndicator.className = 'post-media-tall-indicator';
-            tallIndicator.textContent = 'Show full image';
-            tallIndicator.hidden = true;
-            const applySingleImageLayout = function () {
-              if (!image.naturalWidth || !image.naturalHeight) return;
-              const isTall = image.naturalHeight / image.naturalWidth >= FEED_TALL_IMAGE_RATIO;
-              item.classList.toggle('is-tall', isTall);
-              tallIndicator.hidden = !isTall;
-            };
-            if (image.complete) {
-              applySingleImageLayout();
-            } else {
-              image.addEventListener('load', applySingleImageLayout, { once: true });
-            }
-            trigger.appendChild(tallIndicator);
-          }
+          trigger.setAttribute('data-media-viewer-index', String(index));
 
           trigger.appendChild(image);
           item.appendChild(trigger);
