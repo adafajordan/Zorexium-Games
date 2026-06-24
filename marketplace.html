@@ -1933,8 +1933,9 @@
           if (data.eventStart) {
             var parsedEventStart = new Date(data.eventStart);
             if (!isNaN(parsedEventStart.getTime())) {
-              eventTimeLabel = parsedEventStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' +
-                parsedEventStart.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+              var formattedDate = parsedEventStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+              var formattedTime = parsedEventStart.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+              eventTimeLabel = formattedDate + ' · ' + formattedTime;
             }
           }
           var metaText = listingType === 'job'
