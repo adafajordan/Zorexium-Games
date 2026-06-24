@@ -1813,7 +1813,7 @@
     try {
       data = await file.arrayBuffer();
     } catch (err) {
-      throw new Error('Unable to read the selected media file. Please try selecting it again.');
+      throw new Error('Unable to read the selected media file. Please try selecting it again.' + (err && err.message ? ' (' + err.message + ')' : ''));
     }
     const type = String(file.type || '').trim() || 'application/octet-stream';
     const name = (file instanceof File) ? (file.name || '') : '';
