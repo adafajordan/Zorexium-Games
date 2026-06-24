@@ -1918,7 +1918,7 @@
           var grid = document.getElementById('jobs-events-listing-grid');
           if (!grid) return;
           var listingType = String(data.type || '').toLowerCase() === 'event' ? 'event' : 'job';
-          var listingLocale = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
+          var listingLocale = navigator.language || 'en-US';
           var keywords = [
             listingType,
             data.title,
@@ -1931,7 +1931,7 @@
           var eventTimeLabel = 'Upcoming';
           if (data.eventStart) {
             var parsedEventStart = new Date(data.eventStart);
-            if (parsedEventStart instanceof Date && !isNaN(parsedEventStart.getTime())) {
+            if (!isNaN(parsedEventStart.getTime())) {
               var formattedDate = parsedEventStart.toLocaleDateString(listingLocale, { month: 'short', day: 'numeric' });
               var formattedTime = parsedEventStart.toLocaleTimeString(listingLocale, { hour: 'numeric', minute: '2-digit' });
               eventTimeLabel = formattedDate + ' · ' + formattedTime;
