@@ -2951,7 +2951,9 @@
       gifTrigger.className = 'post-media-button';
       gifTrigger.type = 'button';
       gifTrigger.setAttribute('aria-label', 'Open ' + gifImage.alt + ' in fullscreen viewer');
-      gifTrigger.addEventListener('click', function () {
+      gifTrigger.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
         openMediaViewer([{ type: 'image', src: post.gifUrl, label: gifImage.alt }], 0);
       });
 
@@ -2998,7 +3000,9 @@
           trigger.className = 'post-media-button';
           trigger.type = 'button';
           trigger.setAttribute('aria-label', 'Open ' + image.alt + ' in fullscreen viewer');
-          trigger.addEventListener('click', function () {
+          trigger.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
             openMediaViewer(mediaItems, index);
           });
 
@@ -3796,7 +3800,7 @@
           goToMediaViewerIndex(mediaViewerState.index + (deltaX < 0 ? 1 : -1));
           return;
         }
-        if (axis === 'y' && Math.abs(deltaY) >= MEDIA_VIEWER_DISMISS_THRESHOLD) {
+        if (axis === 'y' && deltaY >= MEDIA_VIEWER_DISMISS_THRESHOLD) {
           closeMediaViewer();
         }
       });
