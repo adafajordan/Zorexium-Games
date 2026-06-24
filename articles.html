@@ -1277,7 +1277,7 @@
 
       function isSafeObjectUrl(url) {
         if (typeof url !== 'string') return false;
-        return /^blob:/i.test(url) || /^data:image\//i.test(url);
+        return /^blob:/i.test(url) || /^data:image\//i.test(url) || /^data:video\//i.test(url);
       }
 
       var AVATAR_COLORS = ['#e53935','#8e24aa','#1e88e5','#00897b','#f4511e','#c62828','#6a1b9a','#0277bd'];
@@ -1358,9 +1358,16 @@
       /* ── Media helpers ──────────────────────────────────────── */
       function putMediaFile(file) {
         var id = generateId('media');
-        return putRecord(MEDIA_STORE, {
-          id: id, blob: file, name: file.name, type: file.type, size: file.size, createdAt: Date.now()
-        }).then(function () { return id; });
+        // Read the file as an ArrayBuffer so the record is always structured-cloneable.
+        // Storing a raw Blob/File object in IndexedDB fails on iOS/WKWebView (Capacitor)
+        // with "Error preparing Blob/File data to be stored in object store".
+        return file.arrayBuffer().then(function (data) {
+          var type = String(file.type || '').trim() || 'application/octet-stream';
+          var name = (file instanceof File) ? (file.name || '') : '';
+          return putRecord(MEDIA_STORE, {
+            id: id, data: data, type: type, name: name, size: file.size, createdAt: Date.now()
+          }).then(function () { return id; });
+        });
       }
 
       function getMediaObjectUrl(id) {
@@ -1373,7 +1380,15 @@
           if (typeof rec.url === 'string' && isSafeObjectUrl(rec.url)) {
             return rec.url;
           }
-          var blob = rec.blob instanceof Blob ? rec.blob : (rec.file instanceof Blob ? rec.file : null);
+          var blob;
+          if (rec.data instanceof ArrayBuffer) {
+            // New format: ArrayBuffer stored for cross-platform IDB compatibility.
+            var type = String(rec.type || '').trim() || 'application/octet-stream';
+            blob = new Blob([rec.data], { type: type });
+          } else {
+            // Legacy format: direct Blob/File in IDB.
+            blob = rec.blob instanceof Blob ? rec.blob : (rec.file instanceof Blob ? rec.file : null);
+          }
           if (!blob) return null;
           return new Promise(function (resolve) {
             var reader = new FileReader();
