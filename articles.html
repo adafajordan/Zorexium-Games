@@ -998,9 +998,9 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
           </button>
           <div class="reader-more-panel" id="reader-more-panel" role="menu">
-            <button class="reader-more-action" id="reader-copy-link-btn" type="button">Copy link</button>
-            <button class="reader-more-action" id="reader-edit-btn" type="button" style="display:none">Edit article</button>
-            <button class="reader-more-action" id="reader-report-btn" type="button">Report article</button>
+            <button class="reader-more-action" id="reader-copy-link-btn" type="button" role="menuitem">Copy link</button>
+            <button class="reader-more-action" id="reader-edit-btn" type="button" role="menuitem" style="display:none">Edit article</button>
+            <button class="reader-more-action" id="reader-report-btn" type="button" role="menuitem">Report article</button>
           </div>
         </div>
       </div>
@@ -2224,6 +2224,7 @@
             textarea.className = 'reader-comment-input';
             textarea.placeholder = 'Write a comment\u2026';
             textarea.rows = 2;
+            textarea.maxLength = 500;
             composerEl.appendChild(textarea);
 
             var submitBtn = document.createElement('button');
@@ -2231,7 +2232,7 @@
             submitBtn.type = 'button';
             submitBtn.textContent = 'Reply';
             submitBtn.addEventListener('click', function () {
-              var text = textarea.value.trim();
+              var text = textarea.value.trim().slice(0, 500);
               if (!text) return;
               var comment = {
                 id: generateId('comment'),
@@ -2290,8 +2291,17 @@
           if (bodyEl) {
             bodyEl.innerHTML = article.body || '';
             bodyEl.querySelectorAll('img').forEach(function (img) {
+              img.setAttribute('tabindex', '0');
+              img.setAttribute('role', 'button');
+              img.setAttribute('aria-label', (img.alt ? img.alt + ' — ' : '') + 'Open image in fullscreen viewer');
               img.addEventListener('click', function () {
                 openReaderLightbox(img.src, img.alt);
+              });
+              img.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openReaderLightbox(img.src, img.alt);
+                }
               });
             });
           }
@@ -2450,12 +2460,18 @@
             if (scrollEl._progressHandler) {
               scrollEl.removeEventListener('scroll', scrollEl._progressHandler);
             }
+            var rafPending = false;
             scrollEl._progressHandler = function () {
-              var scrollTop = scrollEl.scrollTop;
-              var scrollHeight = scrollEl.scrollHeight - scrollEl.clientHeight;
-              var pct = scrollHeight > 0 ? Math.min(100, (scrollTop / scrollHeight) * 100) : 0;
-              progressBar.style.width = pct + '%';
-              progressBar.setAttribute('aria-valuenow', Math.round(pct));
+              if (rafPending) return;
+              rafPending = true;
+              requestAnimationFrame(function () {
+                rafPending = false;
+                var scrollTop = scrollEl.scrollTop;
+                var scrollHeight = scrollEl.scrollHeight - scrollEl.clientHeight;
+                var pct = scrollHeight > 0 ? Math.min(100, (scrollTop / scrollHeight) * 100) : 0;
+                progressBar.style.width = pct + '%';
+                progressBar.setAttribute('aria-valuenow', Math.round(pct));
+              });
             };
             scrollEl.addEventListener('scroll', scrollEl._progressHandler);
             scrollEl.scrollTop = 0;
