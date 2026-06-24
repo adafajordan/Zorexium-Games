@@ -2096,9 +2096,9 @@
     if (!mediaElement || mediaViewerState.type !== 'image') {
       return;
     }
-    // Width-based scaling replaces the old transform-only zoom because transformed
-    // images do not expand the scroll box, which prevented touch/trackpad panning.
-    // Keeping the zoomed image in normal layout flow makes overflow scrolling work.
+    // Width-based scaling replaces the old transform-only zoom because expanding the
+    // image's layout dimensions grows the native scroll area; CSS transforms do not,
+    // which blocked touch/trackpad panning on zoomed images in the prior viewer.
     mediaElement.style.width = nextScale > 1 ? (nextScale * 100) + '%' : '';
     mediaElement.style.maxWidth = nextScale > 1 ? 'none' : '100%';
     mediaElement.style.maxHeight = nextScale > 1 ? 'none' : '';
@@ -3258,15 +3258,15 @@
 
   async function validatePostMedia(images, video) {
     if (images.length && video) {
-      throw new Error('Posts can include pictures or one video, but not both at the same time.');
+      throw new Error('Posts can include images or one video, but not both at the same time.');
     }
     if (images.length > MAX_IMAGE_COUNT) {
-      throw new Error('You can upload up to 10 pictures per post.');
+      throw new Error('You can upload up to 10 images per post.');
     }
 
     for (let index = 0; index < images.length; index += 1) {
       if (images[index].size > MAX_IMAGE_SIZE) {
-        throw new Error('Each picture must be 10MB or smaller.');
+        throw new Error('Each image must be 10MB or smaller.');
       }
     }
 
@@ -3620,7 +3620,7 @@
           return;
         }
         if (!text && !images.length && !video && !gifUrl && !poll) {
-          setNewPostStatus('Add text, pictures, a GIF, a poll, or a video before posting.', 'error');
+          setNewPostStatus('Add text, images, a GIF, a poll, or a video before posting.', 'error');
           return;
         }
         await validatePostMedia(images, video);
@@ -4079,11 +4079,11 @@
       input.accept = hasVideo ? 'video/*' : (hasImages ? 'image/*' : 'image/*,video/*');
     }
     btn.disabled = hasVideo || npcState.images.length >= NPC_MAX_IMAGES;
-    let mediaButtonLabel = 'Add picture or video';
+    let mediaButtonLabel = 'Add image or video';
     if (hasVideo) {
-      mediaButtonLabel = 'Remove the current video before adding pictures.';
+      mediaButtonLabel = 'Remove the current video before adding images.';
     } else if (hasImages) {
-      mediaButtonLabel = 'Add more pictures';
+      mediaButtonLabel = 'Add more images';
     }
     btn.title = mediaButtonLabel;
     btn.setAttribute('aria-label', mediaButtonLabel);
@@ -4648,13 +4648,13 @@
           return file.type.startsWith('video/');
         });
         if (selectedImages.length && selectedVideos.length) {
-          setNewPostStatus('Choose pictures or one video for a post, not both together.', 'error');
+          setNewPostStatus('Choose images or one video for a post, not both together.', 'error');
           npcUpdateMediaButtonState();
           return;
         }
         if (selectedVideos.length) {
           if (npcState.images.length) {
-            setNewPostStatus('Remove the selected pictures before adding a video.', 'error');
+            setNewPostStatus('Remove the selected images before adding a video.', 'error');
             npcUpdateMediaButtonState();
             return;
           }
@@ -4662,7 +4662,7 @@
           setNewPostStatus(selectedVideos.length > 1 ? 'Only the first selected video was added.' : '', selectedVideos.length > 1 ? 'error' : '');
         } else if (selectedImages.length) {
           if (npcState.videoFile) {
-            setNewPostStatus('Remove the selected video before adding pictures.', 'error');
+            setNewPostStatus('Remove the selected video before adding images.', 'error');
             npcUpdateMediaButtonState();
             return;
           }
@@ -4671,7 +4671,7 @@
             npcState.images.push(file);
           });
           if (selectedImages.length > openSlots) {
-            setNewPostStatus('You can attach up to ' + NPC_MAX_IMAGES + ' pictures per post.', 'error');
+            setNewPostStatus('You can attach up to ' + NPC_MAX_IMAGES + ' images per post.', 'error');
           } else {
             setNewPostStatus('');
           }
