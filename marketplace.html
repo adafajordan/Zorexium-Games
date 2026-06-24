@@ -1919,6 +1919,7 @@
           var grid = document.getElementById('jobs-events-listing-grid');
           if (!grid) return;
           var listingType = String(data.type || '').toLowerCase() === 'event' ? 'event' : 'job';
+          var eventLocale = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : undefined;
           var keywords = [
             listingType,
             data.title,
@@ -1928,13 +1929,15 @@
           ].join(' ').toLowerCase();
           var badgeText = listingType === 'job' ? 'Job' : 'Event';
           var eventPrivacy = String(data.privacy || 'Public').trim() || 'Public';
-          eventPrivacy = eventPrivacy.toLowerCase().replace(/\b[a-z]/g, function (letter) { return letter.toUpperCase(); });
+          eventPrivacy = eventPrivacy.split(/\s+/).filter(Boolean).map(function (word) {
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+          }).join(' ');
           var eventTimeLabel = 'Upcoming';
           if (data.eventStart) {
             var parsedEventStart = new Date(data.eventStart);
             if (!isNaN(parsedEventStart.getTime())) {
-              var formattedDate = parsedEventStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              var formattedTime = parsedEventStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+              var formattedDate = parsedEventStart.toLocaleDateString(eventLocale, { month: 'short', day: 'numeric' });
+              var formattedTime = parsedEventStart.toLocaleTimeString(eventLocale, { hour: 'numeric', minute: '2-digit' });
               eventTimeLabel = formattedDate + ' · ' + formattedTime;
             }
           }
