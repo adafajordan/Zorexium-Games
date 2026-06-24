@@ -568,14 +568,17 @@
       .reader-overlay.has-cover .reader-inner { padding-top: 0; }
       .reader-overlay.no-cover .reader-inner { padding-top: 14px; }
 
-      /* Hero cover image */
+      /* Hero cover image — width: 100vw + negative left-margin breaks the image
+         out of the constrained reader-inner container and stretches it edge-to-edge.
+         overflow-x: hidden on .reader-scroll clips any sub-pixel overrun. */
       .reader-cover {
-        width: 100%;
-        aspect-ratio: 5 / 2;
-        object-fit: cover;
+        width: 100vw;
+        max-height: 56vh;
+        object-fit: contain;
         border-radius: 0;
         display: block;
-        margin: 0 calc(-50vw + 50%) 24px;
+        /* Shift left by (50vw − half-container-width) to align with viewport left edge */
+        margin: 0 0 24px calc(-50vw + 50%);
       }
 
       /* Large title */
@@ -1140,7 +1143,8 @@
         coverObjectUrl: null,
         isDraft: true,
         autosaveEnabled: true,
-        createdAt: null
+        createdAt: null,
+        publishedAt: null
       };
       var autosaveTimerId = null;
       var generatedUrls = [];
@@ -1794,6 +1798,7 @@
         editorState.isDraft = existingArticle ? existingArticle.status === 'draft' : true;
         editorState.autosaveEnabled = !existingArticle || existingArticle.status === 'draft';
         editorState.createdAt = existingArticle ? (existingArticle.createdAt || null) : null;
+        editorState.publishedAt = existingArticle ? (existingArticle.publishedAt || null) : null;
 
         var titleInput = document.getElementById('title-input');
         var canvas = document.getElementById('editor-canvas');
@@ -2112,6 +2117,10 @@
         var modal = document.getElementById('publish-modal');
         if (!modal) return;
         setPublishStatus('');
+        var confirmBtn = document.getElementById('publish-confirm-btn');
+        if (confirmBtn) confirmBtn.disabled = false;
+        var draftBtn = document.getElementById('save-draft-btn');
+        if (draftBtn) draftBtn.disabled = false;
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
       }
@@ -2147,7 +2156,6 @@
         if (!vv) return;
         var keyboardHeight = Math.max(0, Math.round(window.innerHeight - vv.height));
         overlay.classList.toggle('keyboard-open', keyboardHeight > KEYBOARD_OPEN_THRESHOLD);
-        overlay.style.height = Math.max(MIN_EDITOR_HEIGHT, Math.round(vv.height)) + 'px';
       }
 
       function setupEditorViewportSync() {
@@ -2179,7 +2187,7 @@
           status: 'published',
           replyAudience: audience || 'everyone',
           createdAt: editorState.isDraft ? now : (editorState.createdAt || now),
-          publishedAt: now
+          publishedAt: editorState.isDraft ? now : (editorState.publishedAt || now)
         };
 
         return saveArticle(article).then(function () {
