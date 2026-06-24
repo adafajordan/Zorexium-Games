@@ -2012,7 +2012,7 @@
     const items = Array.isArray(mediaViewerState.items) ? mediaViewerState.items : [];
     if (!items.length) return null;
     const index = Math.max(0, Math.min(items.length - 1, Number(mediaViewerState.index) || 0));
-    return items[index] || null;
+    return items[index];
   }
 
   function resetMediaViewerDragState() {
@@ -3254,7 +3254,7 @@
 
   async function validatePostMedia(images, video) {
     if (images.length && video) {
-      throw new Error('Posts can include photos or one video, but not both at the same time.');
+      throw new Error('Posts can include pictures or one video, but not both at the same time.');
     }
     if (images.length > MAX_IMAGE_COUNT) {
       throw new Error('You can upload up to 10 pictures per post.');
@@ -3616,7 +3616,7 @@
           return;
         }
         if (!text && !images.length && !video && !gifUrl && !poll) {
-          setNewPostStatus('Add text, photos, a GIF, a poll, or a video before posting.', 'error');
+          setNewPostStatus('Add text, pictures, a GIF, a poll, or a video before posting.', 'error');
           return;
         }
         await validatePostMedia(images, video);
@@ -4075,8 +4075,8 @@
       input.accept = hasVideo ? 'video/*' : (hasImages ? 'image/*' : 'image/*,video/*');
     }
     btn.disabled = hasVideo || npcState.images.length >= NPC_MAX_IMAGES;
-    btn.title = hasVideo ? 'Remove the current video before adding photos.' : (hasImages ? 'Add more photos' : 'Add photo or video');
-    btn.setAttribute('aria-label', hasVideo ? 'Photo or video picker disabled while a video is attached' : (hasImages ? 'Add more photos' : 'Add photo or video'));
+    btn.title = hasVideo ? 'Remove the current video before adding pictures.' : (hasImages ? 'Add more pictures' : 'Add picture or video');
+    btn.setAttribute('aria-label', hasVideo ? 'Picture or video picker disabled while a video is attached' : (hasImages ? 'Add more pictures' : 'Add picture or video'));
   }
 
   function npcHidePollPanel() {
@@ -4638,13 +4638,13 @@
           return file.type.startsWith('video/');
         });
         if (selectedImages.length && selectedVideos.length) {
-          setNewPostStatus('Choose photos or one video for a post, not both together.', 'error');
+          setNewPostStatus('Choose pictures or one video for a post, not both together.', 'error');
           npcUpdateMediaButtonState();
           return;
         }
         if (selectedVideos.length) {
           if (npcState.images.length) {
-            setNewPostStatus('Remove the selected photos before adding a video.', 'error');
+            setNewPostStatus('Remove the selected pictures before adding a video.', 'error');
             npcUpdateMediaButtonState();
             return;
           }
@@ -4652,7 +4652,7 @@
           setNewPostStatus(selectedVideos.length > 1 ? 'Only the first selected video was added.' : '', selectedVideos.length > 1 ? 'error' : '');
         } else if (selectedImages.length) {
           if (npcState.videoFile) {
-            setNewPostStatus('Remove the selected video before adding photos.', 'error');
+            setNewPostStatus('Remove the selected video before adding pictures.', 'error');
             npcUpdateMediaButtonState();
             return;
           }
@@ -4661,7 +4661,7 @@
             npcState.images.push(file);
           });
           if (selectedImages.length > openSlots) {
-            setNewPostStatus('You can attach up to ' + NPC_MAX_IMAGES + ' photos per post.', 'error');
+            setNewPostStatus('You can attach up to ' + NPC_MAX_IMAGES + ' pictures per post.', 'error');
           } else {
             setNewPostStatus('');
           }
