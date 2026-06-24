@@ -19,6 +19,7 @@
   const MEDIA_ZOOM_INCREMENT = 0.25;
   const MEDIA_WHEEL_THROTTLE_MS = 80;
   const FEED_TALL_IMAGE_RATIO = 1.9;
+  const MEDIA_VIEWER_GESTURE_DEADZONE = 14;
   const MEDIA_VIEWER_SWIPE_THRESHOLD = 70;
   const MEDIA_VIEWER_DISMISS_THRESHOLD = 110;
   const DEFAULT_POST_VIDEO_VOLUME = 0.5;
@@ -2095,6 +2096,8 @@
     if (!mediaElement || mediaViewerState.type !== 'image') {
       return;
     }
+    // Width-based scaling keeps the image inside the stage's scrollable layout box,
+    // which lets touch/trackpad users pan around zoomed images without extra drag math.
     mediaElement.style.width = nextScale > 1 ? (nextScale * 100) + '%' : '';
     mediaElement.style.maxWidth = nextScale > 1 ? 'none' : '100%';
     mediaElement.style.maxHeight = nextScale > 1 ? 'none' : '';
@@ -3768,7 +3771,7 @@
         mediaViewerGestureState.deltaX = touch.clientX - mediaViewerGestureState.startX;
         mediaViewerGestureState.deltaY = touch.clientY - mediaViewerGestureState.startY;
         if (!mediaViewerGestureState.axis) {
-          if (Math.abs(mediaViewerGestureState.deltaX) > 14 || Math.abs(mediaViewerGestureState.deltaY) > 14) {
+          if (Math.abs(mediaViewerGestureState.deltaX) > MEDIA_VIEWER_GESTURE_DEADZONE || Math.abs(mediaViewerGestureState.deltaY) > MEDIA_VIEWER_GESTURE_DEADZONE) {
             mediaViewerGestureState.axis = Math.abs(mediaViewerGestureState.deltaX) > Math.abs(mediaViewerGestureState.deltaY) ? 'x' : 'y';
           } else {
             return;
@@ -4075,8 +4078,9 @@
       input.accept = hasVideo ? 'video/*' : (hasImages ? 'image/*' : 'image/*,video/*');
     }
     btn.disabled = hasVideo || npcState.images.length >= NPC_MAX_IMAGES;
-    btn.title = hasVideo ? 'Remove the current video before adding pictures.' : (hasImages ? 'Add more pictures' : 'Add picture or video');
-    btn.setAttribute('aria-label', hasVideo ? 'Picture or video picker disabled while a video is attached' : (hasImages ? 'Add more pictures' : 'Add picture or video'));
+    const mediaButtonLabel = hasVideo ? 'Remove the current video before adding pictures.' : (hasImages ? 'Add more pictures' : 'Add picture or video');
+    btn.title = mediaButtonLabel;
+    btn.setAttribute('aria-label', mediaButtonLabel);
   }
 
   function npcHidePollPanel() {
