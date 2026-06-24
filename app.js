@@ -1106,6 +1106,7 @@
     const value = String(url || '').trim();
     if (!value) return false;
     if (/^blob:/i.test(value)) return true;
+    if (/^data:image\//i.test(value)) return true;
     try {
       const parsed = new URL(value, window.location.href);
       return parsed.protocol === 'https:';
@@ -1718,6 +1719,9 @@
     if (notificationsList) {
       await renderNotificationsPage();
     }
+    if (typeof window.onArticlesAuthChange === 'function') {
+      window.onArticlesAuthChange(currentUser);
+    }
   }
 
   async function syncCurrentUserFromSession() {
@@ -1751,6 +1755,24 @@
 
   async function getMediaRecord(id) {
     return getRecord(MEDIA_STORE, id);
+  }
+
+  // Converts a Blob to a base64 data URL using FileReader.
+  // Used for cover images instead of URL.createObjectURL() so that the result
+  // works in iOS WKWebView (Capacitor), where blob: URLs cannot be used as
+  // <img> src. Data URLs are plain strings — unlike blob: URLs they hold no
+  // system resource and do not require revocation.
+  // NOTE: articles.html contains equivalent inline logic in its own IIFE scope;
+  // the two files share no module system so the logic is intentionally local to each.
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () {
+        try { resolve(URL.createObjectURL(blob)); } catch (e) { resolve(null); }
+      };
+      reader.readAsDataURL(blob);
+    });
   }
 
   function clearGeneratedMediaUrls() {
@@ -2627,14 +2649,17 @@
     if (post.articleCoverMediaId) {
       const mediaRecord = await getMediaRecord(post.articleCoverMediaId);
       if (mediaRecord && mediaRecord.blob instanceof Blob) {
-        const url = URL.createObjectURL(mediaRecord.blob);
-        generatedMediaUrls.push(url);
-        const img = document.createElement('img');
-        img.className = 'article-companion-cover';
-        if (isSafeMediaUrl(url)) img.src = url;
-        img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
-        img.loading = 'lazy';
-        card.appendChild(img);
+        // blobToDataUrl returns a data URL (plain string, no system resource).
+        // Data URLs do not need to be tracked in generatedMediaUrls for cleanup.
+        const url = await blobToDataUrl(mediaRecord.blob);
+        if (url) {
+          const img = document.createElement('img');
+          img.className = 'article-companion-cover';
+          if (isSafeMediaUrl(url)) img.src = url;
+          img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
       }
     }
 

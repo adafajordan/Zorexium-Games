@@ -899,7 +899,8 @@
       }
 
       function isSafeObjectUrl(url) {
-        return typeof url === 'string' && /^blob:/i.test(url);
+        if (typeof url !== 'string') return false;
+        return /^blob:/i.test(url) || /^data:image\//i.test(url);
       }
 
       var AVATAR_COLORS = ['#e53935','#8e24aa','#1e88e5','#00897b','#f4511e','#c62828','#6a1b9a','#0277bd'];
@@ -961,7 +962,14 @@
         if (!id) return Promise.resolve(null);
         return getRecord(MEDIA_STORE, id).then(function (rec) {
           if (!rec || !(rec.blob instanceof Blob)) return null;
-          return URL.createObjectURL(rec.blob);
+          return new Promise(function (resolve) {
+            var reader = new FileReader();
+            reader.onload = function () { resolve(reader.result); };
+            reader.onerror = function () {
+              try { resolve(URL.createObjectURL(rec.blob)); } catch (e) { resolve(null); }
+            };
+            reader.readAsDataURL(rec.blob);
+          });
         });
       }
 
@@ -2220,6 +2228,13 @@
           wireEvents();
         });
       }
+
+      // Expose auth-change hook so app.js can sync currentUser after login/logout
+      window.onArticlesAuthChange = function (user) {
+        currentUser = user || null;
+        updateAuthUI();
+        renderFeed();
+      };
 
       // Wait for DOM ready
       if (document.readyState === 'loading') {
