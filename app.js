@@ -61,6 +61,7 @@
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
   const stickyFooterMarketplaceButton = document.getElementById('sticky-footer-marketplace');
+  const JOBS_EVENTS_NAV_LABEL = 'Jobs and Events';
   const dashboardRoot = document.getElementById('account-dashboard-root');
   const profileBanner = document.getElementById('profile-banner');
   const profileAvatar = document.getElementById('profile-avatar');
@@ -121,6 +122,36 @@
     saved: [],
     marketplace: []
   };
+  function buildJobsEventsNavIcon() {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('viewBox', '0 0 24 24');
+
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('x', '3');
+    rect.setAttribute('y', '4');
+    rect.setAttribute('width', '18');
+    rect.setAttribute('height', '17');
+    rect.setAttribute('rx', '2');
+    svg.appendChild(rect);
+
+    ['M8 2v4M16 2v4M3 10h18', 'M8 14h3M13 14h3M8 18h5'].forEach(function (value) {
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', value);
+      svg.appendChild(path);
+    });
+
+    return svg;
+  }
+
+  if (stickyFooterMarketplaceButton) {
+    stickyFooterMarketplaceButton.setAttribute('aria-label', JOBS_EVENTS_NAV_LABEL);
+    stickyFooterMarketplaceButton.setAttribute('title', JOBS_EVENTS_NAV_LABEL);
+    stickyFooterMarketplaceButton.replaceChildren(buildJobsEventsNavIcon());
+  }
+
   let mediaViewerState = {
     scale: 1,
     items: [],
@@ -1378,7 +1409,7 @@
       case 'saved':
         return count === 1 ? 'saved post' : 'saved posts';
       case 'marketplace':
-        return count === 1 ? 'marketplace listing' : 'marketplace listings';
+        return count === 1 ? 'job or event listing' : 'jobs and events listings';
       default:
         return count === 1 ? 'post' : 'posts';
     }
@@ -1477,8 +1508,8 @@
         };
       case 'marketplace':
         return {
-          title: 'No marketplace listings yet',
-          description: 'Marketplace listings tied to your account will appear here once they are available.'
+          title: 'No jobs or events yet',
+          description: 'Jobs and events tied to your account will appear here once these listing flows are connected to saved data.'
         };
       default:
         return {

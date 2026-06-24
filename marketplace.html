@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Zorexium" />
     <link rel="manifest" href="manifest.json" />
-    <title>Marketplace — Zorexium</title>
+    <title>Jobs and Events — Zorexium</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -19,14 +19,18 @@
         --bg: #ffffff;
         --surface: #f5f5f5;
         --surface-soft: #eeeeee;
+        --surface-strong: #f8eaea;
         --text: #111111;
         --text-muted: #333333;
         --text-soft: #666666;
-        --text-placeholder: #999999;
+        --text-placeholder: #8a8a8a;
         --border: #e0e0e0;
         --border-strong: #cccccc;
         --focus: #e02020;
         --accent: #cc2222;
+        --accent-soft: rgba(204, 34, 34, 0.12);
+        --success: #166534;
+        --shadow: 0 18px 40px rgba(17, 17, 17, 0.12);
         --sticky-footer-height: 62px;
         --sticky-footer-padding-x: 6px;
       }
@@ -36,10 +40,27 @@
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: var(--bg);
         color: var(--text);
-        padding-bottom: var(--sticky-footer-height);
+        padding-bottom: calc(var(--sticky-footer-height) + 18px);
+      }
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+      [hidden] { display: none !important; }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
 
-      /* ── Top anchor (header + control bar as one sticky unit) ── */
       .mkp-top {
         position: sticky;
         top: 0;
@@ -48,8 +69,6 @@
         backdrop-filter: blur(6px);
         border-bottom: 1px solid var(--border);
       }
-
-      /* ── Header ──────────────────────────────────────────────── */
       header {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
@@ -100,165 +119,793 @@
         display: block;
       }
 
-      /* ── Marketplace control bar (search + filter pills) ─────── */
       .mkp-controls {
-        padding: 8px 12px 10px;
+        padding: 10px 12px 12px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
         border-top: 1px solid var(--border);
       }
-
-      /* Search placeholder */
-      .mkp-search-wrap {
-        width: 100%;
-      }
-      .mkp-search-placeholder {
+      .jobs-events-intro {
         display: flex;
-        align-items: center;
-        gap: 8px;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .jobs-events-kicker {
+        margin: 0;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .jobs-events-title {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.1;
+      }
+      .jobs-events-copy {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-soft);
+      }
+      .mkp-search-input {
         width: 100%;
         border: 1px solid var(--border-strong);
-        border-radius: 8px;
-        padding: 9px 12px;
+        border-radius: 10px;
+        padding: 11px 14px;
         background: var(--surface);
-        color: var(--text-placeholder);
+        color: var(--text);
         font-size: 14px;
-        cursor: default;
-        user-select: none;
       }
-      .mkp-search-placeholder svg {
-        width: 16px;
-        height: 16px;
+      .mkp-search-input::placeholder { color: var(--text-placeholder); }
+      .mkp-search-input:focus,
+      .form-control:focus,
+      .form-textarea:focus,
+      .form-select:focus {
+        outline: 2px solid rgba(224, 32, 32, 0.18);
+        border-color: var(--accent);
+      }
+      .bubble-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .bubble-scroll {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        min-width: 0;
+      }
+      .bubble-scroll::-webkit-scrollbar { display: none; }
+      .bubble-btn,
+      .location-finder-btn,
+      .inline-action-btn,
+      .secondary-action-btn,
+      .toolbar-action,
+      .row-action-btn,
+      .view-back-btn,
+      .chooser-option,
+      .modal-save-btn,
+      .modal-cancel-btn {
+        border: 1px solid var(--border-strong);
+        background: var(--surface);
+        color: var(--text-muted);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+      }
+      .bubble-btn {
+        white-space: nowrap;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .bubble-btn:hover,
+      .bubble-btn.active,
+      .bubble-btn[aria-pressed="true"] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .bubble-btn-primary {
+        background: var(--surface-strong);
+        color: var(--accent);
+        border-color: rgba(204, 34, 34, 0.25);
+      }
+      .location-finder-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .location-finder-btn:hover,
+      .inline-action-btn:hover,
+      .secondary-action-btn:hover,
+      .toolbar-action:hover,
+      .row-action-btn:hover,
+      .view-back-btn:hover,
+      .chooser-option:hover,
+      .modal-cancel-btn:hover {
+        background: var(--surface-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .location-finder-btn svg,
+      .toolbar-action svg,
+      .view-back-btn svg,
+      .row-action-btn svg,
+      .job-media-card svg,
+      .listing-visual svg {
+        width: 20px;
+        height: 20px;
         stroke: currentColor;
         fill: none;
         stroke-width: 2;
         stroke-linecap: round;
         stroke-linejoin: round;
-        flex-shrink: 0;
       }
-
-      /* Filter pills row */
-      .mkp-filter-pills {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding-bottom: 2px;
-      }
-      .mkp-filter-pills::-webkit-scrollbar { display: none; }
-      .mkp-pill {
+      .browse-location-summary {
         display: inline-flex;
         align-items: center;
-        white-space: nowrap;
-        flex-shrink: 0;
-        border: 1px solid var(--border-strong);
-        border-radius: 999px;
-        padding: 5px 14px;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .browse-location-summary strong {
+        color: var(--text);
+      }
+
+      main {
+        padding: 14px 12px 0;
+      }
+      .view-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .feed-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .feed-summary h2,
+      .create-view h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .feed-summary p,
+      .create-view-copy,
+      .page-status {
+        margin: 0;
+        color: var(--text-soft);
         font-size: 13px;
-        font-weight: 500;
-        color: var(--text-muted);
-        background: var(--surface);
-        cursor: default;
-        user-select: none;
-        height: 30px;
       }
-
-      /* ── Product grid ─────────────────────────────────────────── */
-      .mkp-grid {
+      .listing-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 10px 8px 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
       }
-
-      /* ── Product card ─────────────────────────────────────────── */
-      .mkp-card {
+      .listing-card {
         border: 1px solid var(--border);
-        border-radius: 10px;
+        border-radius: 14px;
+        background: #fff;
         overflow: hidden;
-        background: #ffffff;
+        box-shadow: 0 6px 18px rgba(17, 17, 17, 0.04);
         display: flex;
         flex-direction: column;
       }
-
-      /* 1:1 image placeholder block */
-      .mkp-card-img {
-        width: 100%;
+      .listing-visual {
         aspect-ratio: 1 / 1;
-        background: #E0E0E0;
+        padding: 14px;
+        background: linear-gradient(180deg, #f3f3f3 0%, #ebebeb 100%);
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--accent);
+      }
+      .listing-badge {
+        display: inline-flex;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .listing-card-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .listing-meta {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .listing-title {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      .listing-highlight {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .listing-location {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .listing-location svg {
+        width: 14px;
+        height: 14px;
+        stroke-width: 2.1;
+      }
+      .empty-state {
+        padding: 24px 16px;
+        border: 1px dashed var(--border-strong);
+        border-radius: 16px;
+        text-align: center;
+        color: var(--text-soft);
+        background: var(--surface);
+      }
+
+      .create-view {
+        gap: 16px;
+        padding-bottom: 24px;
+      }
+      .view-back-btn {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .profile-anchor {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: #fff;
+      }
+      .profile-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #cc2222, #7f1d1d);
+      }
+      .profile-anchor-copy {
+        min-width: 0;
+      }
+      .profile-anchor-title {
+        margin: 0 0 4px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .context-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .context-tag svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+      }
+      .form-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .field-group,
+      .notice-card,
+      .submit-panel,
+      .settings-summary,
+      .cohost-summary,
+      .logistics-trigger,
+      .event-cover-card,
+      .job-media-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: #fff;
+      }
+      .field-group {
+        padding: 14px;
+      }
+      .field-group-title {
+        margin: 0 0 12px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .field-grid,
+      .split-grid {
+        display: grid;
+        gap: 12px;
+      }
+      .split-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .field-offset { margin-top: 12px; }
+      .notice-grid-offset { margin-top: 12px; }
+      .pill-section-offset { margin-top: 14px; }
+      .media-placeholder-copy {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 18px;
+      }
+      .event-cover-description { color: rgba(255, 255, 255, 0.82); margin-top: 6px; }
+      .sheet-offset { margin-top: 14px; }
+      .toggle-copy { flex: 1; }
+      .cohost-label-copy { display: inline-flex; flex-direction: column; gap: 2px; }
+      .field label,
+      .inline-label,
+      .toggle-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+      .form-control,
+      .form-textarea,
+      .form-select {
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        padding: 12px 14px;
+        background: #fff;
+        color: var(--text);
+      }
+      .form-textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+      .field-note,
+      .fine-print,
+      .subtle-copy,
+      .row-summary {
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.5;
+      }
+      .input-with-action {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+      }
+      .inline-action-btn,
+      .secondary-action-btn,
+      .row-action-btn,
+      .modal-save-btn,
+      .modal-cancel-btn {
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .secondary-action-btn {
+        background: #fff;
+      }
+      .pill-section-title {
+        margin: 0 0 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+      .pill-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .pill-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .pill-option span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border-strong);
+        background: var(--surface);
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .pill-option input:checked + span {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .job-media-card {
+        min-height: 180px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: var(--text-soft);
+        background: linear-gradient(180deg, #f7f7f7 0%, #ececec 100%);
+      }
+      .job-media-card strong,
+      .event-cover-preview strong {
+        color: var(--text);
+      }
+      .media-preview-thumb,
+      .event-cover-preview {
+        width: 100%;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #2b2b2b 0%, #5a1f1f 100%);
+        color: #fff;
+        overflow: hidden;
+        position: relative;
+      }
+      .media-preview-thumb {
+        aspect-ratio: 1 / 1;
+        background-size: cover;
+        background-position: center;
+      }
+      .media-preview-thumb.has-image {
+        border: none;
+      }
+      .notice-card,
+      .submit-panel,
+      .settings-summary,
+      .cohost-summary,
+      .logistics-trigger,
+      .event-cover-card {
+        padding: 14px;
+      }
+      .submit-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .primary-btn {
+        width: 100%;
+        border: none;
+        border-radius: 14px;
+        padding: 14px 16px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .primary-btn:hover { background: #b91c1c; }
+      .primary-btn:disabled {
+        opacity: .45;
+        cursor: default;
+      }
+      .submit-status {
+        min-height: 18px;
+        font-size: 13px;
+      }
+      .submit-status.success { color: var(--success); }
+
+      .event-cover-card {
+        padding: 0;
+        overflow: hidden;
+      }
+      .event-cover-preview {
+        min-height: 220px;
+        padding: 18px;
+        display: flex;
+        align-items: flex-end;
+        background-size: cover;
+        background-position: center;
+      }
+      .event-cover-preview::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(17, 17, 17, 0.1), rgba(17, 17, 17, 0.7));
+      }
+      .event-cover-copy,
+      .event-cover-toolbar {
+        position: relative;
+        z-index: 1;
+      }
+      .event-cover-copy {
+        max-width: calc(100% - 84px);
+      }
+      .event-cover-toolbar {
+        margin-left: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-self: flex-start;
+      }
+      .toolbar-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 58px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .toolbar-action svg { width: 16px; height: 16px; }
+      .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .quick-action-card {
+        border: 1px solid var(--border-strong);
+        border-radius: 14px;
+        padding: 12px;
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .quick-action-card span {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .summary-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .summary-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .row-action-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        background: #fff;
+      }
+      .row-action-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+      .sheet-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 430;
+        background: rgba(17, 17, 17, 0.48);
+        padding: 20px 14px;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .sheet-modal.open { display: flex; }
+      .sheet-panel {
+        width: min(560px, 100%);
+        max-height: 88vh;
+        overflow-y: auto;
+        border-radius: 22px 22px 16px 16px;
+        background: #fff;
+        box-shadow: var(--shadow);
+        padding: 18px;
+        position: relative;
+      }
+      .center-panel {
+        align-self: center;
+        border-radius: 20px;
+      }
+      .sheet-handle {
+        width: 44px;
+        height: 5px;
+        border-radius: 999px;
+        background: #d4d4d4;
+        margin: 0 auto 14px;
+      }
+      .sheet-title {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+      .sheet-copy {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: var(--text-soft);
+      }
+      .chooser-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .chooser-option {
+        padding: 18px 14px;
+        border-radius: 16px;
+        background: #fff;
+        text-align: left;
+      }
+      .chooser-option strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text);
+        font-size: 15px;
+      }
+      .chooser-option span {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .sheet-form-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .map-preview {
+        min-height: 180px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #f0f0f0 0%, #dddddd 100%);
+        border: 1px dashed var(--border-strong);
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
-        overflow: hidden;
-      }
-      .mkp-card-img-inner {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-      }
-      .mkp-card-img-inner svg {
-        width: 32px;
-        height: 32px;
-        stroke: #aaaaaa;
-        fill: none;
-        stroke-width: 1.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .mkp-card-img-label {
-        font-size: 9px;
-        color: #aaaaaa;
         text-align: center;
-        line-height: 1.4;
-        letter-spacing: 0.02em;
+        padding: 20px;
+        color: var(--text-soft);
       }
-
-      /* Fixed-height text block */
-      .mkp-card-body {
-        padding: 8px 8px 10px;
+      .sheet-tabs {
+        display: inline-flex;
+        gap: 8px;
+        padding: 4px;
+        border-radius: 999px;
+        background: var(--surface);
+      }
+      .sheet-tab {
+        border: none;
+        background: transparent;
+        color: var(--text-soft);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .sheet-tab.active {
+        background: #fff;
+        color: var(--accent);
+        box-shadow: 0 2px 12px rgba(17, 17, 17, 0.08);
+      }
+      .radio-list,
+      .person-list,
+      .toggle-list {
         display: flex;
         flex-direction: column;
-        gap: 5px;
-        /* Pre-allocate height for: price + 2 title lines + location + gaps + padding */
-        min-height: 78px;
+        gap: 10px;
+      }
+      .radio-row,
+      .person-row,
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: #fff;
+      }
+      .person-row label,
+      .radio-row label {
+        flex: 1;
+        cursor: pointer;
+      }
+      .person-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #991b1b, #ef4444);
         flex-shrink: 0;
-        overflow: hidden;
       }
-
-      /* Skeleton bar base */
-      .mkp-skel {
-        background: #F0F0F0;
-        border-radius: 4px;
+      .switch {
+        position: relative;
+        width: 46px;
+        height: 28px;
         flex-shrink: 0;
       }
-
-      /* Price bar: shorter width, taller height (bold-weight equivalent) */
-      .mkp-skel-price {
-        width: 52%;
-        height: 13px;
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
       }
-
-      /* Title bars: full-width and slightly shorter */
-      .mkp-skel-title {
-        width: 100%;
-        height: 9px;
+      .switch-slider {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: #d4d4d4;
+        transition: background-color .15s ease;
       }
-      .mkp-skel-title-b {
-        width: 78%;
-        height: 9px;
+      .switch-slider::before {
+        content: '';
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        top: 3px;
+        left: 3px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform .15s ease;
+        box-shadow: 0 2px 6px rgba(17, 17, 17, 0.15);
       }
-
-      /* Location bar */
-      .mkp-skel-location {
-        width: 65%;
-        height: 9px;
+      .switch input:checked + .switch-slider {
+        background: var(--accent);
       }
+      .switch input:checked + .switch-slider::before {
+        transform: translateX(18px);
+      }
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .modal-actions > * { flex: 1; }
+      .modal-save-btn {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .modal-save-btn:hover { background: #b91c1c; }
 
-      /* ── Sticky footer ────────────────────────────────────────── */
       .sticky-footer {
         position: fixed;
         left: 0;
@@ -299,7 +946,6 @@
         stroke-linejoin: round;
       }
 
-      /* ── Auth modal ───────────────────────────────────────────── */
       .auth-modal {
         display: none;
         position: fixed;
@@ -386,7 +1032,6 @@
       .auth-status.error { color: #b42318; }
       .auth-status.success { color: #166534; }
 
-      /* ── New Post Composer (minimal – required by app.js) ─────── */
       .npc-panel { width: min(560px, 100%); max-height: 90vh; overflow-y: auto; }
       .npc-audience-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
       .npc-audience-label { font-size: 11px; color: var(--text-soft); }
@@ -427,63 +1072,23 @@
       .npc-poll-footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface); }
       .npc-poll-dur-label { font-size: 12px; color: var(--text-muted); }
       .npc-poll-dur-select { font-size: 12px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); font-family: inherit; }
-      .npc-sub-modal { display: none; position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.45); align-items: center; justify-content: center; padding: 20px; }
-      .npc-sub-modal.open { display: flex; }
-      .npc-sub-panel { background: #fff; border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.2); padding: 18px; width: min(480px,100%); max-height: 80vh; overflow-y: auto; position: relative; }
-      .npc-sub-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
-      .npc-sub-title { font-size: 16px; font-weight: 700; color: var(--accent); margin: 0 0 14px; padding-right: 30px; }
-      .npc-gif-search-row { display: flex; gap: 8px; margin-bottom: 10px; }
-      .npc-gif-search-input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: inherit; font-size: 14px; background: #fff; color: var(--text); outline: none; }
-      .npc-gif-search-input:focus { border-color: var(--focus); }
-      .npc-gif-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-      .npc-gif-tab { padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--surface); color: var(--text-muted); font-family: inherit; }
-      .npc-gif-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-      .npc-gif-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
-      .npc-gif-cell { border-radius: 6px; overflow: hidden; cursor: pointer; background: var(--surface); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-      .npc-gif-cell img { width: 100%; height: 100%; object-fit: cover; }
-      .npc-gif-cell:hover { opacity: .8; }
-      .npc-gif-url-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-      .npc-gif-url-label { font-size: 12px; color: var(--text-soft); margin-bottom: 6px; }
-      .npc-gif-url-inputs { display: flex; gap: 8px; }
-      .npc-gif-url-input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--text); outline: none; }
-      .npc-gif-url-input:focus { border-color: var(--focus); }
-      .npc-gif-url-btn { padding: 7px 14px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
-      .npc-emoji-picker { position: fixed; z-index: 420; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.15); padding: 10px; width: 300px; max-height: 280px; overflow-y: auto; }
-      .npc-emoji-cats { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
-      .npc-emoji-cat-btn { padding: 2px 8px; border: 1px solid var(--border); border-radius: 12px; font-size: 11px; cursor: pointer; background: none; color: var(--text-muted); font-family: inherit; }
-      .npc-emoji-cat-btn.active { background: var(--surface); border-color: var(--accent); color: var(--accent); }
-      .npc-emoji-grid { display: grid; grid-template-columns: repeat(8,1fr); gap: 3px; }
-      .npc-emoji-btn { font-size: 20px; line-height: 1.4; border: none; background: none; cursor: pointer; border-radius: 6px; padding: 2px; text-align: center; }
-      .npc-emoji-btn:hover { background: var(--surface); }
-      .npc-schedule-modal-note { font-size: 12px; color: var(--text-soft); margin-bottom: 10px; }
-      .npc-sched-label { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: block; }
-      .npc-sched-input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 14px; background: #fff; color: var(--text); box-sizing: border-box; }
-      .npc-sched-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); }
-      .npc-sched-btn { margin-top: 12px; padding: 8px 20px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
-      .npc-sched-clear { margin-top: 6px; padding: 8px 20px; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; display: block; }
-      .npc-badge-close { font-size: 10px; opacity: .7; }
-      .npc-img-grid { display: grid; gap: 3px; border-radius: 10px; overflow: hidden; }
-      .npc-img-grid.g1 { grid-template-columns: 1fr; }
-      .npc-img-grid.g2 { grid-template-columns: 1fr 1fr; }
-      .npc-img-grid.g3, .npc-img-grid.g4 { grid-template-columns: 1fr 1fr; }
-      .npc-img-item { position: relative; overflow: hidden; background: var(--surface); }
-      .npc-img-grid.g3 .npc-img-item:first-child { grid-row: 1/3; }
-      .npc-img-item img, .npc-img-item video { width: 100%; height: 160px; object-fit: cover; display: block; }
-      .npc-img-grid.g1 .npc-img-item img, .npc-img-grid.g1 .npc-img-item video { height: 280px; }
-      .npc-img-grid.g3 .npc-img-item:first-child img { height: 323px; }
-      .npc-img-remove { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; border: none; font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; }
-      .npc-img-remove:hover { background: rgba(0,0,0,.8); }
-      .npc-mention-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; }
-      .npc-mention-item:hover, .npc-mention-item.kbd-active { background: var(--surface); }
-      .npc-mention-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
-      .npc-mention-meta { display: flex; flex-direction: column; }
-      .npc-mention-name { font-size: 13px; font-weight: 600; color: var(--text); }
-      .npc-mention-handle { font-size: 11px; color: var(--text-soft); }
+
+      @media (max-width: 560px) {
+        .split-grid,
+        .chooser-grid,
+        .quick-actions {
+          grid-template-columns: 1fr;
+        }
+        .listing-grid {
+          grid-template-columns: 1fr;
+        }
+        .event-cover-copy {
+          max-width: calc(100% - 70px);
+        }
+      }
     </style>
   </head>
   <body>
-
-    <!-- ── Sticky top: header + control bar ───────────────────── -->
     <div class="mkp-top">
       <header>
         <div class="header-left">
@@ -508,160 +1113,352 @@
         </div>
       </header>
 
-      <!-- Search placeholder + filter pills -->
-      <div class="mkp-controls" aria-label="Marketplace search and filters">
+      <div class="mkp-controls" aria-label="Jobs and events search and controls">
+        <section class="jobs-events-intro" aria-labelledby="jobs-events-title">
+          <p class="jobs-events-kicker">Community listings</p>
+          <h1 id="jobs-events-title" class="jobs-events-title">Jobs and Events</h1>
+          <p class="jobs-events-copy">Browse openings, local events, and shared opportunities in one combined experience.</p>
+        </section>
+
         <div class="mkp-search-wrap">
-          <div class="mkp-search-placeholder" aria-label="Search marketplace coming soon" aria-hidden="true">
-            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            Search marketplace…
+          <label class="sr-only" for="jobs-events-search">Search jobs and events</label>
+          <input id="jobs-events-search" class="mkp-search-input" type="search" placeholder="Search jobs and events" aria-label="Search jobs and events" />
+        </div>
+
+        <div class="bubble-row" aria-label="Jobs and events quick actions">
+          <div class="bubble-scroll">
+            <button id="bubble-create-listing" class="bubble-btn bubble-btn-primary" type="button">Create listing</button>
+            <button id="bubble-near-me" class="bubble-btn" type="button" aria-pressed="false">Near me</button>
+            <button id="bubble-jobs" class="bubble-btn" type="button" aria-pressed="false">Jobs</button>
+            <button id="bubble-events" class="bubble-btn" type="button" aria-pressed="false">Events</button>
           </div>
+          <button id="browse-location-btn" class="location-finder-btn" type="button" aria-label="Open location finder" title="Location finder">
+            <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+          </button>
         </div>
-        <div class="mkp-filter-pills" aria-label="Filter options (coming soon)">
-          <span class="mkp-pill">Category</span>
-          <span class="mkp-pill">Price</span>
-          <span class="mkp-pill">Location</span>
-          <span class="mkp-pill">Condition</span>
-          <span class="mkp-pill">Sort By</span>
-        </div>
+
+        <div class="browse-location-summary" id="browse-location-summary">Browsing near <strong id="browse-location-value">Nearby</strong></div>
       </div>
-    </div><!-- /.mkp-top -->
+    </div>
 
-    <!-- ── Product grid ────────────────────────────────────────── -->
-    <main aria-label="Marketplace listings">
-      <div class="mkp-grid" role="list">
+    <main>
+      <section id="jobs-events-feed-view" class="view-shell" aria-labelledby="listings-section-title">
+        <div class="feed-summary">
+          <div>
+            <h2 id="listings-section-title">Latest listings</h2>
+            <p>Use the filters above to switch between jobs, events, or nearby listings.</p>
+          </div>
+        </div>
 
-        <!-- Card 1 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+        <div id="jobs-events-listing-grid" class="listing-grid" role="list" aria-label="Jobs and events listings">
+          <article class="listing-card" role="listitem" data-type="job" data-location="Atlanta, GA" data-keywords="job barista full time atlanta coffee medical tips">
+            <div class="listing-visual">
+              <span class="listing-badge">Job</span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>
+            </div>
+            <div class="listing-card-body">
+              <div class="listing-meta">Full Time</div>
+              <h3 class="listing-title">Barista at Lantern Coffee</h3>
+              <div class="listing-highlight">$18–$22 / hour</div>
+              <div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>Atlanta, GA</div>
+            </div>
+          </article>
+
+          <article class="listing-card" role="listitem" data-type="event" data-location="Atlanta, GA" data-keywords="event meetup atlanta gaming creators community public">
+            <div class="listing-visual">
+              <span class="listing-badge">Event</span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
+            </div>
+            <div class="listing-card-body">
+              <div class="listing-meta">Tonight · Public</div>
+              <h3 class="listing-title">Indie Creators Meetup</h3>
+              <div class="listing-highlight">Free RSVP</div>
+              <div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>Atlanta, GA</div>
+            </div>
+          </article>
+
+          <article class="listing-card" role="listitem" data-type="job" data-location="Remote" data-keywords="job contract ui designer remote contract upload">
+            <div class="listing-visual">
+              <span class="listing-badge">Job</span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>
+            </div>
+            <div class="listing-card-body">
+              <div class="listing-meta">Contract</div>
+              <h3 class="listing-title">UI Designer for Game Launch</h3>
+              <div class="listing-highlight">$45–$60 / hour</div>
+              <div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>Remote</div>
+            </div>
+          </article>
+
+          <article class="listing-card" role="listitem" data-type="event" data-location="Charlotte, NC" data-keywords="event expo charlotte esports live gallery approved hosts">
+            <div class="listing-visual">
+              <span class="listing-badge">Event</span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
+            </div>
+            <div class="listing-card-body">
+              <div class="listing-meta">Weekend · In person</div>
+              <h3 class="listing-title">Southeast Esports Expo</h3>
+              <div class="listing-highlight">Tickets available</div>
+              <div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>Charlotte, NC</div>
+            </div>
+          </article>
+        </div>
+
+        <div id="jobs-events-empty-state" class="empty-state" hidden>No jobs or events match the current search and filters.</div>
+      </section>
+
+      <section id="create-job-view" class="view-shell create-view" hidden aria-labelledby="create-job-title">
+        <button class="view-back-btn" type="button" data-go-feed>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Jobs and Events
+        </button>
+
+        <div class="profile-anchor">
+          <div id="job-user-avatar" class="profile-avatar">ZG</div>
+          <div class="profile-anchor-copy">
+            <p id="job-user-name" class="profile-anchor-title">Your account</p>
+            <span class="context-tag"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Listing on Jobs and Events</span>
+          </div>
+        </div>
+
+        <div>
+          <h2 id="create-job-title">Create job</h2>
+          <p class="create-view-copy">Build a mobile-friendly job listing using the supplied template structure.</p>
+        </div>
+
+        <form id="create-job-form" class="form-stack" novalidate>
+          <div class="field-group">
+            <div class="field-grid">
+              <div class="field">
+                <label for="job-title">Job title</label>
+                <input id="job-title" class="form-control" type="text" placeholder="Job title" />
+              </div>
+              <div class="field">
+                <label for="job-description">Job description</label>
+                <textarea id="job-description" class="form-textarea" placeholder="Job description"></textarea>
+              </div>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-        <!-- Card 2 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+          <div class="field-group">
+            <h3 class="field-group-title">Classification and location</h3>
+            <div class="split-grid">
+              <div class="field">
+                <label for="job-type">Job Type</label>
+                <select id="job-type" class="form-select">
+                  <option>Full Time</option>
+                  <option>Part Time</option>
+                  <option>Contract</option>
+                  <option>Internship</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="job-location">Location</label>
+                <div class="input-with-action">
+                  <input id="job-location" class="form-control" type="text" placeholder="Enter your city or ZIP code" />
+                  <button id="job-location-open" class="inline-action-btn" type="button">Set</button>
+                </div>
+              </div>
+            </div>
+            <div class="field field-offset">
+              <label for="job-category">Job category</label>
+              <input id="job-category" class="form-control" type="text" placeholder="Job category" list="job-category-options" />
+              <datalist id="job-category-options">
+                <option value="Customer Service"></option>
+                <option value="Design"></option>
+                <option value="Engineering"></option>
+                <option value="Hospitality"></option>
+                <option value="Marketing"></option>
+              </datalist>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-        <!-- Card 3 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+          <div class="notice-card">
+            <strong>Pay</strong>
+            <p class="fine-print">Please review the estimated pay for your job and adjust as needed. You are responsible for deciding appropriate pay and complying with local minimum wage requirements. <a href="https://www.dol.gov/general/topic/wages/minimumwage" target="_blank" rel="noreferrer">Learn more</a></p>
+            <div class="split-grid notice-grid-offset">
+              <div class="field">
+                <label for="pay-type">Pay Type</label>
+                <select id="pay-type" class="form-select">
+                  <option>Hourly</option>
+                  <option>Salary</option>
+                  <option>Daily</option>
+                  <option>Project</option>
+                </select>
+              </div>
+              <div></div>
+              <div class="field">
+                <label for="minimum-pay">Minimum pay</label>
+                <input id="minimum-pay" class="form-control" type="number" min="0" placeholder="Minimum pay" />
+              </div>
+              <div class="field">
+                <label for="maximum-pay">Maximum pay</label>
+                <input id="maximum-pay" class="form-control" type="number" min="0" placeholder="Maximum pay" />
+              </div>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-        <!-- Card 4 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+          <div class="field-group">
+            <h3 class="field-group-title">Media and benefits</h3>
+            <label class="sr-only" for="job-cover-upload">Upload cover photo</label>
+            <input id="job-cover-upload" type="file" accept="image/*" hidden />
+            <button id="job-cover-trigger" type="button" class="job-media-card">
+              <div id="job-cover-preview" class="media-preview-thumb">
+                <div class="media-placeholder-copy">
+                  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/><path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10"/></svg>
+                  <strong>Optional cover photo</strong>
+                  <span class="subtle-copy">Add a square photo to make your listing stand out.</span>
+                </div>
+              </div>
+            </button>
+
+            <div class="pill-section-offset">
+              <p class="pill-section-title">What benefits and extra pay do you offer?</p>
+              <p id="job-benefits-help" class="subtle-copy">Selecting None clears the other benefit options.</p>
+              <div class="pill-group" id="benefits-pill-group" aria-describedby="job-benefits-help">
+                <label class="pill-option" for="job-benefit-1"><input id="job-benefit-1" type="checkbox" value="None" checked aria-describedby="job-benefits-help" /><span>None</span></label>
+                <label class="pill-option" for="job-benefit-2"><input id="job-benefit-2" type="checkbox" value="Medical" /><span>Medical</span></label>
+                <label class="pill-option" for="job-benefit-3"><input id="job-benefit-3" type="checkbox" value="Dental" /><span>Dental</span></label>
+                <label class="pill-option" for="job-benefit-4"><input id="job-benefit-4" type="checkbox" value="Vision" /><span>Vision</span></label>
+                <label class="pill-option" for="job-benefit-5"><input id="job-benefit-5" type="checkbox" value="401K" /><span>401K</span></label>
+                <label class="pill-option" for="job-benefit-6"><input id="job-benefit-6" type="checkbox" value="Overtime" /><span>Overtime</span></label>
+                <label class="pill-option" for="job-benefit-7"><input id="job-benefit-7" type="checkbox" value="Tips" /><span>Tips</span></label>
+              </div>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-        <!-- Card 5 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+          <div class="submit-panel">
+            <p class="fine-print">By tapping Accept and publish, you agree to the <a href="terms-of-use.html">Facebook Marketplace Job Posting Terms</a>.</p>
+            <button class="primary-btn" type="submit">Accept and publish</button>
+            <p class="fine-print">Listings are public across Meta-style surfaces, intended for adult audiences, and may be reviewed for policy compliance before or after publication.</p>
+            <p id="job-submit-status" class="submit-status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+
+      <section id="create-event-view" class="view-shell create-view" hidden aria-labelledby="create-event-title">
+        <button class="view-back-btn" type="button" data-go-feed>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Jobs and Events
+        </button>
+
+        <div>
+          <h2 id="create-event-title">Create event</h2>
+          <p class="create-view-copy">Follow the supplied event creation structure while staying consistent with the existing app UI.</p>
+        </div>
+
+        <div class="event-cover-card">
+          <div id="event-cover-preview" class="event-cover-preview">
+            <div class="event-cover-copy">
+              <strong>Cover preview</strong>
+              <p class="create-view-copy event-cover-description">Add a banner, GIF, or gallery image to anchor the event visually.</p>
+            </div>
+            <div class="event-cover-toolbar">
+              <button id="event-gif-btn" class="toolbar-action" type="button">GIF</button>
+              <button id="event-gallery-btn" class="toolbar-action" type="button">Gallery</button>
+              <button id="event-upload-btn" class="toolbar-action" type="button">Upload</button>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
+          <input id="event-cover-upload" type="file" accept="image/*" hidden />
+        </div>
 
-        <!-- Card 6 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+        <form id="create-event-form" class="form-stack" novalidate>
+          <div class="field-group">
+            <div class="field-grid">
+              <div class="field">
+                <label for="event-name">Event name</label>
+                <input id="event-name" class="form-control" type="text" placeholder="Event name" />
+              </div>
+              <div class="field">
+                <label for="event-start">Start date and time</label>
+                <input id="event-start" class="form-control" type="datetime-local" />
+              </div>
+              <div class="field">
+                <button id="add-end-time-btn" class="secondary-action-btn" type="button">Add end time</button>
+              </div>
+              <div id="event-end-field" class="field" hidden>
+                <label for="event-end">End date and time</label>
+                <input id="event-end" class="form-control" type="datetime-local" />
+              </div>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-        <!-- Card 7 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+          <div class="quick-actions">
+            <div class="quick-action-card">
+              <strong>Repeat event</strong>
+              <span>Choose an event cadence.</span>
+              <select id="event-repeat" class="form-select">
+                <option>Does not repeat</option>
+                <option>Daily</option>
+                <option>Weekly</option>
+                <option>Monthly</option>
+              </select>
+            </div>
+            <div class="quick-action-card">
+              <strong>Time Zone</strong>
+              <span>Localized schedule display.</span>
+              <input id="event-timezone" class="form-control" type="text" readonly />
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-        <!-- Card 8 -->
-        <article class="mkp-card" role="listitem" aria-label="Product listing placeholder">
-          <div class="mkp-card-img" aria-hidden="true">
-            <div class="mkp-card-img-inner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span class="mkp-card-img-label">Product Image<br>Placeholder (1:1)</span>
+          <div class="logistics-trigger">
+            <button id="event-logistics-open" class="row-action-btn" type="button">
+              <span class="row-action-copy">
+                <span class="inline-label">Is it in person or virtual?</span>
+                <span id="event-logistics-summary" class="row-summary">Choose event access details.</span>
+              </span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="field-group">
+            <div class="field">
+              <label for="event-privacy">Who can see it?</label>
+              <select id="event-privacy" class="form-select">
+                <option>Public</option>
+                <option>Friends</option>
+                <option>Invite only</option>
+              </select>
             </div>
           </div>
-          <div class="mkp-card-body" aria-hidden="true">
-            <div class="mkp-skel mkp-skel-price"></div>
-            <div class="mkp-skel mkp-skel-title"></div>
-            <div class="mkp-skel mkp-skel-title-b"></div>
-            <div class="mkp-skel mkp-skel-location"></div>
-          </div>
-        </article>
 
-      </div><!-- /.mkp-grid -->
+          <div class="field-group">
+            <div class="field">
+              <label for="event-details">What are the details?</label>
+              <textarea id="event-details" class="form-textarea" placeholder="What are the details?"></textarea>
+            </div>
+          </div>
+
+          <div class="cohost-summary">
+            <button id="event-cohosts-open" class="row-action-btn" type="button">
+              <span class="row-action-copy">
+                <span class="inline-label">Add co-hosts</span>
+                <span id="event-cohosts-summary" class="row-summary">Search and invite collaborators.</span>
+              </span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <div id="event-cohost-chip-list" class="summary-chip-list" hidden></div>
+          </div>
+
+          <div class="settings-summary">
+            <button id="event-settings-open" class="row-action-btn" type="button">
+              <span class="row-action-copy">
+                <span class="inline-label">Additional settings</span>
+                <span id="event-settings-summary" class="row-summary">Configure host posting and spam moderation options.</span>
+              </span>
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="submit-panel">
+            <button class="primary-btn" type="submit">Publish event</button>
+            <p class="fine-print">Your event details, privacy settings, and moderation preferences can be adjusted again before you go live in a connected backend.</p>
+            <p id="event-submit-status" class="submit-status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
     </main>
 
-    <!-- ── Sticky footer navigation ───────────────────────────── -->
     <footer class="sticky-footer" aria-label="Quick navigation">
       <a class="sticky-footer-item" href="index.html" aria-label="Home">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -675,12 +1472,132 @@
       <button id="sticky-footer-notifications" class="sticky-footer-item" type="button" aria-label="Notifications">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button id="sticky-footer-marketplace" class="sticky-footer-item active" type="button" aria-label="Marketplace">
-        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 7h18l-1.5 13a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2z"/><path d="M8 7a4 4 0 0 1 8 0"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/></svg>
+      <button id="sticky-footer-marketplace" class="sticky-footer-item active" type="button" aria-label="Jobs and Events" title="Jobs and Events">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
       </button>
     </footer>
 
-    <!-- ── Auth modal ──────────────────────────────────────────── -->
+    <div id="create-listing-modal" class="sheet-modal" aria-hidden="true">
+      <div class="sheet-panel center-panel" role="dialog" aria-modal="true" aria-labelledby="create-listing-modal-title">
+        <h2 id="create-listing-modal-title" class="sheet-title">Create listing</h2>
+        <p class="sheet-copy">Choose the listing flow you want to open.</p>
+        <div class="chooser-grid">
+          <button class="chooser-option" type="button" data-open-create="job">
+            <strong>Job</strong>
+            <span>Open the structured job creation template.</span>
+          </button>
+          <button class="chooser-option" type="button" data-open-create="event">
+            <strong>Event</strong>
+            <span>Open the rich event creation template.</span>
+          </button>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel-btn" type="button" data-close-modal="create-listing-modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="location-modal" class="sheet-modal" aria-hidden="true">
+      <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="location-modal-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 id="location-modal-title" class="sheet-title">Set Location</h2>
+        <p class="sheet-copy">Use the location finder control or a listing form field to set a city or ZIP code.</p>
+        <div class="sheet-form-stack">
+          <div class="map-preview">Map preview placeholder<br />Use the text field below when map infrastructure is unavailable.</div>
+          <div class="field">
+            <label for="location-modal-input">Enter your city or ZIP code</label>
+            <input id="location-modal-input" class="form-control" type="text" placeholder="Enter your city or ZIP code" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel-btn" type="button" data-close-modal="location-modal">Cancel</button>
+          <button id="location-modal-save" class="modal-save-btn" type="button">Apply location</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="logistics-modal" class="sheet-modal" aria-hidden="true">
+      <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="logistics-modal-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 id="logistics-modal-title" class="sheet-title">Is it in person or virtual?</h2>
+        <p class="sheet-copy">Choose how attendees will access the event.</p>
+        <div class="sheet-tabs" role="tablist" aria-label="Logistics mode">
+          <button id="logistics-tab-person" class="sheet-tab active" type="button">In Person</button>
+          <button id="logistics-tab-virtual" class="sheet-tab" type="button">Virtual</button>
+        </div>
+        <div id="logistics-person-panel" class="sheet-form-stack sheet-offset">
+          <div class="field">
+            <label for="event-in-person-location">Enter location</label>
+            <input id="event-in-person-location" class="form-control" type="text" placeholder="Enter location" />
+          </div>
+        </div>
+        <div id="logistics-virtual-panel" class="sheet-form-stack sheet-offset" hidden>
+          <div class="radio-list">
+            <div class="radio-row"><input id="virtual-facebook-live" name="virtual-type" type="radio" value="Facebook Live" checked /><label for="virtual-facebook-live">Facebook Live</label></div>
+            <div class="radio-row"><input id="virtual-external-link" name="virtual-type" type="radio" value="External link" /><label for="virtual-external-link">External link</label></div>
+            <div class="radio-row"><input id="virtual-other" name="virtual-type" type="radio" value="Other" /><label for="virtual-other">Other</label></div>
+          </div>
+          <div class="field">
+            <label for="event-virtual-detail">Virtual detail</label>
+            <input id="event-virtual-detail" class="form-control" type="text" placeholder="Add a link or note if needed" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel-btn" type="button" data-close-modal="logistics-modal">Cancel</button>
+          <button id="logistics-modal-save" class="modal-save-btn" type="button">Save logistics</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="cohosts-modal" class="sheet-modal" aria-hidden="true">
+      <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="cohosts-modal-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 id="cohosts-modal-title" class="sheet-title">Add co-hosts</h2>
+        <p class="sheet-copy">Search for people and choose who should help host the event.</p>
+        <div class="field">
+          <label for="cohost-search">Search for people</label>
+          <input id="cohost-search" class="form-control" type="search" placeholder="Search for people" />
+        </div>
+        <div id="cohost-list" class="person-list sheet-offset"></div>
+        <div class="modal-actions">
+          <button class="modal-cancel-btn" type="button" data-close-modal="cohosts-modal">Cancel</button>
+          <button id="cohosts-modal-save" class="modal-save-btn" type="button">Save co-hosts</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-modal" class="sheet-modal" aria-hidden="true">
+      <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 id="settings-modal-title" class="sheet-title">Additional settings</h2>
+        <p class="sheet-copy">Manage posting and moderation defaults for the event page.</p>
+        <div class="toggle-list">
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <div class="toggle-label">Only hosts can post</div>
+            </div>
+            <label class="switch"><input id="setting-hosts-post" type="checkbox" /><span class="switch-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <div class="toggle-label">Posts must be approved by a host</div>
+            </div>
+            <label class="switch"><input id="setting-host-approval" type="checkbox" /><span class="switch-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <div class="toggle-label">Posts and comments detected as potential spam</div>
+            </div>
+            <label class="switch"><input id="setting-spam-moderation" type="checkbox" checked /><span class="switch-slider"></span></label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel-btn" type="button" data-close-modal="settings-modal">Cancel</button>
+          <button id="settings-modal-save" class="modal-save-btn" type="button">Save settings</button>
+        </div>
+      </div>
+    </div>
+
     <div id="auth-modal" class="auth-modal" aria-hidden="true">
       <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <button id="auth-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
@@ -728,7 +1645,6 @@
       </div>
     </div>
 
-    <!-- ── New Post Composer modal ─────────────────────────────── -->
     <div id="new-post-modal" class="auth-modal" aria-hidden="true">
       <div class="auth-panel npc-panel" role="dialog" aria-modal="true" aria-labelledby="new-post-title">
         <button id="new-post-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
@@ -745,7 +1661,7 @@
 
         <form id="new-post-form" novalidate>
           <div class="npc-compose-area">
-            <textarea id="new-post-text" class="npc-textarea" placeholder="What&#39;s on your mind?" rows="3" aria-label="Post text"></textarea>
+            <textarea id="new-post-text" class="npc-textarea" placeholder="What's on your mind?" rows="3" aria-label="Post text"></textarea>
             <div id="npc-mention-dropdown" class="npc-mention-dropdown" hidden role="listbox" aria-label="Suggested mentions"></div>
             <div class="npc-char-counter" id="npc-char-counter" aria-hidden="true">
               <svg class="npc-ring-svg" viewBox="0 0 36 36">
@@ -872,26 +1788,604 @@
       window.openNewPost = openNewPost;
       window.closeNewPostModal = closeNewPostModal;
 
-      document.getElementById('auth-close').addEventListener('click', closeAuthModal);
-      document.querySelectorAll('.auth-tab').forEach(function (tab) {
-        tab.addEventListener('click', function () {
-          openAuthModal(tab.getAttribute('data-auth-view'));
-        });
-      });
-      document.getElementById('auth-modal').addEventListener('click', function (e) {
-        if (e.target === this) closeAuthModal();
-      });
-      document.getElementById('new-post-close').addEventListener('click', closeNewPostModal);
-      document.getElementById('new-post-modal').addEventListener('click', function (e) {
-        if (e.target === this) closeNewPostModal();
-      });
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-          if (document.getElementById('auth-modal').classList.contains('open')) closeAuthModal();
-          var npm = document.getElementById('new-post-modal');
-          if (npm && npm.classList.contains('open')) closeNewPostModal();
+      (function () {
+        var DB_NAME = 'zorexium-app-db';
+        var DB_VERSION = 4;
+        var ACCOUNTS_STORE = 'accounts';
+        var POSTS_STORE = 'posts';
+        var SESSION_STORE = 'session';
+        var MEDIA_STORE = 'media';
+        var COMMENTS_STORE = 'comments';
+        var NOTIFICATIONS_STORE = 'notifications';
+        var ARTICLES_STORE = 'articles';
+        var viewIds = {
+          feed: 'jobs-events-feed-view',
+          'create-job': 'create-job-view',
+          'create-event': 'create-event-view'
+        };
+        var viewState = {
+          activeView: 'feed',
+          query: '',
+          type: '',
+          nearOnly: false,
+          browseLocation: 'Nearby',
+          modalLocationTarget: 'browse',
+          logisticsMode: 'person',
+          logistics: {
+            mode: 'person',
+            inPersonLocation: '',
+            virtualType: 'Facebook Live',
+            virtualDetail: ''
+          },
+          selectedCohosts: [],
+          settings: {
+            hostsCanPost: false,
+            hostApproval: false,
+            spamModeration: true
+          },
+          allAccounts: [],
+          currentUser: null
+        };
+
+        function openDb() {
+          return new Promise(function (resolve, reject) {
+            if (!window.indexedDB) {
+              reject(new Error('IndexedDB unavailable'));
+              return;
+            }
+            var request = window.indexedDB.open(DB_NAME, DB_VERSION);
+            request.onupgradeneeded = function () {
+              var database = request.result;
+              if (!database.objectStoreNames.contains(ACCOUNTS_STORE)) database.createObjectStore(ACCOUNTS_STORE, { keyPath: 'id' });
+              if (!database.objectStoreNames.contains(POSTS_STORE)) database.createObjectStore(POSTS_STORE, { keyPath: 'id' });
+              if (!database.objectStoreNames.contains(SESSION_STORE)) database.createObjectStore(SESSION_STORE, { keyPath: 'key' });
+              if (!database.objectStoreNames.contains(MEDIA_STORE)) database.createObjectStore(MEDIA_STORE, { keyPath: 'id' });
+              if (!database.objectStoreNames.contains(COMMENTS_STORE)) database.createObjectStore(COMMENTS_STORE, { keyPath: 'id' });
+              if (!database.objectStoreNames.contains(NOTIFICATIONS_STORE)) database.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id' });
+              if (!database.objectStoreNames.contains(ARTICLES_STORE)) database.createObjectStore(ARTICLES_STORE, { keyPath: 'id' });
+            };
+            request.onerror = function () {
+              reject(request.error || new Error('Failed to open DB.'));
+            };
+            request.onsuccess = function () {
+              resolve(request.result);
+            };
+          });
         }
-      });
+
+        function getRecord(database, storeName, key) {
+          return new Promise(function (resolve, reject) {
+            var transaction = database.transaction(storeName, 'readonly');
+            var request = transaction.objectStore(storeName).get(key);
+            request.onerror = function () {
+              reject(request.error || new Error('Failed to read record.'));
+            };
+            request.onsuccess = function () {
+              resolve(request.result || null);
+            };
+          });
+        }
+
+        function getAllRecords(database, storeName) {
+          return new Promise(function (resolve, reject) {
+            var transaction = database.transaction(storeName, 'readonly');
+            var request = transaction.objectStore(storeName).getAll();
+            request.onerror = function () {
+              reject(request.error || new Error('Failed to read records.'));
+            };
+            request.onsuccess = function () {
+              resolve(Array.isArray(request.result) ? request.result : []);
+            };
+          });
+        }
+
+        function getInitials(name, username) {
+          var source = String(name || username || 'ZG').trim();
+          if (!source) return 'ZG';
+          var parts = source.split(/\s+/).filter(Boolean).slice(0, 2);
+          var letters = parts.map(function (part) { return part.charAt(0).toUpperCase(); }).join('');
+          return letters || source.slice(0, 2).toUpperCase();
+        }
+
+        function getAvatarColor(seed) {
+          var palette = ['#cc2222', '#991b1b', '#7c3aed', '#1d4ed8', '#0f766e', '#b45309'];
+          var text = String(seed || 'zorexium');
+          var total = 0;
+          for (var index = 0; index < text.length; index += 1) {
+            total += text.charCodeAt(index);
+          }
+          return palette[total % palette.length];
+        }
+
+        function getProfileLocation(user) {
+          if (!user || typeof user !== 'object') return '';
+          var keys = ['profileLocation', 'location', 'cityState', 'city', 'zipCode'];
+          for (var index = 0; index < keys.length; index += 1) {
+            var value = String(user[keys[index]] || '').trim();
+            if (value) return value;
+          }
+          return '';
+        }
+
+        function setBrowseLocation(value) {
+          viewState.browseLocation = String(value || '').trim() || 'Nearby';
+          document.getElementById('browse-location-value').textContent = viewState.browseLocation;
+          filterListings();
+        }
+
+        function setJobIdentity(user) {
+          var avatar = document.getElementById('job-user-avatar');
+          var name = document.getElementById('job-user-name');
+          var displayName = user ? (user.name || user.username || 'Your account') : 'Your account';
+          avatar.textContent = getInitials(user && user.name, user && user.username);
+          avatar.style.background = 'linear-gradient(135deg, ' + getAvatarColor(user && user.username) + ', #111111)';
+          name.textContent = displayName;
+          var locationValue = getProfileLocation(user);
+          if (locationValue) {
+            document.getElementById('job-location').value = locationValue;
+            setBrowseLocation(locationValue);
+            document.getElementById('event-in-person-location').value = locationValue;
+          }
+        }
+
+        function formatTimezone() {
+          try {
+            var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local';
+            return zone.replace(/_/g, ' ');
+          } catch (error) {
+            return 'Local time';
+          }
+        }
+
+        function getSuggestedPeople(accounts) {
+          var candidates = (accounts || []).filter(function (account) {
+            return !viewState.currentUser || account.id !== viewState.currentUser.id;
+          }).slice(0, 6).map(function (account) {
+            return {
+              id: account.id,
+              name: account.name || account.username,
+              username: account.username || 'user'
+            };
+          });
+          if (candidates.length) return candidates;
+          return [
+            { id: 'suggested-1', name: 'Jordan Rivera', username: 'jordy' },
+            { id: 'suggested-2', name: 'Ava Moore', username: 'avam' },
+            { id: 'suggested-3', name: 'Chris Lin', username: 'chrisl' }
+          ];
+        }
+
+        function renderCohosts() {
+          var searchValue = String(document.getElementById('cohost-search').value || '').trim().toLowerCase();
+          var container = document.getElementById('cohost-list');
+          var people = getSuggestedPeople(viewState.allAccounts).filter(function (person) {
+            if (!searchValue) return true;
+            return String(person.name).toLowerCase().indexOf(searchValue) !== -1 || String(person.username).toLowerCase().indexOf(searchValue) !== -1;
+          });
+          container.innerHTML = '';
+          if (!people.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = 'No matching people found.';
+            container.appendChild(empty);
+            return;
+          }
+          people.forEach(function (person) {
+            var row = document.createElement('div');
+            row.className = 'person-row';
+            var avatar = document.createElement('div');
+            avatar.className = 'person-avatar';
+            avatar.textContent = getInitials(person.name, person.username);
+            avatar.style.background = 'linear-gradient(135deg, ' + getAvatarColor(person.username) + ', #111111)';
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = 'cohost-' + person.id;
+            checkbox.checked = viewState.selectedCohosts.some(function (entry) { return entry.id === person.id; });
+            checkbox.addEventListener('change', function () {
+              if (checkbox.checked) {
+                viewState.selectedCohosts = viewState.selectedCohosts.concat([{ id: person.id, name: person.name, username: person.username }]);
+              } else {
+                viewState.selectedCohosts = viewState.selectedCohosts.filter(function (entry) { return entry.id !== person.id; });
+              }
+            });
+            var label = document.createElement('label');
+            label.htmlFor = checkbox.id;
+            label.className = 'cohost-label-copy';
+            var strong = document.createElement('strong');
+            strong.textContent = person.name;
+            var handle = document.createElement('span');
+            handle.className = 'row-summary';
+            handle.textContent = '@' + person.username;
+            label.appendChild(strong);
+            label.appendChild(handle);
+            row.appendChild(avatar);
+            row.appendChild(checkbox);
+            row.appendChild(label);
+            container.appendChild(row);
+          });
+        }
+
+        function updateCohostSummary() {
+          var summary = document.getElementById('event-cohosts-summary');
+          var chipList = document.getElementById('event-cohost-chip-list');
+          if (!viewState.selectedCohosts.length) {
+            summary.textContent = 'Search and invite collaborators.';
+            chipList.hidden = true;
+            chipList.innerHTML = '';
+            return;
+          }
+          summary.textContent = viewState.selectedCohosts.length + ' co-host' + (viewState.selectedCohosts.length === 1 ? '' : 's') + ' selected';
+          chipList.hidden = false;
+          chipList.innerHTML = '';
+          viewState.selectedCohosts.forEach(function (person) {
+            var chip = document.createElement('span');
+            chip.className = 'summary-chip';
+            chip.textContent = person.name;
+            chipList.appendChild(chip);
+          });
+        }
+
+        function updateSettingsSummary() {
+          var active = [];
+          if (viewState.settings.hostsCanPost) active.push('Only hosts can post');
+          if (viewState.settings.hostApproval) active.push('Host approval required');
+          if (viewState.settings.spamModeration) active.push('Spam moderation on');
+          document.getElementById('event-settings-summary').textContent = active.length ? active.join(' • ') : 'Configure host posting and spam moderation options.';
+        }
+
+        function updateLogisticsSummary() {
+          var summary = document.getElementById('event-logistics-summary');
+          if (viewState.logistics.mode === 'person') {
+            summary.textContent = viewState.logistics.inPersonLocation ? ('In person • ' + viewState.logistics.inPersonLocation) : 'In person • Add a location';
+            return;
+          }
+          summary.textContent = viewState.logistics.virtualType + (viewState.logistics.virtualDetail ? (' • ' + viewState.logistics.virtualDetail) : '');
+        }
+
+        function sanitizeImageUrl(value) {
+          var text = String(value || '').trim();
+          if (!text) return '';
+          return /^(https?:|data:image\/|blob:)/i.test(text) ? text : '';
+        }
+
+        function setPreviewImage(element, url) {
+          if (!element) return;
+          if (!url) {
+            element.style.removeProperty('background-image');
+            element.classList.remove('has-image');
+            return;
+          }
+          element.style.setProperty('background-image', 'url("' + url.replace(/"/g, '%22') + '")');
+          element.classList.add('has-image');
+        }
+
+        function showModal(id) {
+          var modal = document.getElementById(id);
+          if (!modal) return;
+          modal.classList.add('open');
+          modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function hideModal(id) {
+          var modal = document.getElementById(id);
+          if (!modal) return;
+          modal.classList.remove('open');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function filterListings() {
+          var cards = Array.prototype.slice.call(document.querySelectorAll('#jobs-events-listing-grid .listing-card'));
+          var query = viewState.query.toLowerCase();
+          var browseLocation = viewState.browseLocation.toLowerCase();
+          var visibleCount = 0;
+          cards.forEach(function (card) {
+            var matchesQuery = !query || String(card.getAttribute('data-keywords') || '').toLowerCase().indexOf(query) !== -1;
+            var matchesType = !viewState.type || card.getAttribute('data-type') === viewState.type;
+            var matchesNear = !viewState.nearOnly || String(card.getAttribute('data-location') || '').toLowerCase().indexOf(browseLocation) !== -1 || browseLocation === 'nearby';
+            var visible = matchesQuery && matchesType && matchesNear;
+            card.hidden = !visible;
+            if (visible) visibleCount += 1;
+          });
+          document.getElementById('jobs-events-empty-state').hidden = visibleCount !== 0;
+        }
+
+        function syncBubbleState() {
+          document.getElementById('bubble-jobs').classList.toggle('active', viewState.type === 'job');
+          document.getElementById('bubble-jobs').setAttribute('aria-pressed', viewState.type === 'job' ? 'true' : 'false');
+          document.getElementById('bubble-events').classList.toggle('active', viewState.type === 'event');
+          document.getElementById('bubble-events').setAttribute('aria-pressed', viewState.type === 'event' ? 'true' : 'false');
+          document.getElementById('bubble-near-me').classList.toggle('active', viewState.nearOnly);
+          document.getElementById('bubble-near-me').setAttribute('aria-pressed', viewState.nearOnly ? 'true' : 'false');
+          filterListings();
+        }
+
+        function showView(viewName) {
+          viewState.activeView = viewIds[viewName] ? viewName : 'feed';
+          Object.keys(viewIds).forEach(function (key) {
+            var section = document.getElementById(viewIds[key]);
+            section.hidden = key !== viewState.activeView;
+          });
+          window.location.hash = viewState.activeView === 'feed' ? '' : viewState.activeView;
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        function openCreateFlow(type) {
+          hideModal('create-listing-modal');
+          if (type === 'job') {
+            showView('create-job');
+          } else {
+            showView('create-event');
+          }
+        }
+
+        function handleRoute() {
+          var hash = String(window.location.hash || '').replace(/^#/, '');
+          if (hash === 'create-job' || hash === 'create-event') {
+            showView(hash);
+            return;
+          }
+          showView('feed');
+        }
+
+        function bindBenefits() {
+          var checkboxes = Array.prototype.slice.call(document.querySelectorAll('#benefits-pill-group input[type="checkbox"]'));
+          if (!checkboxes.length) return;
+          var noneBox = checkboxes[0];
+          checkboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+              if (checkbox === noneBox && noneBox.checked) {
+                checkboxes.slice(1).forEach(function (item) { item.checked = false; });
+                return;
+              }
+              if (checkbox !== noneBox && checkbox.checked) {
+                noneBox.checked = false;
+              }
+              if (!checkboxes.slice(1).some(function (item) { return item.checked; })) {
+                noneBox.checked = true;
+              }
+            });
+          });
+        }
+
+        function readImageFile(file, callback) {
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function () {
+            callback(String(reader.result || ''));
+          };
+          reader.readAsDataURL(file);
+        }
+
+        function initializeForms() {
+          var now = new Date();
+          var iso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+          document.getElementById('event-start').value = iso;
+          document.getElementById('event-timezone').value = formatTimezone();
+          updateLogisticsSummary();
+          updateCohostSummary();
+          updateSettingsSummary();
+          bindBenefits();
+
+          document.getElementById('jobs-events-search').addEventListener('input', function (event) {
+            viewState.query = String(event.target.value || '');
+            filterListings();
+          });
+          document.getElementById('bubble-jobs').addEventListener('click', function () {
+            viewState.type = viewState.type === 'job' ? '' : 'job';
+            syncBubbleState();
+          });
+          document.getElementById('bubble-events').addEventListener('click', function () {
+            viewState.type = viewState.type === 'event' ? '' : 'event';
+            syncBubbleState();
+          });
+          document.getElementById('bubble-near-me').addEventListener('click', function () {
+            viewState.nearOnly = !viewState.nearOnly;
+            syncBubbleState();
+          });
+          document.getElementById('bubble-create-listing').addEventListener('click', function () {
+            if (document.body.getAttribute('data-authenticated') !== 'true') {
+              openAuthModal('login');
+              return;
+            }
+            showModal('create-listing-modal');
+          });
+          document.getElementById('browse-location-btn').addEventListener('click', function () {
+            viewState.modalLocationTarget = 'browse';
+            document.getElementById('location-modal-input').value = viewState.browseLocation === 'Nearby' ? '' : viewState.browseLocation;
+            showModal('location-modal');
+          });
+          document.getElementById('job-location-open').addEventListener('click', function () {
+            viewState.modalLocationTarget = 'job';
+            document.getElementById('location-modal-input').value = document.getElementById('job-location').value;
+            showModal('location-modal');
+          });
+          Array.prototype.slice.call(document.querySelectorAll('[data-open-create]')).forEach(function (button) {
+            button.addEventListener('click', function () {
+              openCreateFlow(button.getAttribute('data-open-create'));
+            });
+          });
+          Array.prototype.slice.call(document.querySelectorAll('[data-go-feed]')).forEach(function (button) {
+            button.addEventListener('click', function () {
+              showView('feed');
+            });
+          });
+          Array.prototype.slice.call(document.querySelectorAll('[data-close-modal]')).forEach(function (button) {
+            button.addEventListener('click', function () {
+              hideModal(button.getAttribute('data-close-modal'));
+            });
+          });
+          Array.prototype.slice.call(document.querySelectorAll('.sheet-modal')).forEach(function (modal) {
+            modal.addEventListener('click', function (event) {
+              if (event.target === modal) hideModal(modal.id);
+            });
+          });
+
+          document.getElementById('location-modal-save').addEventListener('click', function () {
+            var value = String(document.getElementById('location-modal-input').value || '').trim();
+            if (viewState.modalLocationTarget === 'job') {
+              document.getElementById('job-location').value = value;
+            } else if (viewState.modalLocationTarget === 'event') {
+              document.getElementById('event-in-person-location').value = value;
+              viewState.logistics.mode = 'person';
+              viewState.logistics.inPersonLocation = value;
+              updateLogisticsSummary();
+            } else {
+              setBrowseLocation(value || 'Nearby');
+            }
+            hideModal('location-modal');
+          });
+
+          document.getElementById('job-cover-trigger').addEventListener('click', function () {
+            document.getElementById('job-cover-upload').click();
+          });
+          document.getElementById('job-cover-upload').addEventListener('change', function (event) {
+            readImageFile(event.target.files && event.target.files[0], function (result) {
+              var preview = document.getElementById('job-cover-preview');
+              preview.innerHTML = '';
+              setPreviewImage(preview, result);
+            });
+          });
+
+          document.getElementById('event-gallery-btn').addEventListener('click', function () {
+            document.getElementById('event-cover-upload').click();
+          });
+          document.getElementById('event-upload-btn').addEventListener('click', function () {
+            document.getElementById('event-cover-upload').click();
+          });
+          document.getElementById('event-cover-upload').addEventListener('change', function (event) {
+            readImageFile(event.target.files && event.target.files[0], function (result) {
+              setPreviewImage(document.getElementById('event-cover-preview'), result);
+            });
+          });
+          document.getElementById('event-gif-btn').addEventListener('click', function () {
+            var url = window.prompt('Paste a GIF URL');
+            var safeUrl = sanitizeImageUrl(url);
+            if (!safeUrl) return;
+            setPreviewImage(document.getElementById('event-cover-preview'), safeUrl);
+          });
+
+          document.getElementById('add-end-time-btn').addEventListener('click', function () {
+            var endField = document.getElementById('event-end-field');
+            var isHidden = endField.hidden;
+            endField.hidden = !isHidden;
+            document.getElementById('add-end-time-btn').textContent = isHidden ? 'Remove end time' : 'Add end time';
+          });
+
+          document.getElementById('event-logistics-open').addEventListener('click', function () {
+            showModal('logistics-modal');
+          });
+          document.getElementById('logistics-tab-person').addEventListener('click', function () {
+            viewState.logisticsMode = 'person';
+            document.getElementById('logistics-tab-person').classList.add('active');
+            document.getElementById('logistics-tab-virtual').classList.remove('active');
+            document.getElementById('logistics-person-panel').hidden = false;
+            document.getElementById('logistics-virtual-panel').hidden = true;
+          });
+          document.getElementById('logistics-tab-virtual').addEventListener('click', function () {
+            viewState.logisticsMode = 'virtual';
+            document.getElementById('logistics-tab-person').classList.remove('active');
+            document.getElementById('logistics-tab-virtual').classList.add('active');
+            document.getElementById('logistics-person-panel').hidden = true;
+            document.getElementById('logistics-virtual-panel').hidden = false;
+          });
+          document.getElementById('logistics-modal-save').addEventListener('click', function () {
+            if (viewState.logisticsMode === 'person') {
+              viewState.logistics.mode = 'person';
+              viewState.logistics.inPersonLocation = String(document.getElementById('event-in-person-location').value || '').trim();
+            } else {
+              var checked = document.querySelector('input[name="virtual-type"]:checked');
+              viewState.logistics.mode = 'virtual';
+              viewState.logistics.virtualType = checked ? checked.value : 'Facebook Live';
+              viewState.logistics.virtualDetail = String(document.getElementById('event-virtual-detail').value || '').trim();
+            }
+            updateLogisticsSummary();
+            hideModal('logistics-modal');
+          });
+
+          document.getElementById('event-cohosts-open').addEventListener('click', function () {
+            renderCohosts();
+            showModal('cohosts-modal');
+          });
+          document.getElementById('cohost-search').addEventListener('input', renderCohosts);
+          document.getElementById('cohosts-modal-save').addEventListener('click', function () {
+            updateCohostSummary();
+            hideModal('cohosts-modal');
+          });
+
+          document.getElementById('event-settings-open').addEventListener('click', function () {
+            document.getElementById('setting-hosts-post').checked = viewState.settings.hostsCanPost;
+            document.getElementById('setting-host-approval').checked = viewState.settings.hostApproval;
+            document.getElementById('setting-spam-moderation').checked = viewState.settings.spamModeration;
+            showModal('settings-modal');
+          });
+          document.getElementById('settings-modal-save').addEventListener('click', function () {
+            viewState.settings.hostsCanPost = document.getElementById('setting-hosts-post').checked;
+            viewState.settings.hostApproval = document.getElementById('setting-host-approval').checked;
+            viewState.settings.spamModeration = document.getElementById('setting-spam-moderation').checked;
+            updateSettingsSummary();
+            hideModal('settings-modal');
+          });
+
+          document.getElementById('create-job-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            document.getElementById('job-submit-status').textContent = 'Job details captured successfully.';
+            document.getElementById('job-submit-status').className = 'submit-status success';
+          });
+          document.getElementById('create-event-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            document.getElementById('event-submit-status').textContent = 'Event details captured successfully.';
+            document.getElementById('event-submit-status').className = 'submit-status success';
+          });
+
+          syncBubbleState();
+          handleRoute();
+          window.addEventListener('hashchange', handleRoute);
+        }
+
+        function initializeStaticModalBindings() {
+          document.getElementById('auth-close').addEventListener('click', closeAuthModal);
+          document.querySelectorAll('.auth-tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+              openAuthModal(tab.getAttribute('data-auth-view'));
+            });
+          });
+          document.getElementById('auth-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeAuthModal();
+          });
+          document.getElementById('new-post-close').addEventListener('click', closeNewPostModal);
+          document.getElementById('new-post-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeNewPostModal();
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+              if (document.getElementById('auth-modal').classList.contains('open')) closeAuthModal();
+              if (document.getElementById('new-post-modal').classList.contains('open')) closeNewPostModal();
+              Array.prototype.slice.call(document.querySelectorAll('.sheet-modal.open')).forEach(function (modal) { hideModal(modal.id); });
+            }
+          });
+        }
+
+        initializeStaticModalBindings();
+        initializeForms();
+        openDb().then(function (database) {
+          return Promise.all([
+            getRecord(database, SESSION_STORE, 'current'),
+            getAllRecords(database, ACCOUNTS_STORE)
+          ]).then(function (results) {
+            var session = results[0];
+            var accounts = results[1];
+            viewState.allAccounts = accounts;
+            if (session && session.userId) {
+              viewState.currentUser = accounts.filter(function (account) { return account.id === session.userId; })[0] || null;
+            }
+            setJobIdentity(viewState.currentUser);
+            renderCohosts();
+          });
+        }).catch(function () {
+          setJobIdentity(null);
+          renderCohosts();
+        });
+      }());
     </script>
     <script src="app.js"></script>
   </body>
