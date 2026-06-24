@@ -1763,6 +1763,7 @@
         if (isSafeMediaUrl(objectUrl)) return { url: objectUrl, isObjectUrl: true };
         URL.revokeObjectURL(objectUrl);
       } catch (error) {
+        // Fall through to a data URL fallback for environments that reject blob: URLs.
       }
       const fallbackDataUrl = await blobToDataUrl(blob);
       if (isSafeMediaUrl(fallbackDataUrl)) return { url: fallbackDataUrl, isObjectUrl: false };
@@ -1787,6 +1788,7 @@
         database.close();
       }
     } catch (error) {
+      // Ignore close failures and force a new connection on the next DB operation.
     }
     appDbPromise = null;
   }
