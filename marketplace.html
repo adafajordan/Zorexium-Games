@@ -1320,7 +1320,7 @@
           </div>
 
           <div class="submit-panel">
-            <p class="fine-print">By tapping Accept and publish, you agree to the <a href="terms-of-use.html">Neter Job Posting Terms</a>.</p>
+            <p class="fine-print">By tapping Accept and publish, you agree to the <a href="terms-of-use.html">Neter Terms of Use</a>.</p>
             <button class="primary-btn" type="submit">Accept and publish</button>
             <p class="fine-print">Listings are public across Neter, intended for adult audiences, and may be reviewed for policy compliance before or after publication.</p>
             <p id="job-submit-status" class="submit-status" aria-live="polite"></p>
@@ -1892,7 +1892,7 @@
             } else if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
               var arr = new Uint8Array(8);
               window.crypto.getRandomValues(arr);
-              rand = Array.prototype.map.call(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+              rand = Array.prototype.map.call(arr, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
             } else {
               throw new Error('crypto unavailable');
             }
@@ -1974,7 +1974,7 @@
         }
 
         function escapeHtml(text) {
-          return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
         }
 
         function storeCoverMediaRecord(database, dataUrl) {
