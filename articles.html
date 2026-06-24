@@ -870,12 +870,20 @@
       }
 
       /* ── Session / User ─────────────────────────────────────── */
-      function getSessionUserId() {
+      function getWindowSessionUserId() {
         try {
           if (!window.name || window.name.indexOf(SESSION_PREFIX) !== 0) return null;
           var payload = JSON.parse(window.name.slice(SESSION_PREFIX.length));
           return payload && payload.userId ? payload.userId : null;
         } catch (e) { return null; }
+      }
+
+      function getSessionUserId() {
+        var windowUserId = getWindowSessionUserId();
+        if (windowUserId) return Promise.resolve(windowUserId);
+        return getRecord(SESSION_STORE, 'current').then(function (record) {
+          return record && record.userId ? record.userId : null;
+        }).catch(function () { return null; });
       }
 
       /* ── ID / util helpers ──────────────────────────────────── */
@@ -2185,12 +2193,11 @@
 
       /* ── Init ───────────────────────────────────────────────── */
       function init() {
-        var userId = getSessionUserId();
-        var userPromise = userId
-          ? getRecord(ACCOUNTS_STORE, userId).then(function (user) { currentUser = user || null; })
-          : Promise.resolve();
-
-        userPromise.then(function () {
+        getSessionUserId().then(function (userId) {
+          if (!userId) return null;
+          return getRecord(ACCOUNTS_STORE, userId);
+        }).then(function (user) {
+          currentUser = user || null;
           updateAuthUI();
           renderFeed();
           setupTabs();
