@@ -1106,6 +1106,7 @@
     const value = String(url || '').trim();
     if (!value) return false;
     if (/^blob:/i.test(value)) return true;
+    if (/^data:image\//i.test(value)) return true;
     try {
       const parsed = new URL(value, window.location.href);
       return parsed.protocol === 'https:';
@@ -1718,6 +1719,9 @@
     if (notificationsList) {
       await renderNotificationsPage();
     }
+    if (typeof window.onArticlesAuthChange === 'function') {
+      window.onArticlesAuthChange(currentUser);
+    }
   }
 
   async function syncCurrentUserFromSession() {
@@ -1751,6 +1755,17 @@
 
   async function getMediaRecord(id) {
     return getRecord(MEDIA_STORE, id);
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () {
+        try { resolve(URL.createObjectURL(blob)); } catch (e) { resolve(null); }
+      };
+      reader.readAsDataURL(blob);
+    });
   }
 
   function clearGeneratedMediaUrls() {
@@ -2627,14 +2642,15 @@
     if (post.articleCoverMediaId) {
       const mediaRecord = await getMediaRecord(post.articleCoverMediaId);
       if (mediaRecord && mediaRecord.blob instanceof Blob) {
-        const url = URL.createObjectURL(mediaRecord.blob);
-        generatedMediaUrls.push(url);
-        const img = document.createElement('img');
-        img.className = 'article-companion-cover';
-        if (isSafeMediaUrl(url)) img.src = url;
-        img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
-        img.loading = 'lazy';
-        card.appendChild(img);
+        const url = await blobToDataUrl(mediaRecord.blob);
+        if (url) {
+          const img = document.createElement('img');
+          img.className = 'article-companion-cover';
+          if (isSafeMediaUrl(url)) img.src = url;
+          img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
       }
     }
 
