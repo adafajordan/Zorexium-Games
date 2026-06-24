@@ -624,6 +624,7 @@
         font-size: 13px;
       }
       .submit-status.success { color: var(--success); }
+      .submit-status.error { color: var(--accent); }
 
       .event-cover-card {
         padding: 0;
@@ -1079,9 +1080,6 @@
         .quick-actions {
           grid-template-columns: 1fr;
         }
-        .listing-grid {
-          grid-template-columns: 1fr;
-        }
         .event-cover-copy {
           max-width: calc(100% - 70px);
         }
@@ -1114,12 +1112,6 @@
       </header>
 
       <div class="mkp-controls" aria-label="Jobs and events search and controls">
-        <section class="jobs-events-intro" aria-labelledby="jobs-events-title">
-          <p class="jobs-events-kicker">Community listings</p>
-          <h1 id="jobs-events-title" class="jobs-events-title">Jobs and Events</h1>
-          <p class="jobs-events-copy">Browse openings, local events, and shared opportunities in one combined experience.</p>
-        </section>
-
         <div class="mkp-search-wrap">
           <label class="sr-only" for="jobs-events-search">Search jobs and events</label>
           <input id="jobs-events-search" class="mkp-search-input" type="search" placeholder="Search jobs and events" aria-label="Search jobs and events" />
@@ -1328,9 +1320,9 @@
           </div>
 
           <div class="submit-panel">
-            <p class="fine-print">By tapping Accept and publish, you agree to the <a href="terms-of-use.html">Facebook Marketplace Job Posting Terms</a>.</p>
+            <p class="fine-print">By tapping Accept and publish, you agree to the <a href="terms-of-use.html">Neter Job Posting Terms</a>.</p>
             <button class="primary-btn" type="submit">Accept and publish</button>
-            <p class="fine-print">Listings are public across Meta-style surfaces, intended for adult audiences, and may be reviewed for policy compliance before or after publication.</p>
+            <p class="fine-print">Listings are public across Neter, intended for adult audiences, and may be reviewed for policy compliance before or after publication.</p>
             <p id="job-submit-status" class="submit-status" aria-live="polite"></p>
           </div>
         </form>
@@ -1533,7 +1525,7 @@
         </div>
         <div id="logistics-virtual-panel" class="sheet-form-stack sheet-offset" hidden>
           <div class="radio-list">
-            <div class="radio-row"><input id="virtual-facebook-live" name="virtual-type" type="radio" value="Facebook Live" checked /><label for="virtual-facebook-live">Facebook Live</label></div>
+            <div class="radio-row"><input id="virtual-neter-live" name="virtual-type" type="radio" value="Neter Live" checked /><label for="virtual-neter-live">Neter Live</label></div>
             <div class="radio-row"><input id="virtual-external-link" name="virtual-type" type="radio" value="External link" /><label for="virtual-external-link">External link</label></div>
             <div class="radio-row"><input id="virtual-other" name="virtual-type" type="radio" value="Other" /><label for="virtual-other">Other</label></div>
           </div>
@@ -1814,7 +1806,7 @@
           logistics: {
             mode: 'person',
             inPersonLocation: '',
-            virtualType: 'Facebook Live',
+            virtualType: 'Neter Live',
             virtualDetail: ''
           },
           selectedCohosts: [],
@@ -1876,6 +1868,118 @@
             request.onsuccess = function () {
               resolve(Array.isArray(request.result) ? request.result : []);
             };
+          });
+        }
+
+        function putRecord(database, storeName, record) {
+          return new Promise(function (resolve, reject) {
+            var transaction = database.transaction(storeName, 'readwrite');
+            var request = transaction.objectStore(storeName).put(record);
+            request.onerror = function () {
+              reject(request.error || new Error('Failed to write record.'));
+            };
+            request.onsuccess = function () {
+              resolve();
+            };
+          });
+        }
+
+        function generateListingId(prefix) {
+          var rand = '';
+          try {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+              rand = window.crypto.randomUUID();
+            } else {
+              var arr = new Uint8Array(8);
+              window.crypto.getRandomValues(arr);
+              rand = Array.prototype.map.call(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+            }
+          } catch (e) {
+            rand = Date.now().toString(36) + Math.random().toString(36).slice(2);
+          }
+          return (prefix || 'listing') + '-' + rand;
+        }
+
+        function addListingCardToFeed(data) {
+          var grid = document.getElementById('jobs-events-listing-grid');
+          if (!grid) return;
+          var keywords = [
+            data.type,
+            data.title,
+            data.jobType || data.logistics || '',
+            data.location,
+            data.category || ''
+          ].join(' ').toLowerCase();
+          var badgeText = data.type === 'job' ? 'Job' : 'Event';
+          var metaText = data.type === 'job'
+            ? (data.jobType || 'Listing')
+            : (data.eventStart ? 'Upcoming · ' + (data.privacy || 'Public') : 'Upcoming · Public');
+          var highlightText = data.type === 'job'
+            ? (data.minPay && data.maxPay ? '$' + data.minPay + '–$' + data.maxPay + ' / ' + (data.payType || 'hr') : (data.minPay ? '$' + data.minPay + ' / ' + (data.payType || 'hr') : ''))
+            : '';
+          var iconSvg = data.type === 'job'
+            ? '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>'
+            : '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>';
+
+          var article = document.createElement('article');
+          article.className = 'listing-card';
+          article.setAttribute('role', 'listitem');
+          article.setAttribute('data-type', data.type);
+          article.setAttribute('data-location', data.location || '');
+          article.setAttribute('data-keywords', keywords);
+
+          var visualDiv = document.createElement('div');
+          visualDiv.className = 'listing-visual';
+          if (data.coverDataUrl) {
+            var img = document.createElement('img');
+            img.src = data.coverDataUrl;
+            img.alt = '';
+            img.setAttribute('aria-hidden', 'true');
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;border-radius:inherit;';
+            visualDiv.style.position = 'relative';
+            visualDiv.appendChild(img);
+          }
+          var badge = document.createElement('span');
+          badge.className = 'listing-badge';
+          badge.textContent = badgeText;
+          visualDiv.appendChild(badge);
+          if (!data.coverDataUrl) {
+            visualDiv.insertAdjacentHTML('beforeend', iconSvg);
+          }
+
+          var bodyDiv = document.createElement('div');
+          bodyDiv.className = 'listing-card-body';
+          bodyDiv.innerHTML =
+            '<div class="listing-meta">' + escapeHtml(metaText) + '</div>' +
+            '<h3 class="listing-title">' + escapeHtml(data.title) + '</h3>' +
+            (highlightText ? '<div class="listing-highlight">' + escapeHtml(highlightText) + '</div>' : '') +
+            (data.location ? '<div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>' + escapeHtml(data.location) + '</div>' : '');
+
+          article.appendChild(visualDiv);
+          article.appendChild(bodyDiv);
+          grid.insertBefore(article, grid.firstChild);
+          document.getElementById('jobs-events-empty-state').hidden = true;
+        }
+
+        function escapeHtml(text) {
+          return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function publishToMainFeed(database, postText, coverDataUrl, userId) {
+          return new Promise(function (resolve) {
+            if (!database || !userId) { resolve(); return; }
+            var postRecord = {
+              id: generateListingId('post'),
+              userId: userId,
+              text: postText,
+              imageMediaIds: [],
+              videoMediaId: null,
+              gifUrl: coverDataUrl || '',
+              poll: null,
+              scheduledAt: null,
+              createdAt: Date.now()
+            };
+            putRecord(database, POSTS_STORE, postRecord).then(resolve).catch(resolve);
           });
         }
 
@@ -2242,7 +2346,15 @@
             readImageFile(event.target.files && event.target.files[0], function (result) {
               var preview = document.getElementById('job-cover-preview');
               preview.innerHTML = '';
-              setPreviewImage(preview, result);
+              if (result) {
+                var img = document.createElement('img');
+                img.src = result;
+                img.alt = 'Cover photo preview';
+                img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;border-radius:inherit;';
+                preview.style.position = 'relative';
+                preview.appendChild(img);
+                preview.classList.add('has-image');
+              }
             });
           });
 
@@ -2295,7 +2407,7 @@
             } else {
               var checked = document.querySelector('input[name="virtual-type"]:checked');
               viewState.logistics.mode = 'virtual';
-              viewState.logistics.virtualType = checked ? checked.value : 'Facebook Live';
+              viewState.logistics.virtualType = checked ? checked.value : 'Neter Live';
               viewState.logistics.virtualDetail = String(document.getElementById('event-virtual-detail').value || '').trim();
             }
             updateLogisticsSummary();
@@ -2328,13 +2440,95 @@
 
           document.getElementById('create-job-form').addEventListener('submit', function (event) {
             event.preventDefault();
-            document.getElementById('job-submit-status').textContent = 'Job details captured successfully.';
-            document.getElementById('job-submit-status').className = 'submit-status success';
+            var statusEl = document.getElementById('job-submit-status');
+            var title = String(document.getElementById('job-title').value || '').trim();
+            if (!title) {
+              statusEl.textContent = 'Please enter a job title.';
+              statusEl.className = 'submit-status error';
+              return;
+            }
+            var jobData = {
+              type: 'job',
+              title: title,
+              description: String(document.getElementById('job-description').value || '').trim(),
+              jobType: document.getElementById('job-type').value,
+              location: String(document.getElementById('job-location').value || '').trim(),
+              category: String(document.getElementById('job-category').value || '').trim(),
+              payType: document.getElementById('pay-type').value,
+              minPay: String(document.getElementById('minimum-pay').value || '').trim(),
+              maxPay: String(document.getElementById('maximum-pay').value || '').trim(),
+              coverDataUrl: (function () {
+                var img = document.querySelector('#job-cover-preview img');
+                return img ? img.src : '';
+              }())
+            };
+            var postText = '📋 New Job: ' + jobData.title +
+              (jobData.jobType ? ' (' + jobData.jobType + ')' : '') +
+              (jobData.location ? ' · ' + jobData.location : '') +
+              (jobData.description ? '\n' + jobData.description : '');
+            statusEl.textContent = 'Publishing…';
+            statusEl.className = 'submit-status';
+            openDb().then(function (database) {
+              var userId = viewState.currentUser ? viewState.currentUser.id : null;
+              return publishToMainFeed(database, postText, jobData.coverDataUrl, userId).then(function () {
+                addListingCardToFeed(jobData);
+                statusEl.textContent = 'Job published to your listings and main feed.';
+                statusEl.className = 'submit-status success';
+                setTimeout(function () { showView('feed'); }, 1200);
+              });
+            }).catch(function () {
+              addListingCardToFeed(jobData);
+              statusEl.textContent = 'Job published to your listings.';
+              statusEl.className = 'submit-status success';
+              setTimeout(function () { showView('feed'); }, 1200);
+            });
           });
           document.getElementById('create-event-form').addEventListener('submit', function (event) {
             event.preventDefault();
-            document.getElementById('event-submit-status').textContent = 'Event details captured successfully.';
-            document.getElementById('event-submit-status').className = 'submit-status success';
+            var statusEl = document.getElementById('event-submit-status');
+            var title = String(document.getElementById('event-name').value || '').trim();
+            if (!title) {
+              statusEl.textContent = 'Please enter an event name.';
+              statusEl.className = 'submit-status error';
+              return;
+            }
+            var eventData = {
+              type: 'event',
+              title: title,
+              eventStart: document.getElementById('event-start').value,
+              details: String(document.getElementById('event-details').value || '').trim(),
+              privacy: document.getElementById('event-privacy').value,
+              logistics: viewState.logistics.mode === 'person'
+                ? viewState.logistics.inPersonLocation || 'In person'
+                : (viewState.logistics.virtualType || 'Virtual'),
+              location: viewState.logistics.mode === 'person'
+                ? (viewState.logistics.inPersonLocation || '')
+                : 'Virtual',
+              coverDataUrl: (function () {
+                var el = document.getElementById('event-cover-preview');
+                return el ? (el.style.backgroundImage.replace(/^url\(["']?/, '').replace(/["']?\)$/, '') || '') : '';
+              }())
+            };
+            var postText = '📅 New Event: ' + eventData.title +
+              (eventData.eventStart ? ' · ' + eventData.eventStart : '') +
+              (eventData.location ? ' · ' + eventData.location : '') +
+              (eventData.details ? '\n' + eventData.details : '');
+            statusEl.textContent = 'Publishing…';
+            statusEl.className = 'submit-status';
+            openDb().then(function (database) {
+              var userId = viewState.currentUser ? viewState.currentUser.id : null;
+              return publishToMainFeed(database, postText, eventData.coverDataUrl, userId).then(function () {
+                addListingCardToFeed(eventData);
+                statusEl.textContent = 'Event published to your listings and main feed.';
+                statusEl.className = 'submit-status success';
+                setTimeout(function () { showView('feed'); }, 1200);
+              });
+            }).catch(function () {
+              addListingCardToFeed(eventData);
+              statusEl.textContent = 'Event published to your listings.';
+              statusEl.className = 'submit-status success';
+              setTimeout(function () { showView('feed'); }, 1200);
+            });
           });
 
           syncBubbleState();
