@@ -495,6 +495,8 @@
 
         // -- Poll for new messages (fallback when WebSocket is unavailable) ---
 
+        var DM_FALLBACK_POLL_MS = 10000;
+
         var lastMessageCount = 0;
         function pollMessages() {
           loadConversation().then(function (record) {
@@ -529,7 +531,7 @@
               dmWs = null;
               // Fall back to polling at a reduced rate
               if (!pollIntervalId) {
-                pollIntervalId = setInterval(pollMessages, 10000);
+                pollIntervalId = setInterval(pollMessages, DM_FALLBACK_POLL_MS);
               }
             };
 
@@ -539,7 +541,7 @@
           } catch (e) {
             // WebSocket unavailable — use polling immediately
             if (!pollIntervalId) {
-              pollIntervalId = setInterval(pollMessages, 5000);
+              pollIntervalId = setInterval(pollMessages, DM_FALLBACK_POLL_MS);
             }
           }
         }

@@ -250,7 +250,7 @@ const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 wss.on('connection', function onWsConnection(ws, req) {
   const url = new URL(req.url, 'http://localhost');
   const convId = String(url.searchParams.get('conv') || '').trim().slice(0, 200);
-  if (!convId) { ws.close(1008, 'conv param required'); return; }
+  if (!convId || !/^[^:]+:[^:]+$/.test(convId)) { ws.close(1008, 'invalid conv param'); return; }
 
   if (!dmClients.has(convId)) dmClients.set(convId, new Set());
   dmClients.get(convId).add(ws);
@@ -271,7 +271,7 @@ function broadcastDmUpdate(conversationId) {
   if (!clients || !clients.size) return;
   const payload = JSON.stringify({ type: 'dm-update', conversationId });
   clients.forEach(function (client) {
-    if (client.readyState === client.OPEN) client.send(payload);
+    if (client.readyState === 1 /* OPEN */) client.send(payload);
   });
 }
 

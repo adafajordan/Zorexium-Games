@@ -574,7 +574,7 @@
     // Fallback: read-modify-write (local IndexedDB)
     const record = await getRecordLocal(storeName, key);
     if (record) {
-      const current = Number(record[field] || 0);
+      const current = Number(record[field]) || 0;
       const next = delta < 0 ? Math.max(0, current + delta) : current + delta;
       await putRecordLocal(storeName, Object.assign({}, record, { [field]: next }));
       return next;
