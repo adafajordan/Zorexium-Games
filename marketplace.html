@@ -2564,6 +2564,7 @@
                 serverPersistenceFailures += 1;
                 if (serverPersistenceFailures >= SERVER_PERSISTENCE_FAILURE_LIMIT) {
                   serverPersistenceUnavailable = true;
+                  console.warn('[Zorexium] Server persistence disabled after repeated sync failures. Retrying in background.');
                 }
                 throw error;
               });

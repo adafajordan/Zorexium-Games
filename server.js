@@ -14,6 +14,7 @@ const STATIC_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const STATIC_RATE_LIMIT_MAX_REQUESTS = 180;
 
 app.disable('x-powered-by');
+app.set('trust proxy', true);
 app.use(express.json({ limit: '16mb' }));
 
 const memoryStore = new Map();
@@ -25,7 +26,7 @@ if (DATABASE_URL) {
     ssl: process.env.PGSSLMODE === 'disable'
       ? false
       : {
-          rejectUnauthorized: process.env.PG_SSL_NO_VERIFY === 'true' ? false : true
+          rejectUnauthorized: process.env.PG_SSL_NO_VERIFY !== 'true'
         }
   });
 }
@@ -38,6 +39,7 @@ const publicFiles = new Set(
     return PUBLIC_ALLOWED_EXTENSIONS.has(extension);
   })
 );
+const publicAssetMap = new Map();
 const staticRequestLog = new Map();
 
 function isSafeStoreName(value) {
@@ -65,7 +67,7 @@ function tooLargePayload(data) {
 }
 
 function staticRateLimit(req, res, next) {
-  const identifier = String((req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown')).split(',')[0].trim();
+  const identifier = String(req.ip || req.socket.remoteAddress || 'unknown').trim();
   const now = Date.now();
   const windowStart = now - STATIC_RATE_LIMIT_WINDOW_MS;
   const history = staticRequestLog.get(identifier) || [];
@@ -76,6 +78,35 @@ function staticRateLimit(req, res, next) {
   recent.push(now);
   staticRequestLog.set(identifier, recent);
   return next();
+}
+
+function getContentTypeForFile(fileName) {
+  const extension = path.extname(fileName).toLowerCase();
+  switch (extension) {
+    case '.html': return 'text/html; charset=utf-8';
+    case '.js': return 'application/javascript; charset=utf-8';
+    case '.css': return 'text/css; charset=utf-8';
+    case '.json': return 'application/json; charset=utf-8';
+    case '.webmanifest': return 'application/manifest+json; charset=utf-8';
+    case '.svg': return 'image/svg+xml';
+    case '.png': return 'image/png';
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg';
+    case '.gif': return 'image/gif';
+    case '.ico': return 'image/x-icon';
+    case '.txt': return 'text/plain; charset=utf-8';
+    default: return 'application/octet-stream';
+  }
+}
+
+function buildPublicAssetMap() {
+  publicFiles.forEach((fileName) => {
+    const filePath = path.join(__dirname, fileName);
+    publicAssetMap.set(fileName, {
+      contentType: getContentTypeForFile(fileName),
+      body: fs.readFileSync(filePath)
+    });
+  });
 }
 
 async function ensureDatabaseTables() {
@@ -227,23 +258,27 @@ app.delete('/api/store/:storeName/:recordKey', async (req, res) => {
 });
 
 app.get('/', staticRateLimit, (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const indexAsset = publicAssetMap.get('index.html');
+  if (!indexAsset) return res.status(500).send('Missing index asset');
+  return res.type(indexAsset.contentType).send(indexAsset.body);
 });
 
 app.get('/:fileName', staticRateLimit, (req, res) => {
   const fileName = String(req.params.fileName || '').trim();
-  if (!fileName || fileName.startsWith('.') || fileName.indexOf('..') !== -1) {
+  if (!fileName || fileName.startsWith('.') || fileName.includes('..')) {
     return res.status(404).send('Not found');
   }
-  if (!publicFiles.has(fileName)) {
+  const asset = publicAssetMap.get(fileName);
+  if (!asset) {
     return res.status(404).send('Not found');
   }
-  return res.sendFile(path.join(__dirname, fileName));
+  return res.type(asset.contentType).send(asset.body);
 });
 
 async function start() {
   try {
     await ensureDatabaseTables();
+    buildPublicAssetMap();
     app.listen(PORT, HOST, () => {
       const dbMode = pool ? 'postgres' : 'in-memory-fallback';
       console.log(`[zorexium] listening on http://${HOST}:${PORT} (${dbMode})`);

@@ -25,6 +25,17 @@
   const LOCAL_ONLY_STORES = Object.freeze({
     session: true
   });
+  const ALLOWED_TYPED_ARRAY_CTORS = Object.freeze({
+    Int8Array: true,
+    Uint8Array: true,
+    Uint8ClampedArray: true,
+    Int16Array: true,
+    Uint16Array: true,
+    Int32Array: true,
+    Uint32Array: true,
+    Float32Array: true,
+    Float64Array: true
+  });
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -422,7 +433,7 @@
       const length = Number(value.byteLength || 0);
       const view = new Uint8Array(full, offset, length);
       const ctorName = String(value.ctor || '');
-      const ctor = typeof window !== 'undefined' ? window[ctorName] : null;
+      const ctor = (typeof window !== 'undefined' && ALLOWED_TYPED_ARRAY_CTORS[ctorName]) ? window[ctorName] : null;
       if (typeof ctor === 'function' && ctor.BYTES_PER_ELEMENT && ctorName !== 'DataView') {
         return new ctor(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength));
       }
