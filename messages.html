@@ -22,7 +22,9 @@
         --focus: #e02020;
         --accent: #cc2222;
         --sticky-footer-height: 62px;
+        --sticky-footer-padding-x: 6px;
       }
+      [hidden] { display: none !important; }
       * { box-sizing: border-box; }
       body {
         margin: 0;
@@ -367,43 +369,159 @@
       }
       .dm-auth-btn:hover { background: var(--accent); color: #fff; }
 
-      /* ── Bottom nav ─────────────────────────────────────────────── */
-      .bottom-nav {
+      /* ── Sticky footer (matches rest of site) ──────────────────── */
+      .sticky-footer {
         position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
+        z-index: 90;
         height: var(--sticky-footer-height);
+        background: #ffffff;
         border-top: 1px solid var(--border);
-        background: rgba(255,255,255,0.97);
-        backdrop-filter: blur(6px);
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0,1fr));
+        display: flex;
         align-items: center;
-        z-index: 40;
+        justify-content: space-around;
+        padding: 0 var(--sticky-footer-padding-x);
       }
-      .bottom-nav-item {
-        width: 100%;
-        height: 100%;
-        border: 0;
-        background: none;
-        color: var(--text-muted);
+      .sticky-footer-item {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        color: var(--text-soft);
+        width: 44px;
+        height: 44px;
+        background: none;
+        border: none;
         cursor: pointer;
-        position: relative;
+        padding: 0;
+        text-decoration: none;
       }
-      .bottom-nav-item svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2.2; }
-      .bottom-nav-item.active { color: var(--accent); }
-      .bottom-nav-item.active svg { fill: currentColor; stroke: none; }
-      .bottom-nav-dot {
-        position: absolute;
-        top: 10px;
-        width: 8px;
-        height: 8px;
+      .sticky-footer-item:hover,
+      .sticky-footer-item.active {
+        color: var(--accent);
+      }
+      .sticky-footer-item svg {
+        width: 24px;
+        height: 24px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ── Compose modal overlay ──────────────────────────────────── */
+      .compose-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 200;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .compose-modal {
+        background: var(--bg);
+        border-radius: 16px 16px 0 0;
+        width: 100%;
+        max-width: 540px;
+        max-height: 80dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .compose-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .compose-modal-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .compose-modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        line-height: 1;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px;
         border-radius: 50%;
-        background: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+      }
+      .compose-modal-close:hover { background: var(--surface-soft); }
+      .compose-search-wrap {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .compose-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--surface);
+        border-radius: 20px;
+        padding: 8px 14px;
+      }
+      .compose-search svg { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--text-placeholder); fill: none; stroke-width: 2.2; }
+      .compose-search input {
+        border: none;
+        background: none;
+        outline: none;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--text);
+        width: 100%;
+      }
+      .compose-search input::placeholder { color: var(--text-placeholder); }
+      .compose-user-list {
+        overflow-y: auto;
+        flex: 1;
+      }
+      .compose-user-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 18px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+      }
+      .compose-user-row:hover { background: var(--surface-soft); }
+      .compose-user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #93a2b7;
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+      .compose-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+      .compose-user-info { min-width: 0; }
+      .compose-user-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .compose-user-handle { font-size: 12px; color: var(--text-soft); }
+      .compose-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 18px;
+        font-size: 14px;
+        color: var(--text-soft);
       }
     </style>
   </head>
@@ -486,25 +604,41 @@
       </div>
     </div>
 
-    <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
-    <nav class="bottom-nav" id="bottom-nav" aria-label="Primary navigation">
-      <button class="bottom-nav-item" type="button" data-nav="index.html" aria-label="Home">
-        <span class="bottom-nav-dot" aria-hidden="true"></span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <!-- ═══════════════ STICKY FOOTER (matches rest of site) ════════ -->
+    <footer class="sticky-footer" aria-label="Quick navigation">
+      <a class="sticky-footer-item" href="index.html" aria-label="Home">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </a>
+      <a class="sticky-footer-item" href="articles.html" aria-label="Articles">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg>
+      </a>
+      <button id="sticky-footer-notifications" class="sticky-footer-item" type="button" aria-label="Notifications" title="Notifications">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button class="bottom-nav-item" type="button" data-nav="search" aria-label="Search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <button id="sticky-footer-marketplace" class="sticky-footer-item" type="button" aria-label="Jobs and Events" title="Jobs and Events">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
       </button>
-      <button class="bottom-nav-item" type="button" data-nav="articles.html" aria-label="Explore">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 5.6A8.5 8.5 0 0 0 5.6 18.4"/><path d="M5.6 5.6A8.5 8.5 0 0 0 18.4 18.4"/><circle cx="12" cy="12" r="1.7"/></svg>
+      <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
-      <button class="bottom-nav-item" type="button" data-nav="notifications.html" aria-label="Notifications">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      </button>
-      <button class="bottom-nav-item active" type="button" data-nav="messages.html" aria-label="Messages">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      </button>
-    </nav>
+    </footer>
+
+    <!-- ═══════════════ COMPOSE MODAL ══════════════════════════════ -->
+    <div id="compose-modal-overlay" class="compose-modal-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="compose-modal-title">
+      <div class="compose-modal">
+        <div class="compose-modal-header">
+          <h2 class="compose-modal-title" id="compose-modal-title">New Message</h2>
+          <button id="compose-modal-close" class="compose-modal-close" type="button" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="compose-search-wrap">
+          <label class="compose-search" for="compose-user-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="compose-user-search" type="search" placeholder="Search people…" autocomplete="off" />
+          </label>
+        </div>
+        <div id="compose-user-list" class="compose-user-list" role="list"></div>
+      </div>
+    </div>
 
     <script src="app.js"></script>
     <script>
@@ -530,7 +664,10 @@
         var inboxEmpty     = document.getElementById('inbox-empty');
         var inboxEmptySub  = document.getElementById('inbox-empty-sub');
         var composeFab     = document.getElementById('compose-fab');
-        var bottomNav      = document.getElementById('bottom-nav');
+        var composeOverlay = document.getElementById('compose-modal-overlay');
+        var composeClose   = document.getElementById('compose-modal-close');
+        var composeSearch  = document.getElementById('compose-user-search');
+        var composeList    = document.getElementById('compose-user-list');
 
         var threadHeaderAvatar = document.getElementById('thread-header-avatar');
         var threadHeaderName   = document.getElementById('thread-header-name');
@@ -835,7 +972,6 @@
           threadView.style.display = 'none';
           inboxView.style.display = '';
           composeFab.style.display = '';
-          bottomNav.style.display = '';
           document.title = 'Messages';
 
           allAccounts = accounts;
@@ -861,7 +997,7 @@
           settingsBtn.addEventListener('click', function () { /* settings placeholder */ });
           composeFab.addEventListener('click', function () {
             if (!currentUser) { window.location.href = 'index.html'; return; }
-            inboxEmptySub.textContent = 'Start a conversation from a user\'s profile to message someone.';
+            openComposeModal();
           });
 
           loadAllConversations().then(function (convs) {
@@ -992,7 +1128,6 @@
         function initThread(session, accounts) {
           inboxView.style.display = 'none';
           composeFab.style.display = 'none';
-          bottomNav.style.display = 'none';
           threadView.style.display = 'flex';
 
           if (!session) { showAuthNotice(); return; }
@@ -1043,15 +1178,99 @@
           connectWs();
         }
 
-        /* ── Bottom nav ─────────────────────────────────────────────── */
-        document.querySelectorAll('[data-nav]').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var target = btn.getAttribute('data-nav');
-            if (!target || target === 'messages.html') return;
-            if (target === 'search') { searchInput.focus(); return; }
-            window.location.href = target;
+        /* ── Compose modal ──────────────────────────────────────────── */
+        function renderComposeUserList(filterText) {
+          composeList.innerHTML = '';
+          var uid = currentUser ? currentUser.id : '';
+          var users = allAccounts.filter(function (a) {
+            if (!a || !a.id || a.id === uid) return false;
+            if (!filterText) return true;
+            var q = filterText.toLowerCase();
+            var name = String(a.name || a.username || '').toLowerCase();
+            var handle = String(a.username || '').toLowerCase();
+            return name.indexOf(q) !== -1 || handle.indexOf(q) !== -1;
           });
+
+          if (!users.length) {
+            var empty = document.createElement('div');
+            empty.className = 'compose-empty';
+            empty.textContent = filterText ? 'No users found' : 'No other users yet';
+            composeList.appendChild(empty);
+            return;
+          }
+
+          users.forEach(function (user) {
+            var row = document.createElement('div');
+            row.className = 'compose-user-row';
+            row.setAttribute('role', 'listitem');
+            row.setAttribute('tabindex', '0');
+            row.setAttribute('aria-label', 'Message ' + (user.name || user.username || 'User'));
+
+            var avatarEl = document.createElement('div');
+            avatarEl.className = 'compose-user-avatar';
+            avatarEl.style.background = getAvatarColor(user.username || user.id);
+            if (user.profilePictureDataUrl) {
+              var img = document.createElement('img');
+              img.src = user.profilePictureDataUrl;
+              img.alt = '';
+              avatarEl.appendChild(img);
+            } else {
+              avatarEl.textContent = getInitials(user.name, user.username);
+            }
+
+            var infoEl = document.createElement('div');
+            infoEl.className = 'compose-user-info';
+            var nameEl = document.createElement('div');
+            nameEl.className = 'compose-user-name';
+            nameEl.textContent = user.name || user.username || 'User';
+            var handleEl = document.createElement('div');
+            handleEl.className = 'compose-user-handle';
+            handleEl.textContent = user.username ? '@' + user.username : '';
+            infoEl.appendChild(nameEl);
+            infoEl.appendChild(handleEl);
+
+            row.appendChild(avatarEl);
+            row.appendChild(infoEl);
+
+            (function (u) {
+              function openDm() {
+                closeComposeModal();
+                window.location.href = 'messages.html?with=' + encodeURIComponent(u.id);
+              }
+              row.addEventListener('click', openDm);
+              row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDm(); } });
+            }(user));
+
+            composeList.appendChild(row);
+          });
+        }
+
+        function openComposeModal() {
+          composeSearch.value = '';
+          renderComposeUserList('');
+          composeOverlay.hidden = false;
+          composeSearch.focus();
+        }
+
+        function closeComposeModal() {
+          composeOverlay.hidden = true;
+        }
+
+        composeClose.addEventListener('click', closeComposeModal);
+        composeOverlay.addEventListener('click', function (e) {
+          if (e.target === composeOverlay) closeComposeModal();
         });
+        composeSearch.addEventListener('input', function () {
+          renderComposeUserList(String(composeSearch.value || '').trim());
+        });
+
+        /* ── Sticky footer nav ──────────────────────────────────────── */
+        var sfNotifications = document.getElementById('sticky-footer-notifications');
+        var sfMarketplace   = document.getElementById('sticky-footer-marketplace');
+        var sfProfile       = document.getElementById('sticky-footer-profile');
+        if (sfNotifications) sfNotifications.addEventListener('click', function () { window.location.href = 'notifications.html'; });
+        if (sfMarketplace)   sfMarketplace.addEventListener('click', function () { window.location.href = 'marketplace.html'; });
+        if (sfProfile)       sfProfile.addEventListener('click', function () { window.location.href = 'account-dashboard.html'; });
 
         /* ── Boot ───────────────────────────────────────────────────── */
         getUserSession().then(function (session) {
