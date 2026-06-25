@@ -2602,6 +2602,9 @@
         var POSTS_STORE = 'posts';
         var SESSION_STORE = 'session';
         var MEDIA_STORE = 'media';
+        var COMMENTS_STORE = 'comments';
+        var NOTIFICATIONS_STORE = 'notifications';
+        var ARTICLES_STORE = 'articles';
         var activeHomeTab = 'for-you';
         var homeCurrentUser = null;
 
@@ -2609,11 +2612,18 @@
           return new Promise(function (resolve, reject) {
             if (!window.indexedDB) { reject(new Error('no idb')); return; }
             var req = window.indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = function () {
+              var d = req.result;
+              if (!d.objectStoreNames.contains(ACCOUNTS_STORE)) d.createObjectStore(ACCOUNTS_STORE, { keyPath: 'id' });
+              if (!d.objectStoreNames.contains(POSTS_STORE)) d.createObjectStore(POSTS_STORE, { keyPath: 'id' });
+              if (!d.objectStoreNames.contains(SESSION_STORE)) d.createObjectStore(SESSION_STORE, { keyPath: 'key' });
+              if (!d.objectStoreNames.contains(MEDIA_STORE)) d.createObjectStore(MEDIA_STORE, { keyPath: 'id' });
+              if (!d.objectStoreNames.contains(COMMENTS_STORE)) d.createObjectStore(COMMENTS_STORE, { keyPath: 'id' });
+              if (!d.objectStoreNames.contains(NOTIFICATIONS_STORE)) d.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id' });
+              if (!d.objectStoreNames.contains(ARTICLES_STORE)) d.createObjectStore(ARTICLES_STORE, { keyPath: 'id' });
+            };
             req.onsuccess = function () { resolve(req.result); };
             req.onerror = function () { reject(req.error); };
-            // Schema migrations are handled by app.js which owns the DB version.
-            // This page only reads existing stores, so upgrades are no-ops here.
-            req.onupgradeneeded = function () {};
           });
         }
 
