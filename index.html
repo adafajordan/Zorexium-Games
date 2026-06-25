@@ -1683,6 +1683,34 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+      .article-companion-event-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 0 0 6px;
+      }
+      .article-companion-event-row .article-companion-title {
+        margin: 0;
+        flex: 1;
+      }
+      .article-companion-type-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-soft);
+        line-height: 1.35;
+        flex-shrink: 0;
+      }
+      .article-companion-event-meta {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.4;
+      }
+      .article-companion-event-meta span {
+        display: block;
+      }
       .article-companion-excerpt {
         margin: 0 0 8px;
         font-size: 13px;
@@ -2717,13 +2745,28 @@
           if (post.type === 'job' || post.type === 'event') {
             var listingTypeLabel = post.type === 'event' ? 'Event' : 'Job';
             var listingHref = 'marketplace.html?listing=' + encodeURIComponent(post.listingId || post.id) + '&type=' + encodeURIComponent(post.type);
-            var metaText = post.listingMeta || post.listingDateTime || post.listingLocation || '';
+            var titleHtml = post.type === 'event'
+              ? '<div class="article-companion-event-row"><span class="article-companion-type-label">Event</span><p class="article-companion-title">' + homeEscapeHtml(post.listingTitle || post.text || listingTypeLabel) + '</p></div>'
+              : '<p class="article-companion-title">' + homeEscapeHtml(post.listingTitle || post.text || listingTypeLabel) + '</p>';
+            var eventMetaHtml = '';
+            if (post.type === 'event' && (post.listingDateTime || post.listingLocation)) {
+              eventMetaHtml = '<p class="article-companion-event-meta">' +
+                (post.listingDateTime ? ('<span>' + homeEscapeHtml(post.listingDateTime) + '</span>') : '') +
+                (post.listingLocation ? ('<span>' + homeEscapeHtml(post.listingLocation) + '</span>') : '') +
+                '</p>';
+            }
+            var jobMetaParts = [];
+            if (post.listingMeta) jobMetaParts.push(post.listingMeta);
+            if (post.listingPay && jobMetaParts.indexOf(post.listingPay) === -1) jobMetaParts.push(post.listingPay);
+            if (post.listingLocation && jobMetaParts.indexOf(post.listingLocation) === -1) jobMetaParts.push(post.listingLocation);
             mediaHtml = '<a class="article-companion-card" data-companion-link="true" href="' + listingHref + '">' +
               (mediaUrl ? '<img class="article-companion-cover" src="' + mediaUrl + '" alt="" />' : '') +
               '<div class="article-companion-body">' +
-              '<p class="article-companion-title">' + homeEscapeHtml(post.listingTitle || post.text || listingTypeLabel) + '</p>' +
+              titleHtml +
               (post.listingSummary ? '<p class="article-companion-excerpt">' + homeEscapeHtml(post.listingSummary) + '</p>' : '') +
-              '<p class="article-companion-footer"><span>' + listingTypeLabel + '</span>' + (metaText ? ' <span class="article-companion-readtime">&middot; ' + homeEscapeHtml(metaText) + '</span>' : '') + '</p>' +
+              (post.type === 'event'
+                ? eventMetaHtml
+                : ('<p class="article-companion-footer"><span>' + listingTypeLabel + '</span>' + (jobMetaParts.length ? ' <span class="article-companion-readtime">&middot; ' + homeEscapeHtml(jobMetaParts.join(' · ')) + '</span>' : '') + '</p>')) +
               '</div></a>';
           } else if (mediaUrl) {
             mediaHtml = '<div class="post-media-grid single feed-compact-single"><div class="post-media-item"><img class="post-media-image" src="' + mediaUrl + '" alt="" /></div></div>';
