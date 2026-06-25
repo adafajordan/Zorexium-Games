@@ -423,6 +423,33 @@
           messagesEl.insertBefore(wrap, emptyEl);
         }
 
+        // -- Increment a numeric field on the server --------------------------
+
+        function serverIncrement(apiStore, recordKey, field, by) {
+          var url = '/api/store/' + encodeURIComponent(apiStore) + '/' + encodeURIComponent(recordKey) + '/increment';
+          return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: field, by: by })
+          }).catch(function () {});
+        }
+
+        // -- Reset this user's unread DM count --------------------------------
+
+        function resetUnreadDmCount() {
+          if (!currentUser || serverUnavailable) return;
+          var url = '/api/store/accounts/' + encodeURIComponent(currentUser.id);
+          fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+            if (!data || !data.record) return;
+            var updated = Object.assign({}, data.record, { unreadDmCount: 0 });
+            return fetch(url, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ record: updated })
+            });
+          }).catch(function () {});
+        }
+
         // -- Send message ----------------------------------------------------
 
         function sendMessage() {
@@ -454,6 +481,11 @@
               updatedAt: Date.now()
             };
             return saveConversation(updated);
+          }).then(function () {
+            // Increment recipient's unread count
+            if (otherUser && otherUser.id) {
+              serverIncrement('accounts', otherUser.id, 'unreadDmCount', 1);
+            }
           }).catch(function (err) {
             console.warn('Message send failed', err);
           }).finally(function () {
@@ -461,7 +493,7 @@
           });
         }
 
-        // -- Poll for new messages -------------------------------------------
+        // -- Poll for new messages (fallback when WebSocket is unavailable) ---
 
         var lastMessageCount = 0;
         function pollMessages() {
@@ -472,6 +504,44 @@
               renderMessages(record);
             }
           }).catch(function () {});
+        }
+
+        // -- WebSocket for real-time delivery ---------------------------------
+
+        var dmWs = null;
+        function connectDmWebSocket() {
+          if (!conversationId) return;
+          try {
+            var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var wsUrl = protocol + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId);
+            dmWs = new WebSocket(wsUrl);
+
+            dmWs.onmessage = function (event) {
+              try {
+                var data = JSON.parse(event.data);
+                if (data && data.type === 'dm-update' && data.conversationId === conversationId) {
+                  pollMessages();
+                }
+              } catch (e) {}
+            };
+
+            dmWs.onclose = function () {
+              dmWs = null;
+              // Fall back to polling at a reduced rate
+              if (!pollIntervalId) {
+                pollIntervalId = setInterval(pollMessages, 10000);
+              }
+            };
+
+            dmWs.onerror = function () {
+              // onclose will fire next and install the fallback
+            };
+          } catch (e) {
+            // WebSocket unavailable — use polling immediately
+            if (!pollIntervalId) {
+              pollIntervalId = setInterval(pollMessages, 5000);
+            }
+          }
         }
 
         // -- Update send button state ----------------------------------------
@@ -515,14 +585,15 @@
           // Show composer
           document.getElementById('dm-composer').style.display = '';
 
-          // Load initial messages
+          // Load initial messages and mark as read
           loadConversation().then(function (record) {
             lastMessageCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;
             renderMessages(record);
+            resetUnreadDmCount();
           });
 
-          // Poll every 5 seconds for new messages
-          pollIntervalId = setInterval(pollMessages, 5000);
+          // Use WebSocket for real-time updates; polling is the fallback
+          connectDmWebSocket();
 
           // Composer events
           inputEl.addEventListener('input', function () {
@@ -577,6 +648,7 @@
 
         window.addEventListener('beforeunload', function () {
           if (pollIntervalId) clearInterval(pollIntervalId);
+          if (dmWs) { dmWs.onclose = null; dmWs.close(); }
         });
       }());
     </script>

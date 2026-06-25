@@ -1,9 +1,12 @@
+const http = require('http');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const { WebSocketServer } = require('ws');
 
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = Number(process.env.PORT || 10000);
 const HOST = process.env.HOST || '0.0.0.0';
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -216,6 +219,62 @@ async function removeRecord(storeName, key) {
   );
 }
 
+async function incrementRecordField(storeName, key, field, delta) {
+  if (!pool) {
+    const map = getMemoryStoreMap(storeName);
+    const existing = map.get(key) || {};
+    const newVal = Number(existing[field] || 0) + Number(delta);
+    map.set(key, Object.assign({}, existing, { [field]: newVal }));
+    return newVal;
+  }
+  const result = await pool.query(
+    `INSERT INTO app_records (store_name, record_key, record_data, created_at, updated_at)
+     VALUES ($1, $2, jsonb_build_object($3::text, $4::numeric), NOW(), NOW())
+     ON CONFLICT (store_name, record_key) DO UPDATE SET
+       record_data = jsonb_set(
+         app_records.record_data,
+         ARRAY[$3::text],
+         to_jsonb(COALESCE((app_records.record_data->>$3)::numeric, 0) + $4)
+       ),
+       updated_at = NOW()
+     RETURNING (record_data->>$3)::numeric AS new_value`,
+    [storeName, key, String(field), Number(delta)]
+  );
+  return result.rows.length ? Number(result.rows[0].new_value) : Number(delta);
+}
+
+// Map of conversationId → Set<WebSocket> for real-time DM delivery
+const dmClients = new Map();
+
+const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+wss.on('connection', function onWsConnection(ws, req) {
+  const url = new URL(req.url, 'http://localhost');
+  const convId = String(url.searchParams.get('conv') || '').trim().slice(0, 200);
+  if (!convId) { ws.close(1008, 'conv param required'); return; }
+
+  if (!dmClients.has(convId)) dmClients.set(convId, new Set());
+  dmClients.get(convId).add(ws);
+
+  ws.on('close', function () {
+    const clients = dmClients.get(convId);
+    if (clients) {
+      clients.delete(ws);
+      if (!clients.size) dmClients.delete(convId);
+    }
+  });
+
+  ws.on('message', function () {});
+});
+
+function broadcastDmUpdate(conversationId) {
+  const clients = dmClients.get(conversationId);
+  if (!clients || !clients.size) return;
+  const payload = JSON.stringify({ type: 'dm-update', conversationId });
+  clients.forEach(function (client) {
+    if (client.readyState === client.OPEN) client.send(payload);
+  });
+}
+
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -269,10 +328,36 @@ app.put('/api/store/:storeName/:recordKey', async (req, res) => {
 
   try {
     await writeRecord(storeName, key, payload);
+    if (storeName === 'messages') broadcastDmUpdate(key);
     return res.json({ ok: true });
   } catch (error) {
     console.error('[api] failed to write record', { storeName, key, error });
     return res.status(500).json({ error: 'Failed to write record.' });
+  }
+});
+
+app.post('/api/store/:storeName/:recordKey/increment', async (req, res) => {
+  const storeName = String(req.params.storeName || '').trim();
+  const key = normalizeRecordKey(req.params.recordKey);
+  const field = String((req.body && req.body.field) || '').trim();
+  const by = Number((req.body && req.body.by) != null ? req.body.by : 1);
+
+  if (!isSafeStoreName(storeName) || !key) {
+    return res.status(400).json({ error: 'Invalid store name or key.' });
+  }
+  if (!field || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(field)) {
+    return res.status(400).json({ error: 'Invalid field name.' });
+  }
+  if (!Number.isFinite(by)) {
+    return res.status(400).json({ error: 'Invalid increment value.' });
+  }
+
+  try {
+    const newValue = await incrementRecordField(storeName, key, field, by);
+    return res.json({ ok: true, value: newValue });
+  } catch (error) {
+    console.error('[api] failed to increment record field', { storeName, key, field, by, error });
+    return res.status(500).json({ error: 'Failed to increment record field.' });
   }
 });
 
@@ -313,7 +398,7 @@ async function start() {
   try {
     await ensureDatabaseTables();
     buildPublicAssetMap();
-    app.listen(PORT, HOST, () => {
+    httpServer.listen(PORT, HOST, () => {
       const dbMode = pool ? 'postgres' : 'in-memory-fallback';
       console.log(`[zorexium] listening on http://${HOST}:${PORT} (${dbMode})`);
     });

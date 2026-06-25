@@ -555,6 +555,33 @@
     await putRecordLocal(storeName, record);
   }
 
+  async function atomicIncrementRecord(storeName, key, field, delta) {
+    const serverStoreName = API_STORE_NAME_MAP[storeName];
+    if (serverStoreName && shouldUseServerStore(storeName) && !serverStoreUnavailable) {
+      const url = '/api/store/' + encodeURIComponent(serverStoreName) + '/' + encodeURIComponent(String(key)) + '/increment';
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field: field, by: delta })
+        });
+        if (!response.ok) throw new Error('increment ' + response.status);
+        return (await response.json()).value;
+      } catch (err) {
+        console.warn('[Zorexium] Atomic increment failed, falling back to read-modify-write.', err);
+      }
+    }
+    // Fallback: read-modify-write (local IndexedDB)
+    const record = await getRecordLocal(storeName, key);
+    if (record) {
+      const current = Number(record[field] || 0);
+      const next = delta < 0 ? Math.max(0, current + delta) : current + delta;
+      await putRecordLocal(storeName, Object.assign({}, record, { [field]: next }));
+      return next;
+    }
+    return null;
+  }
+
   async function deleteRecord(storeName, key) {
     if (shouldUseServerStore(storeName)) {
       try {
@@ -676,10 +703,7 @@
     });
     const postRecord = await getRecord(POSTS_STORE, postId);
     if (postRecord) {
-      const currentCommentCount = Math.max(0, Number(postRecord.commentCount || 0));
-      await putRecord(POSTS_STORE, Object.assign({}, postRecord, {
-        commentCount: currentCommentCount + 1
-      }));
+      await atomicIncrementRecord(POSTS_STORE, postId, 'commentCount', 1);
     }
     await addPostOwnerNotification(postId, 'comment', (currentUser.name || currentUser.username) + ' commented on your post.');
   }
@@ -745,10 +769,7 @@
     }
     const postRecord = await getRecord(POSTS_STORE, postId);
     if (postRecord) {
-      const currentLikeCount = Math.max(0, Number(postRecord.likeCount || 0));
-      await putRecord(POSTS_STORE, Object.assign({}, postRecord, {
-        likeCount: isLiked ? Math.max(0, currentLikeCount - 1) : currentLikeCount + 1
-      }));
+      await atomicIncrementRecord(POSTS_STORE, postId, 'likeCount', isLiked ? -1 : 1);
     }
     const updated = Object.assign({}, currentUser, { likedPostIds: liked });
     await putRecord(ACCOUNTS_STORE, updated);
@@ -2204,6 +2225,18 @@
     syncPostActionStates();
   }
 
+  function updateDmBadge(count) {
+    const badges = document.querySelectorAll('[data-dm-badge]');
+    badges.forEach(function (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.hidden = false;
+      } else {
+        badge.hidden = true;
+      }
+    });
+  }
+
   async function refreshUserFacingViews() {
     updateAuthControls();
     initializeActionButtonCounts(document);
@@ -2215,6 +2248,11 @@
     });
     syncDashboardTriggers();
     syncPostActionStates();
+    if (currentUser) {
+      updateDmBadge(Number(currentUser.unreadDmCount || 0));
+    } else {
+      updateDmBadge(0);
+    }
     if (postFeed && !isDashboardPage()) {
       await renderSavedPosts();
     }
