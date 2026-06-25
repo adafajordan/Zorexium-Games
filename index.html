@@ -2635,6 +2635,8 @@
             var req = window.indexedDB.open(DB_NAME, DB_VERSION);
             req.onsuccess = function () { resolve(req.result); };
             req.onerror = function () { reject(req.error); };
+            // Schema migrations are handled by app.js which owns the DB version.
+            // This page only reads existing stores, so upgrades are no-ops here.
             req.onupgradeneeded = function () {};
           });
         }
