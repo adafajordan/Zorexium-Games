@@ -363,7 +363,7 @@
         <div class="inbox-top">
           <button id="inbox-profile-btn" class="profile-chip" type="button" aria-label="Profile">
             <img id="inbox-avatar-image" alt="" hidden />
-            <span id="inbox-avatar-initials">YO</span>
+            <span id="inbox-avatar-initials">?</span>
             <span class="profile-chip-dot" aria-hidden="true"></span>
           </button>
           <h1 class="inbox-title">Chat</h1>
@@ -380,7 +380,7 @@
 
         <div class="inbox-empty" id="inbox-empty-state">
           <p class="inbox-empty-title">No chats yet</p>
-          <p class="inbox-empty-subtitle">Start chatting with end-to-end encryption</p>
+          <p class="inbox-empty-subtitle" id="inbox-empty-subtitle">Start chatting with end-to-end encryption</p>
         </div>
       </section>
 
@@ -456,6 +456,7 @@
         var filterLabel = document.getElementById('inbox-filter-label');
         var searchInput = document.getElementById('inbox-search-input');
         var composeFab = document.getElementById('compose-fab');
+        var emptySubtitle = document.getElementById('inbox-empty-subtitle');
 
         var messagesEl = document.getElementById('dm-messages');
         var emptyEl = document.getElementById('dm-empty');
@@ -525,7 +526,7 @@
           var n = String(name || username || '').trim();
           var parts = n.split(/\s+/);
           if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-          return n.slice(0, 2).toUpperCase() || 'YO';
+          return n.slice(0, 2).toUpperCase() || '?';
         }
 
         function getAvatarColor(seed) {
@@ -583,7 +584,9 @@
         }
 
         function saveConversation(record) {
-          return serverFetch('PUT', conversationId, record).catch(function () {});
+          return serverFetch('PUT', conversationId, record).catch(function (err) {
+            console.warn('Failed to save conversation', err);
+          });
         }
 
         function renderMessages(record) {
@@ -620,7 +623,7 @@
           messagesEl.insertBefore(wrap, emptyEl);
         }
 
-        function serverIncrement(recordKey, field, by) {
+        function incrementAccountField(recordKey, field, by) {
           var url = '/api/store/accounts/' + encodeURIComponent(recordKey) + '/increment';
           return fetch(url, {
             method: 'POST',
@@ -671,7 +674,11 @@
               updatedAt: Date.now()
             });
           }).then(function () {
-            if (otherUser && otherUser.id) serverIncrement(otherUser.id, 'unreadDmCount', 1);
+            if (otherUser && otherUser.id) {
+              incrementAccountField(otherUser.id, 'unreadDmCount', 1).catch(function (err) {
+                console.warn('Failed to increment unread count', err);
+              });
+            }
           }).finally(function () {
             sendBtn.disabled = false;
           });
@@ -717,14 +724,10 @@
           inboxAvatarInitials.textContent = initials;
           inboxProfileBtn.style.background = getAvatarColor(user.username || user.id);
 
-          if (user.profilePictureDataUrl) {
-            inboxAvatarImage.src = user.profilePictureDataUrl;
-            inboxAvatarImage.hidden = false;
-            inboxAvatarInitials.hidden = true;
-            return;
-          }
-          inboxAvatarImage.hidden = true;
-          inboxAvatarInitials.hidden = false;
+          var hasPicture = !!user.profilePictureDataUrl;
+          if (hasPicture) inboxAvatarImage.src = user.profilePictureDataUrl;
+          inboxAvatarImage.hidden = !hasPicture;
+          inboxAvatarInitials.hidden = hasPicture;
         }
 
         function initInboxMode(session, accounts) {
@@ -757,7 +760,7 @@
               window.location.href = 'index.html';
               return;
             }
-            alert('No chats yet. Start from a profile to message someone.');
+            emptySubtitle.textContent = 'No chats yet. Start from a profile to message someone.';
           });
         }
 
@@ -822,11 +825,17 @@
         document.querySelectorAll('[data-nav-target]').forEach(function (button) {
           button.addEventListener('click', function () {
             var target = button.getAttribute('data-nav-target');
+            var allowedTargets = {
+              'index.html': true,
+              'articles.html': true,
+              'notifications.html': true
+            };
             if (!target || target === 'messages.html') return;
             if (target === 'search') {
               searchInput.focus();
               return;
             }
+            if (!allowedTargets[target]) return;
             window.location.href = target;
           });
         });
