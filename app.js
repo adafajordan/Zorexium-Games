@@ -1331,12 +1331,17 @@
     const userAttendance = attendanceStore[user.id];
     if (!userAttendance || typeof userAttendance !== 'object') return [];
     const listings = readMarketplaceListingsFromStorage();
-    const listingById = new Map(listings.map(function (listing) { return [listing && listing.id, listing]; }));
+    const listingById = new Map(listings.filter(function (listing) {
+      return listing && listing.id;
+    }).map(function (listing) {
+      return [listing.id, listing];
+    }));
     return Object.keys(userAttendance).map(function (eventId) {
       const entry = userAttendance[eventId];
       const status = typeof entry === 'string' ? entry : String((entry && entry.status) || '');
       if (status !== 'going') return null;
       const listing = listingById.get(eventId) || {};
+      const eventStart = listing.eventStart ? new Date(listing.eventStart) : null;
       return {
         id: 'attendance-' + user.id + '-' + eventId,
         userId: user.id,
@@ -1348,7 +1353,7 @@
         listingDetails: listing.details || '',
         listingMeta: 'going',
         listingLocation: listing.location || '',
-        listingDateTime: listing.eventStart && !Number.isNaN(new Date(listing.eventStart).getTime()) ? new Date(listing.eventStart).toLocaleString() : '',
+        listingDateTime: eventStart && !Number.isNaN(eventStart.getTime()) ? eventStart.toLocaleString() : '',
         listingCoverDataUrl: listing.coverDataUrl || '',
         imageMediaIds: [],
         videoMediaId: null,
@@ -1617,13 +1622,16 @@
       return savedIds.indexOf(post.id) !== -1;
     });
     const attendanceItems = Array.isArray(attendancePosts) ? attendancePosts : [];
+    const getListingIdentifier = function (post) {
+      return post && (post.listingId || post.id) ? String(post.listingId || post.id) : '';
+    };
     const marketplacePosts = userPosts.filter(function (post) {
       return post.type === 'job' || post.type === 'event';
     }).slice();
     attendanceItems.forEach(function (attendancePost) {
-      const eventListingId = attendancePost.listingId || attendancePost.id;
+      const eventListingId = getListingIdentifier(attendancePost);
       const existingEventIndex = marketplacePosts.findIndex(function (post) {
-        return post.type === 'event' && (post.listingId || post.id) === eventListingId;
+        return post.type === 'event' && getListingIdentifier(post) === eventListingId;
       });
       if (existingEventIndex === -1) {
         marketplacePosts.push(attendancePost);

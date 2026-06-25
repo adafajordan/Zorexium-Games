@@ -1107,6 +1107,22 @@
         }
       }
 
+      function getListingFromStorageById(listingId) {
+        if (!listingId) return null;
+        try {
+          var raw = localStorage.getItem(LISTINGS_LS_KEY);
+          var list = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(list)) return null;
+          for (var index = 0; index < list.length; index += 1) {
+            var entry = list[index];
+            if (entry && entry.id === listingId) return entry;
+          }
+        } catch (error) {
+          return null;
+        }
+        return null;
+      }
+
       /* ── Job detail fullscreen overlay ─────────────────────── */
       .job-detail-overlay {
         display: none;
@@ -2597,10 +2613,10 @@
               event.stopPropagation();
               var targetStatus = button.getAttribute('data-event-action');
               var eventId = button.getAttribute('data-event-id');
-              var listing = listingDataMap[eventId];
+              var listing = listingDataMap[eventId] || getListingFromStorageById(eventId);
               var currentStatus = getEventAttendanceStatus(eventId);
               var nextStatus = currentStatus === targetStatus ? '' : targetStatus;
-              if (!setEventAttendanceStatus(listing || { id: eventId }, nextStatus)) return;
+              if (!setEventAttendanceStatus(listing || { id: eventId, type: 'event', title: 'Event' }, nextStatus)) return;
               syncEventActionButtons(eventId);
             });
             button.addEventListener('keydown', function (event) {
@@ -2642,7 +2658,7 @@
           var keywords = [
             listingType,
             data.title,
-            data.jobType || data.location || '',
+            listingType === 'job' ? data.jobType : '',
             data.location,
             data.category || ''
           ].join(' ').toLowerCase();
@@ -3167,7 +3183,7 @@
 
         function buildEventListingCardMarkup(data) {
           var fallbackId = data.id || generateListingId('event');
-          var listingSnapshot = Object.assign({}, data, { id: fallbackId, type: 'event' });
+          var listingSnapshot = Object.assign({}, data, { id: data.id || fallbackId, type: data.type || 'event' });
           listingDataMap[fallbackId] = listingSnapshot;
           var card = document.createElement('article');
           card.className = 'listing-card listing-card-clickable';
@@ -3390,7 +3406,7 @@
               coverDataUrl: imageEl ? imageEl.src : '',
               details: '',
               description: '',
-              eventStart: ''
+              eventStart: null
             };
             listingDataMap[fallbackData.id] = fallbackData;
             card.classList.add('listing-card-clickable');
