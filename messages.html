@@ -9,174 +9,365 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --bg: #f4f5f7;
-        --surface: #ffffff;
-        --surface-soft: #e7ebef;
-        --text: #111827;
-        --text-soft: #5b6b7a;
-        --border: #d4dbe2;
-        --accent: #1d9bf0;
-        --accent-dark: #1786cc;
-        --thread-accent: #cc2222;
-        --sticky-footer-height: 78px;
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f5f5f5;
+        --surface-soft: #eeeeee;
+        --text: #111111;
+        --text-muted: #333333;
+        --text-soft: #666666;
+        --text-placeholder: #999999;
+        --border: #e0e0e0;
+        --border-strong: #cccccc;
+        --focus: #e02020;
+        --accent: #cc2222;
+        --sticky-footer-height: 62px;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        min-height: 100dvh;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: var(--text);
         background: var(--bg);
-      }
-      .page {
+        color: var(--text);
         min-height: 100dvh;
-        padding-bottom: calc(var(--sticky-footer-height) + 18px);
       }
 
-      /* Inbox layout */
-      .messages-inbox {
-        width: min(960px, 100%);
-        margin: 0 auto;
-        padding: 22px 18px 26px;
-      }
-      .inbox-top {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
+      /* ── Shared header ─────────────────────────────────────────── */
+      .msg-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: flex;
         align-items: center;
-        gap: 12px;
+        padding: 0 14px;
+        height: 56px;
+        background: rgba(255,255,255,0.97);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(6px);
+        gap: 10px;
+        flex-shrink: 0;
       }
-      .profile-chip {
-        width: 52px;
-        height: 52px;
+      .msg-header-left,
+      .msg-header-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 0 0 auto;
+        min-width: 44px;
+      }
+      .msg-header-right { justify-content: flex-end; }
+      .msg-header-center {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 17px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .msg-icon-btn {
+        background: none;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0;
+      }
+      .msg-icon-btn:hover { background: var(--surface-soft); color: var(--accent); }
+      .msg-icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* avatar chip */
+      .avatar-chip {
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         border: 0;
         padding: 0;
-        position: relative;
         overflow: hidden;
         background: #93a2b7;
         color: #fff;
         font-weight: 700;
-        font-size: 16px;
+        font-size: 13px;
         cursor: pointer;
-      }
-      .profile-chip img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .profile-chip-dot {
-        position: absolute;
-        top: 1px;
-        right: 1px;
-        width: 12px;
-        height: 12px;
-        border-radius: 999px;
-        background: var(--accent);
-        border: 2px solid var(--bg);
-      }
-      .inbox-title {
-        margin: 0;
-        text-align: center;
-        font-size: clamp(30px, 5vw, 44px);
-        letter-spacing: -0.02em;
-        font-weight: 700;
-      }
-      .inbox-filter {
-        border: 2px solid #c8d0d8;
-        border-radius: 999px;
-        background: transparent;
-        color: var(--text);
-        min-width: 124px;
-        padding: 12px 18px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        font-size: 18px;
-        font-weight: 500;
-        cursor: pointer;
+        flex-shrink: 0;
+        position: relative;
       }
-      .inbox-filter svg {
-        width: 18px;
-        height: 18px;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2.25;
+      .avatar-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .avatar-chip-static { cursor: default; }
+
+      /* thread header user info */
+      .thread-header-center { justify-content: flex-start; padding-left: 2px; }
+      .thread-user-name {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+      }
+      .thread-user-handle { font-size: 12px; color: var(--text-soft); font-weight: 400; }
+
+      /* ── INBOX view ─────────────────────────────────────────────── */
+      #inbox-view {
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+        padding-bottom: calc(var(--sticky-footer-height) + 8px);
+      }
+
+      .inbox-search-wrap {
+        padding: 10px 14px 0;
       }
       .inbox-search {
-        margin-top: 22px;
-        width: 100%;
-        border: 0;
-        border-radius: 999px;
-        background: #dce1e6;
-        color: #4e5f70;
-        font-size: clamp(20px, 4vw, 58px);
-        line-height: 1;
-        padding: 18px 22px;
         display: flex;
         align-items: center;
-        gap: 10px;
-      }
-      .inbox-search svg {
-        flex-shrink: 0;
-        width: 1.05em;
-        height: 1.05em;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2.2;
-      }
-      .inbox-search input {
+        gap: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 8px 14px;
         width: 100%;
+      }
+      .inbox-search svg { flex-shrink: 0; width: 18px; height: 18px; stroke: var(--text-placeholder); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+      .inbox-search input {
+        flex: 1;
         border: 0;
         outline: 0;
         background: transparent;
-        color: inherit;
-        font: inherit;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--text);
       }
-      .inbox-search input::placeholder { color: #607282; opacity: 1; }
+      .inbox-search input::placeholder { color: var(--text-placeholder); }
+
+      /* conversation list */
+      .conv-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 0 0;
+      }
+      .conv-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+        transition: background 0.1s;
+      }
+      .conv-row:hover { background: var(--surface); }
+      .conv-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 18px;
+        color: #fff;
+        overflow: hidden;
+      }
+      .conv-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .conv-info { flex: 1; min-width: 0; }
+      .conv-name-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        justify-content: space-between;
+      }
+      .conv-name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+      .conv-ts { font-size: 12px; color: var(--text-soft); white-space: nowrap; flex-shrink: 0; }
+      .conv-handle { font-size: 12px; color: var(--text-soft); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .conv-preview { font-size: 13px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      /* empty state */
       .inbox-empty {
-        margin-top: 26px;
-        padding-left: 10px;
-      }
-      .inbox-empty-title {
-        margin: 0 0 8px;
-        font-size: clamp(34px, 5.2vw, 66px);
-        line-height: 1.1;
-      }
-      .inbox-empty-subtitle {
-        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 24px;
+        text-align: center;
         color: var(--text-soft);
-        font-size: clamp(20px, 3.8vw, 46px);
-        line-height: 1.32;
+        gap: 12px;
       }
+      .inbox-empty svg { width: 48px; height: 48px; stroke: var(--border-strong); fill: none; stroke-width: 1.5; }
+      .inbox-empty-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0; }
+      .inbox-empty-sub { font-size: 14px; margin: 0; }
+
+      /* Compose FAB */
       .compose-fab {
         position: fixed;
-        right: 26px;
-        bottom: calc(var(--sticky-footer-height) + 30px);
-        width: clamp(72px, 13vw, 164px);
-        height: clamp(72px, 13vw, 164px);
+        right: 20px;
+        bottom: calc(var(--sticky-footer-height) + 14px);
+        width: 56px;
+        height: 56px;
         border: 0;
         border-radius: 50%;
         background: var(--accent);
         color: #fff;
-        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.22);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        z-index: 30;
       }
-      .compose-fab:hover { background: var(--accent-dark); }
-      .compose-fab svg {
-        width: 55%;
-        height: 55%;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
+      .compose-fab:hover { background: #b01c1c; }
+      .compose-fab svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
+      /* ── THREAD view ────────────────────────────────────────────── */
+      #thread-view {
+        display: none;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .dm-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 660px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .dm-bubble-wrap {
+        display: flex;
+        flex-direction: column;
+      }
+      .dm-bubble {
+        max-width: 76%;
+        padding: 10px 14px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+      .dm-bubble-out { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+      .dm-bubble-in  { align-self: flex-start; background: var(--surface); color: var(--text); border-bottom-left-radius: 4px; }
+      .dm-bubble-meta { font-size: 11px; color: var(--text-soft); margin-top: 3px; }
+      .dm-bubble-wrap.out .dm-bubble-meta { text-align: right; }
+
+      /* thread empty */
+      .dm-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        gap: 10px;
+        color: var(--text-soft);
+        font-size: 14px;
+        text-align: center;
+        padding: 24px;
+      }
+      .dm-empty svg { width: 48px; height: 48px; stroke: var(--border-strong); fill: none; stroke-width: 1.5; }
+
+      /* composer */
+      .dm-composer {
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+        padding: 8px 12px;
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        flex-shrink: 0;
+        max-width: 660px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .dm-attach-btn {
+        background: none;
+        border: none;
+        color: var(--text-soft);
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .dm-attach-btn:hover { color: var(--accent); }
+      .dm-attach-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+      .dm-input {
+        flex: 1;
+        border: 1px solid var(--border-strong);
+        border-radius: 20px;
+        padding: 9px 14px;
+        font-family: inherit;
+        font-size: 14px;
+        resize: none;
+        background: var(--surface);
+        color: var(--text);
+        min-height: 40px;
+        max-height: 120px;
+        overflow-y: auto;
+        line-height: 1.4;
+      }
+      .dm-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); background: #fff; }
+      .dm-send-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0;
+      }
+      .dm-send-btn:hover { background: #b01c1c; }
+      .dm-send-btn:disabled { opacity: 0.45; cursor: default; }
+      .dm-send-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* auth notice */
+      .dm-auth-notice {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        color: var(--text-soft);
+        font-size: 14px;
+        text-align: center;
+        padding: 24px;
+      }
+      .dm-auth-btn {
+        border: 1px solid var(--accent);
+        background: none;
+        color: var(--accent);
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 8px 22px;
+        border-radius: 20px;
+        cursor: pointer;
+      }
+      .dm-auth-btn:hover { background: var(--accent); color: #fff; }
+
+      /* ── Bottom nav ─────────────────────────────────────────────── */
       .bottom-nav {
         position: fixed;
         left: 0;
@@ -184,10 +375,10 @@
         bottom: 0;
         height: var(--sticky-footer-height);
         border-top: 1px solid var(--border);
-        background: rgba(250, 251, 252, 0.96);
-        backdrop-filter: blur(8px);
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(6px);
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0,1fr));
         align-items: center;
         z-index: 40;
       }
@@ -196,243 +387,121 @@
         height: 100%;
         border: 0;
         background: none;
-        color: #0f172a;
+        color: var(--text-muted);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        position: relative;
         cursor: pointer;
+        position: relative;
       }
-      .bottom-nav-item svg {
-        width: clamp(24px, 5vw, 44px);
-        height: clamp(24px, 5vw, 44px);
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2.2;
-      }
-      .bottom-nav-item.active { color: #050f1e; }
+      .bottom-nav-item svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+      .bottom-nav-item.active { color: var(--accent); }
       .bottom-nav-item.active svg { fill: currentColor; stroke: none; }
       .bottom-nav-dot {
         position: absolute;
-        top: 11px;
-        width: 12px;
-        height: 12px;
+        top: 10px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         background: var(--accent);
-      }
-
-      /* Thread mode (existing DM thread) */
-      .dm-thread {
-        display: none;
-        min-height: 100dvh;
-        background: #fff;
-      }
-      .dm-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        background: rgba(255,255,255,0.97);
-        border-bottom: 1px solid #e0e0e0;
-        backdrop-filter: blur(6px);
-        position: sticky;
-        top: 0;
-        z-index: 50;
-        flex-shrink: 0;
-      }
-      .dm-back-btn {
-        background: none;
-        border: none;
-        padding: 4px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        color: #111;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .dm-back-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-      .dm-header-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: 700;
-        color: #fff;
-        background: #8f9faf;
-        flex-shrink: 0;
-      }
-      .dm-header-info { min-width: 0; flex: 1; }
-      .dm-header-name { font-weight: 700; font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .dm-header-handle { font-size: 12px; color: #666; }
-      .dm-messages {
-        overflow-y: auto;
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        max-width: 640px;
-        width: 100%;
-        margin: 0 auto;
-        height: calc(100dvh - 122px);
-      }
-      .dm-bubble {
-        max-width: 75%;
-        padding: 10px 14px;
-        border-radius: 18px;
-        font-size: 14px;
-        line-height: 1.5;
-        word-break: break-word;
-      }
-      .dm-bubble-out { align-self: flex-end; background: var(--thread-accent); color: #fff; border-bottom-right-radius: 4px; }
-      .dm-bubble-in { align-self: flex-start; background: #f5f5f5; color: #111; border-bottom-left-radius: 4px; }
-      .dm-bubble-meta { font-size: 11px; color: #666; margin-top: 2px; text-align: right; }
-      .dm-bubble-in .dm-bubble-meta { text-align: left; }
-      .dm-empty {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        gap: 8px;
-        color: #666;
-        font-size: 14px;
-        text-align: center;
-        padding: 24px;
-      }
-      .dm-empty-icon svg { width: 48px; height: 48px; stroke: #ccc; fill: none; stroke-width: 1.5; }
-      .dm-composer {
-        display: flex;
-        align-items: flex-end;
-        gap: 10px;
-        padding: 10px 16px;
-        border-top: 1px solid #e0e0e0;
-        background: #fff;
-        max-width: 640px;
-        width: 100%;
-        margin: 0 auto;
-      }
-      .dm-input {
-        flex: 1;
-        border: 1px solid #ccc;
-        border-radius: 20px;
-        padding: 10px 14px;
-        font-family: inherit;
-        font-size: 14px;
-        resize: none;
-        background: #f5f5f5;
-        color: #111;
-        min-height: 42px;
-        max-height: 120px;
-        overflow-y: auto;
-        line-height: 1.4;
-      }
-      .dm-send-btn {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        background: var(--thread-accent);
-        border: none;
-        color: #fff;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-      }
-      .dm-send-btn:disabled { opacity: 0.5; cursor: default; }
-      .dm-send-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
-      @media (max-width: 700px) {
-        .messages-inbox {
-          padding: 16px 12px 16px;
-        }
-        .inbox-filter {
-          min-width: 96px;
-          font-size: 16px;
-          padding: 10px 14px;
-        }
       }
     </style>
   </head>
   <body>
-    <div class="page">
-      <section class="messages-inbox" id="messages-inbox" aria-label="Messages inbox">
-        <div class="inbox-top">
-          <button id="inbox-profile-btn" class="profile-chip" type="button" aria-label="Profile">
-            <img id="inbox-avatar-image" alt="" hidden />
+
+    <!-- ═══════════════ INBOX VIEW ═══════════════ -->
+    <div id="inbox-view">
+      <header class="msg-header" id="inbox-header">
+        <div class="msg-header-left">
+          <button id="inbox-avatar-btn" class="avatar-chip" type="button" aria-label="Your profile">
+            <img id="inbox-avatar-img" alt="" hidden />
             <span id="inbox-avatar-initials">?</span>
-            <span class="profile-chip-dot" aria-hidden="true"></span>
-          </button>
-          <h1 class="inbox-title">Chat</h1>
-          <button id="inbox-filter-btn" class="inbox-filter" type="button" aria-label="Filter chats">
-            <span id="inbox-filter-label">All</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
         </div>
+        <div class="msg-header-center">Messages</div>
+        <div class="msg-header-right">
+          <button id="inbox-settings-btn" class="msg-icon-btn" type="button" aria-label="Message settings" title="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </header>
 
+      <div class="inbox-search-wrap">
         <label class="inbox-search" for="inbox-search-input">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-          <input id="inbox-search-input" type="search" placeholder="Search" autocomplete="off" />
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="inbox-search-input" type="search" placeholder="Search Messages..." autocomplete="off" />
         </label>
+      </div>
 
-        <div class="inbox-empty" id="inbox-empty-state">
-          <p class="inbox-empty-title">No chats yet</p>
-          <p class="inbox-empty-subtitle" id="inbox-empty-subtitle">Start chatting with end-to-end encryption</p>
-        </div>
-      </section>
+      <div id="conv-list" class="conv-list" role="list" aria-label="Conversations"></div>
 
-      <section class="dm-thread" id="dm-thread">
-        <div class="dm-header" id="dm-header">
-          <button class="dm-back-btn" id="dm-back" aria-label="Go back" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <div class="dm-header-avatar" id="dm-header-avatar">?</div>
-          <div class="dm-header-info">
-            <div class="dm-header-name" id="dm-header-name">Direct Message</div>
-            <div class="dm-header-handle" id="dm-header-handle"></div>
-          </div>
-        </div>
-
-        <div class="dm-messages" id="dm-messages">
-          <div class="dm-empty" id="dm-empty" hidden>
-            <div class="dm-empty-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <p>No messages yet. Say hello!</p>
-          </div>
-        </div>
-
-        <div class="dm-composer" id="dm-composer">
-          <textarea class="dm-input" id="dm-input" placeholder="Type a message…" rows="1" aria-label="Message text"></textarea>
-          <button class="dm-send-btn" id="dm-send" type="button" aria-label="Send" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-      </section>
+      <div id="inbox-empty" class="inbox-empty" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <p class="inbox-empty-title">No messages yet</p>
+        <p id="inbox-empty-sub" class="inbox-empty-sub">Start a conversation from a user's profile</p>
+      </div>
     </div>
 
-    <button class="compose-fab" id="compose-fab" type="button" aria-label="Start a new message">
+    <button class="compose-fab" id="compose-fab" type="button" aria-label="Compose new message">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h11"/><line x1="18" y1="3" x2="18" y2="11"/><line x1="14" y1="7" x2="22" y2="7"/></svg>
     </button>
 
-    <nav class="bottom-nav" aria-label="Primary">
-      <button class="bottom-nav-item" type="button" data-nav-target="index.html" aria-label="Home">
+    <!-- ═══════════════ THREAD VIEW ═══════════════ -->
+    <div id="thread-view">
+      <header class="msg-header" id="thread-header">
+        <div class="msg-header-left">
+          <button id="thread-back-btn" class="msg-icon-btn" type="button" aria-label="Back to inbox">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div id="thread-header-avatar" class="avatar-chip avatar-chip-static" aria-hidden="true">?</div>
+        </div>
+        <div class="msg-header-center thread-header-center">
+          <div>
+            <div id="thread-header-name" class="thread-user-name">Direct Message</div>
+            <div id="thread-header-handle" class="thread-user-handle"></div>
+          </div>
+        </div>
+        <div class="msg-header-right">
+          <button id="thread-info-btn" class="msg-icon-btn" type="button" aria-label="Conversation info">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="dm-messages" class="dm-messages" role="log" aria-live="polite" aria-label="Message thread">
+        <div id="dm-thread-empty" class="dm-empty">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <p>No messages yet. Say hello!</p>
+        </div>
+      </div>
+
+      <div id="dm-composer" class="dm-composer">
+        <button class="dm-attach-btn" type="button" aria-label="Attach file" title="Attach">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <textarea id="dm-input" class="dm-input" placeholder="Type a message…" rows="1" aria-label="Message text"></textarea>
+        <button id="dm-send" class="dm-send-btn" type="button" aria-label="Send message" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Primary navigation">
+      <button class="bottom-nav-item" type="button" data-nav="index.html" aria-label="Home">
         <span class="bottom-nav-dot" aria-hidden="true"></span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
-      <button class="bottom-nav-item" type="button" data-nav-target="search" aria-label="Search">
+      <button class="bottom-nav-item" type="button" data-nav="search" aria-label="Search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
-      <button class="bottom-nav-item" type="button" data-nav-target="articles.html" aria-label="Explore">
+      <button class="bottom-nav-item" type="button" data-nav="articles.html" aria-label="Explore">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 5.6A8.5 8.5 0 0 0 5.6 18.4"/><path d="M5.6 5.6A8.5 8.5 0 0 0 18.4 18.4"/><circle cx="12" cy="12" r="1.7"/></svg>
       </button>
-      <button class="bottom-nav-item" type="button" data-nav-target="notifications.html" aria-label="Notifications">
+      <button class="bottom-nav-item" type="button" data-nav="notifications.html" aria-label="Notifications">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button class="bottom-nav-item active" type="button" data-nav-target="messages.html" aria-label="Messages">
+      <button class="bottom-nav-item active" type="button" data-nav="messages.html" aria-label="Messages">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
     </nav>
@@ -440,164 +509,376 @@
     <script src="app.js"></script>
     <script>
       (function () {
+        /* ── Constants ─────────────────────────────────────────────── */
         var DB_NAME = 'zorexium-app-db';
         var DB_VERSION = 4;
         var ACCOUNTS_STORE = 'accounts';
-        var SESSION_STORE = 'session';
-        var MESSAGES_SERVER_STORE = 'messages';
+        var SESSION_STORE  = 'session';
+        var MESSAGES_STORE = 'messages';
         var WINDOW_SESSION_PREFIX = 'zorexium-session:';
+        var MSG_EMPTY_DEFAULT = 'Start a conversation from a user\'s profile';
 
-        var inboxView = document.getElementById('messages-inbox');
-        var threadView = document.getElementById('dm-thread');
-        var inboxProfileBtn = document.getElementById('inbox-profile-btn');
-        var inboxAvatarImage = document.getElementById('inbox-avatar-image');
-        var inboxAvatarInitials = document.getElementById('inbox-avatar-initials');
-        var filterBtn = document.getElementById('inbox-filter-btn');
-        var filterLabel = document.getElementById('inbox-filter-label');
-        var searchInput = document.getElementById('inbox-search-input');
-        var composeFab = document.getElementById('compose-fab');
-        var emptySubtitle = document.getElementById('inbox-empty-subtitle');
+        /* ── DOM refs ──────────────────────────────────────────────── */
+        var inboxView      = document.getElementById('inbox-view');
+        var threadView     = document.getElementById('thread-view');
+        var inboxAvatarBtn = document.getElementById('inbox-avatar-btn');
+        var inboxAvatarImg = document.getElementById('inbox-avatar-img');
+        var inboxInitials  = document.getElementById('inbox-avatar-initials');
+        var settingsBtn    = document.getElementById('inbox-settings-btn');
+        var searchInput    = document.getElementById('inbox-search-input');
+        var convList       = document.getElementById('conv-list');
+        var inboxEmpty     = document.getElementById('inbox-empty');
+        var inboxEmptySub  = document.getElementById('inbox-empty-sub');
+        var composeFab     = document.getElementById('compose-fab');
+        var bottomNav      = document.getElementById('bottom-nav');
 
-        var messagesEl = document.getElementById('dm-messages');
-        var emptyEl = document.getElementById('dm-empty');
-        var inputEl = document.getElementById('dm-input');
-        var sendBtn = document.getElementById('dm-send');
-        var headerName = document.getElementById('dm-header-name');
-        var headerHandle = document.getElementById('dm-header-handle');
-        var headerAvatar = document.getElementById('dm-header-avatar');
-        var backBtn = document.getElementById('dm-back');
+        var threadHeaderAvatar = document.getElementById('thread-header-avatar');
+        var threadHeaderName   = document.getElementById('thread-header-name');
+        var threadHeaderHandle = document.getElementById('thread-header-handle');
+        var threadBackBtn      = document.getElementById('thread-back-btn');
+        var threadInfoBtn      = document.getElementById('thread-info-btn');
+        var messagesEl         = document.getElementById('dm-messages');
+        var threadEmptyEl      = document.getElementById('dm-thread-empty');
+        var inputEl            = document.getElementById('dm-input');
+        var sendBtn            = document.getElementById('dm-send');
 
-        var appDbPromise = null;
-        var currentUser = null;
-        var otherUser = null;
-        var conversationId = '';
-        var pollIntervalId = null;
-        var dmWs = null;
-        var serverUnavailable = false;
-        var lastMessageCount = 0;
+        /* ── State ─────────────────────────────────────────────────── */
+        var currentUser      = null;
+        var otherUser        = null;
+        var conversationId   = '';
+        var allConversations = [];
+        var allAccounts      = [];
+        var pollIntervalId   = null;
+        var dmWs             = null;
+        var serverDown       = false;
+        var lastMsgCount     = 0;
+        var appDbPromise     = null;
 
-        function openAppDb() {
+        /* ── IndexedDB helpers ─────────────────────────────────────── */
+        function openDb() {
           if (appDbPromise) return appDbPromise;
-          appDbPromise = new Promise(function (resolve, reject) {
+          appDbPromise = new Promise(function (res, rej) {
             var req = window.indexedDB.open(DB_NAME, DB_VERSION);
-            req.onsuccess = function () { resolve(req.result); };
-            req.onerror = function () { reject(req.error); };
+            req.onsuccess = function () { res(req.result); };
+            req.onerror   = function () { rej(req.error); };
           });
           return appDbPromise;
         }
-
-        function getRecordLocal(store, key) {
-          return openAppDb().then(function (db) {
-            return new Promise(function (resolve) {
-              var tx = db.transaction(store, 'readonly');
-              var req = tx.objectStore(store).get(key);
-              req.onsuccess = function () { resolve(req.result || null); };
-              req.onerror = function () { resolve(null); };
+        function getLocal(store, key) {
+          return openDb().then(function (db) {
+            return new Promise(function (res) {
+              var req = db.transaction(store, 'readonly').objectStore(store).get(key);
+              req.onsuccess = function () { res(req.result || null); };
+              req.onerror   = function () { res(null); };
+            });
+          });
+        }
+        function getAllLocal(store) {
+          return openDb().then(function (db) {
+            return new Promise(function (res) {
+              var req = db.transaction(store, 'readonly').objectStore(store).getAll();
+              req.onsuccess = function () { res(req.result || []); };
+              req.onerror   = function () { res([]); };
             });
           });
         }
 
-        function getAllRecordsLocal(store) {
-          return openAppDb().then(function (db) {
-            return new Promise(function (resolve) {
-              var tx = db.transaction(store, 'readonly');
-              var req = tx.objectStore(store).getAll();
-              req.onsuccess = function () { resolve(req.result || []); };
-              req.onerror = function () { resolve([]); };
-            });
+        /* ── Session helpers ───────────────────────────────────────── */
+        function getWindowSession() {
+          if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
+          try {
+            var p = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+            return (p && p.userId) ? p : null;
+          } catch (e) {
+            return null;
+          }
+        }
+        function getUserSession() {
+          var ws = getWindowSession();
+          if (ws) return Promise.resolve(ws);
+          return getLocal(SESSION_STORE, 'current').then(function (s) {
+            return (s && s.userId) ? s : null;
           });
         }
 
-        function getWithUserId() {
-          var params = new URLSearchParams(window.location.search);
-          return params.get('with') || '';
+        /* ── Utility ───────────────────────────────────────────────── */
+        function getParam(name) {
+          return new URLSearchParams(window.location.search).get(name) || '';
         }
-
-        function buildConversationId(idA, idB) {
-          var sorted = [idA, idB].sort();
-          return sorted[0] + ':' + sorted[1];
+        function buildConvId(a, b) {
+          return [a, b].sort().join(':');
         }
-
-        function formatTime(ts) {
-          try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
-        }
-
         function getInitials(name, username) {
           var n = String(name || username || '').trim();
           var parts = n.split(/\s+/);
           if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
           return n.slice(0, 2).toUpperCase() || '?';
         }
-
         function getAvatarColor(seed) {
           var colors = ['#e02020','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#d81b60','#546e7a'];
-          var hash = 0;
-          var s = String(seed || '');
+          var hash = 0; var s = String(seed || '');
           for (var i = 0; i < s.length; i++) { hash = (hash * 31 + s.charCodeAt(i)) & 0xffffffff; }
           return colors[Math.abs(hash) % colors.length];
         }
-
-        function getWindowSession() {
-          if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
-          try {
-            var payload = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
-            return payload && payload.userId ? payload : null;
-          } catch (e) { return null; }
+        function formatTs(ts) {
+          if (!ts) return '';
+          var d = new Date(ts);
+          var now = new Date();
+          var diffMs = now - d;
+          if (diffMs < 60000) return 'just now';
+          if (diffMs < 3600000) return Math.floor(diffMs / 60000) + 'm';
+          if (diffMs < 86400000) return Math.floor(diffMs / 3600000) + 'h';
+          if (diffMs < 604800000) return Math.floor(diffMs / 86400000) + 'd';
+          return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
         }
-
-        function getUserSession() {
-          var ws = getWindowSession();
-          if (ws) return Promise.resolve(ws);
-          return getRecordLocal(SESSION_STORE, 'current').then(function (s) {
-            return s && s.userId ? s : null;
-          });
+        function formatTime(ts) {
+          try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
         }
-
-        function lookupUserById(userId, accounts) {
-          for (var i = 0; i < accounts.length; i++) {
-            if (accounts[i].id === userId) return accounts[i];
-          }
+        function lookupById(id, accounts) {
+          for (var i = 0; i < accounts.length; i++) { if (accounts[i].id === id) return accounts[i]; }
           return null;
         }
 
-        function serverFetch(method, storeKey, body) {
-          if (serverUnavailable) return Promise.reject(new Error('server unavailable'));
-          var url = '/api/store/' + encodeURIComponent(MESSAGES_SERVER_STORE) + '/' + encodeURIComponent(storeKey);
+        /* ── Server helpers ────────────────────────────────────────── */
+        function apiFetch(method, store, key, body) {
+          if (serverDown) return Promise.reject(new Error('server down'));
+          var url = '/api/store/' + encodeURIComponent(store) + (key ? '/' + encodeURIComponent(key) : '');
           var opts = { method: method };
           if (body !== undefined) {
             opts.headers = { 'Content-Type': 'application/json' };
             opts.body = JSON.stringify({ record: body });
           }
           return fetch(url, opts).then(function (r) {
-            if (!r.ok) throw new Error('Server error ' + r.status);
+            if (!r.ok) throw new Error('Server ' + r.status);
             return r.json();
-          }).catch(function (err) {
-            serverUnavailable = true;
-            throw err;
-          });
+          }).catch(function (err) { serverDown = true; throw err; });
         }
-
         function loadConversation() {
-          return serverFetch('GET', conversationId).then(function (data) {
-            return data && data.record ? data.record : null;
-          }).catch(function () { return null; });
+          return apiFetch('GET', MESSAGES_STORE, conversationId)
+            .then(function (d) { return d && d.record ? d.record : null; })
+            .catch(function () { return null; });
+        }
+        function saveConversation(record) {
+          return apiFetch('PUT', MESSAGES_STORE, conversationId, record)
+            .catch(function (e) { console.warn('save conv failed', e); });
+        }
+        function incrementField(store, key, field, by) {
+          return fetch('/api/store/' + encodeURIComponent(store) + '/' + encodeURIComponent(key) + '/increment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: field, by: by })
+          }).catch(function () {});
+        }
+        function resetUnread() {
+          if (!currentUser || serverDown) return;
+          var url = '/api/store/accounts/' + encodeURIComponent(currentUser.id);
+          fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+            if (!d || !d.record) return;
+            return fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ record: Object.assign({}, d.record, { unreadDmCount: 0 }) }) });
+          }).catch(function () {});
+        }
+        function loadAccountsFromServer() {
+          return fetch('/api/store/accounts').then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { return (d && Array.isArray(d.records) && d.records.length) ? d.records : getAllLocal(ACCOUNTS_STORE); })
+            .catch(function () { return getAllLocal(ACCOUNTS_STORE); });
+        }
+        function loadAllConversations() {
+          return fetch('/api/store/' + MESSAGES_STORE).then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { return (d && Array.isArray(d.records)) ? d.records : []; })
+            .catch(function () { return []; });
         }
 
-        function saveConversation(record) {
-          return serverFetch('PUT', conversationId, record).catch(function (err) {
-            console.warn('Failed to save conversation', err);
+        /* ── Avatar rendering ──────────────────────────────────────── */
+        function setAvatar(el, user) {
+          if (!user) { el.textContent = '?'; el.style.background = '#93a2b7'; return; }
+          el.style.background = getAvatarColor(user.username || user.id);
+          var img = el.querySelector('img');
+          var span = el.querySelector('span');
+          if (img && user.profilePictureDataUrl) {
+            img.src = user.profilePictureDataUrl;
+            img.hidden = false;
+            if (span) span.hidden = true;
+          } else if (img) {
+            img.hidden = true;
+            if (span) span.hidden = false;
+          }
+          if (!img) {
+            var textTarget = span || el;
+            textTarget.textContent = getInitials(user.name, user.username);
+          }
+        }
+
+        /* ── Inbox ─────────────────────────────────────────────────── */
+        function renderInbox(conversations, accounts, filterText) {
+          var uid = currentUser ? currentUser.id : '';
+          var rows = conversations.filter(function (c) {
+            if (!c || !c.id) return false;
+            var parts = String(c.id).split(':');
+            return parts.indexOf(uid) !== -1;
+          });
+
+          rows.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+
+          if (filterText) {
+            var q = filterText.toLowerCase();
+            rows = rows.filter(function (c) {
+              var otherId = getOtherParticipantId(c, uid);
+              var other = lookupById(otherId, accounts);
+              if (!other) return false;
+              var name = String(other.name || other.username || '').toLowerCase();
+              var handle = String(other.username || '').toLowerCase();
+              return name.indexOf(q) !== -1 || handle.indexOf(q) !== -1;
+            });
+          }
+
+          convList.innerHTML = '';
+          if (!rows.length) {
+            inboxEmpty.hidden = false;
+            if (!filterText && !uid) {
+              inboxEmptySub.textContent = 'Sign in to see your messages';
+            } else if (filterText) {
+              inboxEmptySub.textContent = 'No conversations match your search';
+            } else {
+              inboxEmptySub.textContent = MSG_EMPTY_DEFAULT;
+            }
+            return;
+          }
+          inboxEmpty.hidden = true;
+
+          rows.forEach(function (conv) {
+            var otherId = getOtherParticipantId(conv, uid);
+            var other = lookupById(otherId, accounts);
+            var msgs = Array.isArray(conv.messages) ? conv.messages : [];
+            var lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
+            var preview = lastMsg ? String(lastMsg.text || '').slice(0, 80) : '';
+
+            var row = document.createElement('div');
+            row.className = 'conv-row';
+            row.setAttribute('role', 'listitem');
+            row.setAttribute('tabindex', '0');
+            row.setAttribute('aria-label', 'Conversation with ' + (other ? (other.name || other.username || 'User') : 'User'));
+
+            var avatarEl = document.createElement('div');
+            avatarEl.className = 'conv-avatar';
+            if (other) {
+              avatarEl.style.background = getAvatarColor(other.username || other.id);
+              if (other.profilePictureDataUrl) {
+                var img = document.createElement('img');
+                img.src = other.profilePictureDataUrl;
+                img.alt = '';
+                avatarEl.appendChild(img);
+              } else {
+                avatarEl.textContent = getInitials(other.name, other.username);
+              }
+            } else {
+              avatarEl.textContent = '?';
+              avatarEl.style.background = '#93a2b7';
+            }
+
+            var infoEl = document.createElement('div');
+            infoEl.className = 'conv-info';
+
+            var nameRow = document.createElement('div');
+            nameRow.className = 'conv-name-row';
+            var nameEl = document.createElement('span');
+            nameEl.className = 'conv-name';
+            nameEl.textContent = other ? (other.name || other.username || 'User') : (otherId || 'User');
+            var tsEl = document.createElement('span');
+            tsEl.className = 'conv-ts';
+            tsEl.textContent = formatTs(conv.updatedAt || (lastMsg ? lastMsg.createdAt : 0));
+            nameRow.appendChild(nameEl);
+            nameRow.appendChild(tsEl);
+
+            var handleEl = document.createElement('div');
+            handleEl.className = 'conv-handle';
+            handleEl.textContent = other && other.username ? '@' + other.username : '';
+
+            var previewEl = document.createElement('div');
+            previewEl.className = 'conv-preview';
+            if (preview) {
+              var isOwn = lastMsg && lastMsg.senderId === uid;
+              previewEl.textContent = (isOwn ? 'You: ' : '') + preview;
+            } else {
+              previewEl.textContent = 'Start the conversation';
+              previewEl.style.color = 'var(--text-placeholder)';
+            }
+
+            infoEl.appendChild(nameRow);
+            infoEl.appendChild(handleEl);
+            infoEl.appendChild(previewEl);
+
+            row.appendChild(avatarEl);
+            row.appendChild(infoEl);
+
+            (function (convRecord) {
+              function openConv() {
+                var oid = getOtherParticipantId(convRecord, uid);
+                window.location.href = 'messages.html?with=' + encodeURIComponent(oid);
+              }
+              row.addEventListener('click', openConv);
+              row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openConv(); } });
+            }(conv));
+
+            convList.appendChild(row);
           });
         }
 
+        function getOtherParticipantId(conv, myId) {
+          if (!conv) return '';
+          var parts = Array.isArray(conv.participants) ? conv.participants : String(conv.id || '').split(':');
+          for (var i = 0; i < parts.length; i++) { if (parts[i] !== myId) return parts[i]; }
+          return parts[0] || '';
+        }
+
+        function initInbox(session, accounts) {
+          threadView.style.display = 'none';
+          inboxView.style.display = '';
+          composeFab.style.display = '';
+          bottomNav.style.display = '';
+          document.title = 'Messages';
+
+          allAccounts = accounts;
+          currentUser = session ? lookupById(session.userId, accounts) : null;
+
+          // set inbox header avatar
+          if (currentUser) {
+            inboxInitials.textContent = getInitials(currentUser.name, currentUser.username);
+            inboxAvatarBtn.style.background = getAvatarColor(currentUser.username || currentUser.id);
+            if (currentUser.profilePictureDataUrl) {
+              inboxAvatarImg.src = currentUser.profilePictureDataUrl;
+              inboxAvatarImg.hidden = false;
+              inboxInitials.hidden = true;
+            } else {
+              inboxAvatarImg.hidden = true;
+              inboxInitials.hidden = false;
+            }
+          }
+
+          inboxAvatarBtn.addEventListener('click', function () {
+            window.location.href = currentUser ? 'account-dashboard.html' : 'index.html';
+          });
+          settingsBtn.addEventListener('click', function () { /* settings placeholder */ });
+          composeFab.addEventListener('click', function () {
+            if (!currentUser) { window.location.href = 'index.html'; return; }
+            inboxEmptySub.textContent = 'Start a conversation from a user\'s profile to message someone.';
+          });
+
+          loadAllConversations().then(function (convs) {
+            allConversations = convs;
+            renderInbox(convs, accounts, '');
+          });
+
+          searchInput.addEventListener('input', function () {
+            renderInbox(allConversations, allAccounts, String(searchInput.value || '').trim());
+          });
+        }
+
+        /* ── Thread ─────────────────────────────────────────────────── */
         function renderMessages(record) {
           var messages = (record && Array.isArray(record.messages)) ? record.messages : [];
           messagesEl.querySelectorAll('.dm-bubble-wrap').forEach(function (el) { el.remove(); });
-
-          if (!messages.length) {
-            emptyEl.hidden = false;
-            return;
-          }
-          emptyEl.hidden = true;
+          threadEmptyEl.style.display = messages.length ? 'none' : '';
           messages.forEach(function (msg) { appendBubble(msg); });
           messagesEl.scrollTop = messagesEl.scrollHeight;
         }
@@ -605,13 +886,10 @@
         function appendBubble(msg) {
           var isOwn = currentUser && msg.senderId === currentUser.id;
           var wrap = document.createElement('div');
-          wrap.className = 'dm-bubble-wrap';
-          wrap.style.display = 'flex';
-          wrap.style.flexDirection = 'column';
-          wrap.style.alignItems = isOwn ? 'flex-end' : 'flex-start';
+          wrap.className = 'dm-bubble-wrap' + (isOwn ? ' out' : '');
 
           var bubble = document.createElement('div');
-          bubble.className = isOwn ? 'dm-bubble dm-bubble-out' : 'dm-bubble dm-bubble-in';
+          bubble.className = 'dm-bubble ' + (isOwn ? 'dm-bubble-out' : 'dm-bubble-in');
           bubble.textContent = msg.text || '';
 
           var meta = document.createElement('div');
@@ -620,37 +898,15 @@
 
           wrap.appendChild(bubble);
           wrap.appendChild(meta);
-          messagesEl.insertBefore(wrap, emptyEl);
-        }
-
-        function incrementAccountField(recordKey, field, by) {
-          var url = '/api/store/accounts/' + encodeURIComponent(recordKey) + '/increment';
-          return fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ field: field, by: by })
-          }).catch(function () {});
-        }
-
-        function resetUnreadDmCount() {
-          if (!currentUser || serverUnavailable) return;
-          var url = '/api/store/accounts/' + encodeURIComponent(currentUser.id);
-          fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
-            if (!data || !data.record) return;
-            return fetch(url, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ record: Object.assign({}, data.record, { unreadDmCount: 0 }) })
-            });
-          }).catch(function () {});
+          messagesEl.insertBefore(wrap, threadEmptyEl);
         }
 
         function sendMessage() {
           var text = (inputEl.value || '').trim();
           if (!text || !currentUser || !conversationId) return;
-
           inputEl.value = '';
           sendBtn.disabled = true;
+          inputEl.style.height = 'auto';
           updateSendBtn();
 
           var msg = {
@@ -660,7 +916,7 @@
             createdAt: Date.now()
           };
 
-          emptyEl.hidden = true;
+          threadEmptyEl.style.display = 'none';
           appendBubble(msg);
           messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -675,120 +931,99 @@
             });
           }).then(function () {
             if (otherUser && otherUser.id) {
-              incrementAccountField(otherUser.id, 'unreadDmCount', 1).catch(function (err) {
-                console.warn('Failed to increment unread count', err);
-              });
+              incrementField('accounts', otherUser.id, 'unreadDmCount', 1);
             }
-          }).finally(function () {
-            sendBtn.disabled = false;
-          });
+          }).catch(function (e) { console.warn('send failed', e); })
+            .finally(function () { sendBtn.disabled = false; });
         }
 
         function pollMessages() {
           loadConversation().then(function (record) {
-            var messages = (record && Array.isArray(record.messages)) ? record.messages : [];
-            if (messages.length !== lastMessageCount) {
-              lastMessageCount = messages.length;
+            var msgs = (record && Array.isArray(record.messages)) ? record.messages : [];
+            if (msgs.length !== lastMsgCount) {
+              lastMsgCount = msgs.length;
               renderMessages(record);
             }
           }).catch(function () {});
         }
 
-        function connectDmWebSocket() {
+        function connectWs() {
           if (!conversationId) return;
           try {
-            var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            dmWs = new WebSocket(protocol + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId));
-            dmWs.onmessage = function (event) {
+            var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            dmWs = new WebSocket(proto + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId));
+            dmWs.onmessage = function (ev) {
               try {
-                var data = JSON.parse(event.data);
-                if (data && data.type === 'dm-update' && data.conversationId === conversationId) pollMessages();
-              } catch (e) {}
+                var d = JSON.parse(ev.data);
+                if (d && d.type === 'dm-update' && d.conversationId === conversationId) {
+                  pollMessages();
+                }
+              } catch (e) {
+                // malformed ws message — ignore
+              }
             };
             dmWs.onclose = function () {
               dmWs = null;
-              if (!pollIntervalId) pollIntervalId = setInterval(pollMessages, 10000);
+              if (!pollIntervalId) {
+                pollIntervalId = setInterval(pollMessages, 10000);
+              }
             };
           } catch (e) {
-            if (!pollIntervalId) pollIntervalId = setInterval(pollMessages, 10000);
+            if (!pollIntervalId) {
+              pollIntervalId = setInterval(pollMessages, 10000);
+            }
           }
         }
 
-        function updateSendBtn() {
-          sendBtn.disabled = !(inputEl.value || '').trim();
+        function updateSendBtn() { sendBtn.disabled = !(inputEl.value || '').trim(); }
+
+        function showAuthNotice() {
+          var notice = document.createElement('div');
+          notice.className = 'dm-auth-notice';
+          var p = document.createElement('p'); p.textContent = 'Sign in to use Direct Messages.';
+          var btn = document.createElement('button'); btn.className = 'dm-auth-btn'; btn.textContent = 'Go to home';
+          btn.addEventListener('click', function () { window.location.href = 'index.html'; });
+          notice.appendChild(p); notice.appendChild(btn);
+          messagesEl.innerHTML = '';
+          messagesEl.appendChild(notice);
+          document.getElementById('dm-composer').style.display = 'none';
         }
 
-        function setInboxAvatar(user) {
-          if (!user) return;
-          var initials = getInitials(user.name, user.username);
-          inboxAvatarInitials.textContent = initials;
-          inboxProfileBtn.style.background = getAvatarColor(user.username || user.id);
-
-          var hasPicture = !!user.profilePictureDataUrl;
-          if (hasPicture) inboxAvatarImage.src = user.profilePictureDataUrl;
-          inboxAvatarImage.hidden = !hasPicture;
-          inboxAvatarInitials.hidden = hasPicture;
-        }
-
-        function initInboxMode(session, accounts) {
-          threadView.style.display = 'none';
-          inboxView.style.display = '';
-          document.title = 'Messages';
-
-          currentUser = session ? lookupUserById(session.userId, accounts) : null;
-          setInboxAvatar(currentUser);
-
-          inboxProfileBtn.addEventListener('click', function () {
-            if (!currentUser) {
-              window.location.href = 'index.html';
-              return;
-            }
-            window.location.href = 'account-dashboard.html';
-          });
-
-          filterBtn.addEventListener('click', function () {
-            filterLabel.textContent = (filterLabel.textContent === 'All') ? 'Unread' : 'All';
-          });
-
-          searchInput.addEventListener('input', function () {
-            var hasQuery = String(searchInput.value || '').trim().length > 0;
-            document.getElementById('inbox-empty-state').style.display = hasQuery ? 'none' : '';
-          });
-
-          composeFab.addEventListener('click', function () {
-            if (!currentUser) {
-              window.location.href = 'index.html';
-              return;
-            }
-            emptySubtitle.textContent = 'No chats yet. Start from a profile to message someone.';
-          });
-        }
-
-        function initThreadMode(session, accounts) {
+        function initThread(session, accounts) {
           inboxView.style.display = 'none';
           composeFab.style.display = 'none';
-          document.querySelector('.bottom-nav').style.display = 'none';
-          threadView.style.display = 'block';
+          bottomNav.style.display = 'none';
+          threadView.style.display = 'flex';
 
-          var sessionUser = lookupUserById(session.userId, accounts);
-          if (!sessionUser) {
-            window.location.href = 'index.html';
-            return;
-          }
-          currentUser = sessionUser;
+          if (!session) { showAuthNotice(); return; }
 
-          var withId = getWithUserId();
-          otherUser = lookupUserById(withId, accounts);
-          conversationId = buildConversationId(session.userId, withId);
+          currentUser = lookupById(session.userId, accounts);
+          if (!currentUser) { showAuthNotice(); return; }
 
+          var withId = getParam('with');
+          otherUser = lookupById(withId, accounts);
+          conversationId = buildConvId(session.userId, withId);
+
+          document.title = 'Messages — ' + (otherUser ? (otherUser.name || otherUser.username) : 'Chat');
+
+          // thread header
+          threadHeaderName.textContent = otherUser ? (otherUser.name || otherUser.username || 'User') : 'User';
+          threadHeaderHandle.textContent = otherUser && otherUser.username ? '@' + otherUser.username : '';
           if (otherUser) {
-            headerAvatar.style.background = getAvatarColor(otherUser.username || otherUser.id);
-            headerAvatar.textContent = getInitials(otherUser.name, otherUser.username);
-            headerName.textContent = otherUser.name || otherUser.username || 'User';
-            headerHandle.textContent = '@' + (otherUser.username || '');
+            threadHeaderAvatar.style.background = getAvatarColor(otherUser.username || otherUser.id);
+            threadHeaderAvatar.textContent = getInitials(otherUser.name, otherUser.username);
           }
 
-          backBtn.addEventListener('click', function () { history.back(); });
+          threadBackBtn.addEventListener('click', function () {
+            if (document.referrer && document.referrer.indexOf(location.origin) === 0) {
+              history.back();
+            } else {
+              window.location.href = 'messages.html';
+            }
+          });
+          threadInfoBtn.addEventListener('click', function () {
+            if (otherUser) window.location.href = 'account-dashboard.html?userId=' + encodeURIComponent(otherUser.id);
+          });
 
           inputEl.addEventListener('input', function () {
             updateSendBtn();
@@ -796,61 +1031,36 @@
             inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
           });
           inputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              if (!sendBtn.disabled) sendMessage();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled) sendMessage(); }
           });
           sendBtn.addEventListener('click', sendMessage);
 
           loadConversation().then(function (record) {
-            lastMessageCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;
+            lastMsgCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;
             renderMessages(record);
-            resetUnreadDmCount();
+            resetUnread();
           });
-          connectDmWebSocket();
+          connectWs();
         }
 
-        function loadAccountsFromServerOrLocal() {
-          return fetch('/api/store/accounts').then(function (r) {
-            return r.ok ? r.json() : null;
-          }).then(function (data) {
-            if (data && Array.isArray(data.records) && data.records.length) return data.records;
-            return getAllRecordsLocal(ACCOUNTS_STORE);
-          }).catch(function () {
-            return getAllRecordsLocal(ACCOUNTS_STORE);
-          });
-        }
-
-        document.querySelectorAll('[data-nav-target]').forEach(function (button) {
-          button.addEventListener('click', function () {
-            var target = button.getAttribute('data-nav-target');
-            var allowedTargets = {
-              'index.html': true,
-              'articles.html': true,
-              'notifications.html': true
-            };
+        /* ── Bottom nav ─────────────────────────────────────────────── */
+        document.querySelectorAll('[data-nav]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var target = btn.getAttribute('data-nav');
             if (!target || target === 'messages.html') return;
-            if (target === 'search') {
-              searchInput.focus();
-              return;
-            }
-            if (!allowedTargets[target]) return;
+            if (target === 'search') { searchInput.focus(); return; }
             window.location.href = target;
           });
         });
 
+        /* ── Boot ───────────────────────────────────────────────────── */
         getUserSession().then(function (session) {
-          return loadAccountsFromServerOrLocal().then(function (accounts) {
-            if (getWithUserId()) {
-              if (!session) {
-                window.location.href = 'index.html';
-                return;
-              }
-              initThreadMode(session, accounts);
-              return;
+          return loadAccountsFromServer().then(function (accounts) {
+            if (getParam('with')) {
+              initThread(session, accounts);
+            } else {
+              initInbox(session, accounts);
             }
-            initInboxMode(session, accounts);
           });
         });
 
