@@ -10,10 +10,9 @@
     <style>
       :root {
         --accent: #cc2222;
-        --header-h: 56px;
         --footer-h: 62px;
         --engage-w: 68px;
-        color-scheme: dark;
+        color-scheme: light;
       }
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -21,48 +20,9 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #000;
+        background: #fff;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: #fff;
-      }
-
-      /* ── Top header ────────────────────────────── */
-      .clips-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 200;
-        height: var(--header-h);
-        display: grid;
-        grid-template-columns: var(--header-h) 1fr var(--header-h);
-        align-items: center;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
-        pointer-events: none;
-      }
-      .clips-header > * { pointer-events: auto; }
-      .clips-header-btn {
-        background: none;
-        border: none;
-        color: #fff;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        margin: 0 auto;
-        transition: background 0.15s;
-      }
-      .clips-header-btn:hover { background: rgba(255,255,255,0.15); }
-      .clips-header-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-      .clips-header-title {
-        text-align: center;
-        font-size: 17px;
-        font-weight: 700;
-        letter-spacing: 0.01em;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        color: #111;
       }
 
       /* ── Clips scroll container ────────────────── */
@@ -629,19 +589,18 @@
         bottom: 0;
         z-index: 100;
         height: var(--footer-h);
-        background: rgba(0,0,0,0.75);
-        border-top: 1px solid rgba(255,255,255,0.08);
+        background: #fff;
+        border-top: 1px solid #e0e0e0;
         display: flex;
         align-items: center;
         justify-content: space-around;
         padding: 0 6px;
-        backdrop-filter: blur(8px);
       }
       .sticky-footer-item {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: rgba(255,255,255,0.55);
+        color: #666;
         width: 44px;
         height: 44px;
         background: none;
@@ -652,9 +611,6 @@
         transition: color 0.15s;
       }
       .sticky-footer-item:hover,
-      .sticky-footer-item.active {
-        color: #fff;
-      }
       .sticky-footer-item.active {
         color: var(--accent);
       }
@@ -679,13 +635,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #000;
+        background: #fff;
       }
       .clips-loading-spinner {
         width: 36px;
         height: 36px;
-        border: 3px solid rgba(255,255,255,0.15);
-        border-top-color: #fff;
+        border: 3px solid rgba(0,0,0,0.15);
+        border-top-color: #cc2222;
         border-radius: 50%;
         animation: spin 0.75s linear infinite;
       }
@@ -698,17 +654,6 @@
     <div class="clips-loading" id="clips-loading">
       <div class="clips-loading-spinner"></div>
     </div>
-
-    <!-- Fixed top header -->
-    <header class="clips-header" aria-label="Clips header">
-      <button class="clips-header-btn" id="clips-back-btn" type="button" aria-label="Go back">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <span class="clips-header-title">Clips</span>
-      <button class="clips-header-btn" id="clips-camera-btn" type="button" aria-label="Create clip">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-      </button>
-    </header>
 
     <!-- Clips scroll container -->
     <div class="clips-container" id="clips-container" role="main" aria-label="Clips feed"></div>
@@ -943,6 +888,54 @@
             } catch (e) { resolve(null); }
           }).catch(function () { resolve(null); });
         });
+      }
+
+      function mediaRecordToDataUrl(record) {
+        return new Promise(function (resolve) {
+          if (!record || !record.data) { resolve(''); return; }
+          try {
+            var blob = record.data instanceof Blob ? record.data : new Blob([record.data], { type: record.type || 'image/*' });
+            var reader = new FileReader();
+            reader.onload = function () { resolve(typeof reader.result === 'string' ? reader.result : ''); };
+            reader.onerror = function () { resolve(''); };
+            reader.readAsDataURL(blob);
+          } catch (e) {
+            resolve('');
+          }
+        });
+      }
+
+      async function resolveUserAvatarUrl(user) {
+        if (!user) return '';
+        var legacy = String(user.profilePictureDataUrl || '').trim();
+        if (legacy) return legacy;
+        var profileImageMediaId = String(user.profileImageMediaId || '').trim();
+        if (!profileImageMediaId) return '';
+        try {
+          var mediaRecord = await getRecord(MEDIA_STORE, profileImageMediaId);
+          return await mediaRecordToDataUrl(mediaRecord);
+        } catch (error) {
+          return '';
+        }
+      }
+
+      async function applyStickyFooterAvatar() {
+        var sfProfile = document.getElementById('sticky-footer-profile');
+        if (!sfProfile) return;
+        var avatarUrl = await resolveUserAvatarUrl(currentUser);
+        if (avatarUrl) {
+          var img = document.createElement('img');
+          img.src = avatarUrl;
+          img.alt = '';
+          img.width = 24;
+          img.height = 24;
+          img.style.width = '24px';
+          img.style.height = '24px';
+          img.style.borderRadius = '50%';
+          img.style.objectFit = 'cover';
+          img.style.display = 'block';
+          sfProfile.replaceChildren(img);
+        }
       }
 
       /* ── Gradient palette for placeholder cards ─────────────── */
@@ -1426,15 +1419,6 @@
         window.location.href = 'index.html';
       });
 
-      /* ── Header buttons ─────────────────────────────────────── */
-      document.getElementById('clips-back-btn').addEventListener('click', function () {
-        history.back();
-      });
-      document.getElementById('clips-camera-btn').addEventListener('click', function () {
-        if (!currentUser) { showAuthPrompt(); return; }
-        window.location.href = 'index.html';
-      });
-
       /* ── Footer nav ─────────────────────────────────────────── */
       var sfMarketplace = document.getElementById('sticky-footer-marketplace');
       var sfProfile = document.getElementById('sticky-footer-profile');
@@ -1450,7 +1434,7 @@
         if (!posts || posts.length === 0) {
           var empty = document.createElement('div');
           empty.className = 'clips-empty';
-          empty.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg><h2>No Clips Yet</h2><p>Post content on the home page and it will appear here as a clip.</p>';
+          empty.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg><h2>No Clips Yet</h2><p>Post a video on the home page and it will appear here as a clip.</p>';
           container.appendChild(empty);
           return;
         }
@@ -1461,10 +1445,10 @@
         for (var i = 0; i < posts.length; i++) {
           var post = posts[i];
           var author = accountMap[post.userId] || null;
-          var mediaInfo = null;
-          if (post.mediaId) {
-            mediaInfo = await loadMediaBlob(post.mediaId);
-          }
+          var mediaId = post.videoMediaId || post.mediaId || null;
+          if (!mediaId) continue;
+          var mediaInfo = await loadMediaBlob(mediaId);
+          if (!mediaInfo || !(mediaInfo.type || '').startsWith('video')) continue;
           var clipEl = buildClip(post, mediaInfo, author);
           container.appendChild(clipEl);
           clips.push(clipEl);
@@ -1474,22 +1458,13 @@
 
       /* ── Sort / sample posts for clips ─────────────────────── */
       function pickClipPosts(posts) {
-        /* Prefer posts with media; fall back to all posts */
-        var withMedia = posts.filter(function (p) { return p.mediaId; });
-        var without = posts.filter(function (p) { return !p.mediaId; });
-        /* Interleave: 1 media + 1 text, up to 30 clips */
-        var result = [];
-        var mi = 0, ti = 0;
-        while (result.length < 30 && (mi < withMedia.length || ti < without.length)) {
-          if (mi < withMedia.length) result.push(withMedia[mi++]);
-          if (result.length < 30 && ti < without.length) result.push(without[ti++]);
-        }
-        return result;
+        return posts.filter(function (p) { return Boolean(p.videoMediaId || p.mediaId); }).slice(0, 30);
       }
 
       /* ── Bootstrap ──────────────────────────────────────────── */
       openDB().then(async function () {
         currentUser = await loadCurrentUser();
+        await applyStickyFooterAvatar();
         var posts = await getAllRecords(POSTS_STORE);
         var accounts = await getAllRecords(ACCOUNTS_STORE);
         /* Sort newest first */
