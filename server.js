@@ -29,9 +29,8 @@ function normalizeDatabaseUrl(rawUrl) {
     const parsed = new URL(rawUrl);
     const sslModeFromUrl = String(parsed.searchParams.get('sslmode') || '').toLowerCase();
     parsed.searchParams.delete('sslmode');
-    const query = parsed.searchParams.toString();
     return {
-      connectionString: `${parsed.origin}${parsed.pathname}${query ? `?${query}` : ''}${parsed.hash}`,
+      connectionString: parsed.toString(),
       sslModeFromUrl
     };
   } catch (_error) {
