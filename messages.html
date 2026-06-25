@@ -541,7 +541,18 @@
         }
 
         function showAuthNotice() {
-          messagesEl.innerHTML = '<div class="dm-auth-notice"><p>Sign in to use Direct Messages.</p><button class="dm-auth-btn" onclick="window.location.href=\'index.html\'">Go to home</button></div>';
+          var notice = document.createElement('div');
+          notice.className = 'dm-auth-notice';
+          var p = document.createElement('p');
+          p.textContent = 'Sign in to use Direct Messages.';
+          var btn = document.createElement('button');
+          btn.className = 'dm-auth-btn';
+          btn.textContent = 'Go to home';
+          btn.addEventListener('click', function () { window.location.href = 'index.html'; });
+          notice.appendChild(p);
+          notice.appendChild(btn);
+          messagesEl.innerHTML = '';
+          messagesEl.appendChild(notice);
           document.getElementById('dm-composer').style.display = 'none';
         }
 

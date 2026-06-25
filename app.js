@@ -3988,9 +3988,11 @@
             profileEditButton.className = nowFollowing ? 'profile-follow-btn following' : 'profile-follow-btn';
             const refreshedUser = await getUserById(viewedUser.id);
             if (refreshedUser) {
-              profileFollowersTotal.textContent = String(normalizeProfileMetric(refreshedUser.profileFollowers));
+              const newFollowerCount = refreshedUser.followerIds ? refreshedUser.followerIds.length : refreshedUser.profileFollowers;
+              profileFollowersTotal.textContent = String(normalizeProfileMetric(newFollowerCount));
             }
-            profileFollowingTotal.textContent = String(normalizeProfileMetric(currentUser.profileFollowing));
+            const newFollowingCount = currentUser.followingIds ? currentUser.followingIds.length : currentUser.profileFollowing;
+            profileFollowingTotal.textContent = String(normalizeProfileMetric(newFollowingCount));
           } catch (err) {
             console.warn('Follow toggle failed', err);
           }
