@@ -1108,7 +1108,13 @@
           replyInput.value = '';
           await addComment(postId, text);
           var nextReplyCount = await atomicIncrementRecord(COMMENTS_STORE, comment.id, 'replyCount', 1);
-          var normalizedReplyCount = Number.isFinite(Number(nextReplyCount)) ? Math.max(0, Math.round(Number(nextReplyCount))) : (parseInt(replyBtn.getAttribute('data-count') || '0', 10) + 1);
+          var normalizedReplyCount;
+          if (Number.isFinite(Number(nextReplyCount))) {
+            normalizedReplyCount = Math.max(0, Math.round(Number(nextReplyCount)));
+          } else {
+            var refreshedComment = await getRecord(COMMENTS_STORE, comment.id);
+            normalizedReplyCount = Math.max(0, Math.round(Number(refreshedComment && refreshedComment.replyCount) || 0));
+          }
           replyBtn.setAttribute('data-count', String(normalizedReplyCount));
           replyCountSpan.textContent = String(normalizedReplyCount);
           replyBox.remove();
@@ -1229,17 +1235,21 @@
           avatar.className = 'post-comment-avatar';
           avatar.style.background = user ? getAvatarColor(user.username) : '#888';
           avatar.textContent = user ? getInitials(user.name, user.username) : '?';
-          avatar.setAttribute('data-profile-user-id', user && user.id ? user.id : '');
-          avatar.setAttribute('role', 'button');
-          avatar.setAttribute('tabindex', '0');
+          if (user && user.id) {
+            avatar.setAttribute('data-profile-user-id', user.id);
+            avatar.setAttribute('role', 'button');
+            avatar.setAttribute('tabindex', '0');
+          }
           var content = document.createElement('div');
           content.className = 'post-comment-content';
           var author = document.createElement('span');
           author.className = 'post-comment-author';
           author.textContent = user ? user.name : 'Unknown';
-          author.setAttribute('data-profile-user-id', user && user.id ? user.id : '');
-          author.setAttribute('role', 'button');
-          author.setAttribute('tabindex', '0');
+          if (user && user.id) {
+            author.setAttribute('data-profile-user-id', user.id);
+            author.setAttribute('role', 'button');
+            author.setAttribute('tabindex', '0');
+          }
           var text = document.createElement('p');
           text.className = 'post-comment-text';
           text.textContent = comment.text;
@@ -4150,9 +4160,6 @@
     const viewedUser = followSnapshot.viewedUser;
     if (requestedProfileUserId && !viewedUser) {
       return;
-    }
-    if (!requestedProfileUserId && currentUser && viewedUser && viewedUser.id !== currentUser.id) {
-      currentUser = viewedUser;
     }
     const isOwnProfile = Boolean(viewedUser && currentUser && viewedUser.id === currentUser.id) || (!requestedProfileUserId && Boolean(currentUser));
     const [posts, comments] = await Promise.all([readPosts(), readAllComments()]);
