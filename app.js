@@ -4539,20 +4539,20 @@
     window.location.href = buildProfileHref(nextProfileUserId);
   }
 
-  function navigateToNotifications() {
+  function navigateToMessages() {
     if (!currentUser) {
       openAuthModal('login');
       return;
     }
+    if (getCurrentPageName() !== MESSAGES_PAGE_PATH) {
+      window.location.href = MESSAGES_PAGE_PATH;
+    }
+  }
 
-    function navigateToMessages() {
-      if (!currentUser) {
-        openAuthModal('login');
-        return;
-      }
-      if (getCurrentPageName() !== MESSAGES_PAGE_PATH) {
-        window.location.href = MESSAGES_PAGE_PATH;
-      }
+  function navigateToNotifications() {
+    if (!currentUser) {
+      openAuthModal('login');
+      return;
     }
     if (getCurrentPageName() !== NOTIFICATIONS_PAGE_PATH) {
       window.location.href = NOTIFICATIONS_PAGE_PATH;
