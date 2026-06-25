@@ -7,6 +7,9 @@ const app = express();
 const PORT = Number(process.env.PORT || 10000);
 const HOST = process.env.HOST || '0.0.0.0';
 const DATABASE_URL = process.env.DATABASE_URL || '';
+const NODE_ENV = String(process.env.NODE_ENV || '').toLowerCase();
+const IS_PRODUCTION = NODE_ENV === 'production';
+const IS_RENDER = process.env.RENDER === 'true' || Boolean(process.env.RENDER_EXTERNAL_URL);
 const MAX_RECORD_PAYLOAD_BYTES = 12 * 1024 * 1024;
 const PUBLIC_ALLOWED_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.webmanifest', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.txt']);
 const PUBLIC_BLOCKLIST = new Set(['server.js', 'package.json', 'package-lock.json', 'STORAGE_AUDIT.md']);
@@ -20,14 +23,46 @@ app.use(express.json({ limit: '16mb' }));
 const memoryStore = new Map();
 let pool = null;
 
+function normalizeDatabaseUrl(rawUrl) {
+  if (!rawUrl) return { connectionString: rawUrl, sslModeFromUrl: '' };
+  try {
+    const parsed = new URL(rawUrl);
+    const sslModeFromUrl = String(parsed.searchParams.get('sslmode') || '').toLowerCase();
+    parsed.searchParams.delete('sslmode');
+    const query = parsed.searchParams.toString();
+    return {
+      connectionString: `${parsed.origin}${parsed.pathname}${query ? `?${query}` : ''}${parsed.hash}`,
+      sslModeFromUrl
+    };
+  } catch (_error) {
+    return { connectionString: rawUrl, sslModeFromUrl: '' };
+  }
+}
+
+function getPgSslConfig(sslMode) {
+  if (sslMode === 'disable') return false;
+  const shouldUseSsl = IS_PRODUCTION || Boolean(sslMode);
+  if (!shouldUseSsl) return false;
+
+  if (sslMode === 'verify-ca' || sslMode === 'verify-full') {
+    return { rejectUnauthorized: true };
+  }
+  if (process.env.PG_SSL_NO_VERIFY === 'true') {
+    return { rejectUnauthorized: false };
+  }
+  if (process.env.PG_SSL_NO_VERIFY === 'false') {
+    return { rejectUnauthorized: true };
+  }
+  return { rejectUnauthorized: !(IS_PRODUCTION && IS_RENDER) };
+}
+
 if (DATABASE_URL) {
+  const { connectionString, sslModeFromUrl } = normalizeDatabaseUrl(DATABASE_URL);
+  const sslMode = String(process.env.PGSSLMODE || sslModeFromUrl || '').toLowerCase();
+
   pool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: process.env.PGSSLMODE === 'disable'
-      ? false
-      : {
-          rejectUnauthorized: process.env.PG_SSL_NO_VERIFY !== 'true'
-        }
+    connectionString,
+    ssl: getPgSslConfig(sslMode)
   });
 }
 
