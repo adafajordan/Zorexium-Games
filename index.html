@@ -1593,6 +1593,70 @@
         color: var(--text-soft);
         margin: 0 0 4px;
       }
+
+      /* ── Home feed tabs ──────────────────────────────── */
+      .home-tab-nav {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(6px);
+      }
+      .home-tab-btn {
+        flex: 1;
+        padding: 13px 0;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-soft);
+        cursor: pointer;
+        transition: color .15s, border-color .15s;
+        font-family: inherit;
+      }
+      .home-tab-btn.active {
+        color: var(--text);
+        border-bottom-color: var(--accent);
+      }
+      .home-tab-btn:hover:not(.active) {
+        color: var(--text-muted);
+      }
+      #home-feed-following {
+        display: none;
+      }
+      #home-feed-following.active-tab {
+        display: block;
+      }
+      .home-following-empty {
+        padding: 48px 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-soft);
+      }
+      .home-following-empty svg {
+        width: 40px;
+        height: 40px;
+        fill: none;
+        stroke: var(--text-placeholder);
+        stroke-width: 1.6;
+        opacity: .6;
+      }
+      .home-following-empty h3 {
+        margin: 0;
+        font-size: 17px;
+        color: var(--text);
+      }
+      .home-following-empty p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+      }
       /* ── Article companion card (in main feed) ─────── */
       .article-companion-card {
         display: block;
@@ -2088,11 +2152,20 @@
 
     <div class="page-body">
 
+      <!-- Home feed tabs -->
+      <nav class="home-tab-nav" role="tablist" aria-label="Home feed">
+        <button class="home-tab-btn active" role="tab" aria-selected="true" data-home-tab="for-you" id="home-tab-for-you">For You</button>
+        <button class="home-tab-btn" role="tab" aria-selected="false" data-home-tab="following" id="home-tab-following">Following</button>
+      </nav>
+
       <main>
 
-        <p class="feed-section-label">Trending posts</p>
+        <!-- For You feed -->
+        <div id="home-feed-for-you">
 
-        <div class="post-feed">
+          <p class="feed-section-label">Trending posts</p>
+
+          <div class="post-feed" id="home-static-feed">
 
           <!-- Post 1 -->
           <article class="post-card" data-post-id="static-post-1">
@@ -2261,6 +2334,12 @@
             </div>
           </article>
 
+        </div>
+
+        </div><!-- end #home-feed-for-you -->
+
+        <!-- Following feed (populated by JS) -->
+        <div id="home-feed-following" aria-label="Following feed" aria-live="polite">
         </div>
 
       </main>
@@ -2538,6 +2617,213 @@
           if (document.getElementById('new-post-modal').classList.contains('open')) closeNewPostModal();
         }
       });
+
+      // ── Home feed tabs (For You / Following) ─────────────────
+      (function () {
+        var DB_NAME = 'zorexium-app-db';
+        var DB_VERSION = 4;
+        var ACCOUNTS_STORE = 'accounts';
+        var POSTS_STORE = 'posts';
+        var SESSION_STORE = 'session';
+        var MEDIA_STORE = 'media';
+        var activeHomeTab = 'for-you';
+        var homeCurrentUser = null;
+
+        function openHomeDb() {
+          return new Promise(function (resolve, reject) {
+            if (!window.indexedDB) { reject(new Error('no idb')); return; }
+            var req = window.indexedDB.open(DB_NAME, DB_VERSION);
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { reject(req.error); };
+            req.onupgradeneeded = function () {};
+          });
+        }
+
+        function homeGetRecord(db, store, key) {
+          return new Promise(function (resolve) {
+            var tx = db.transaction(store, 'readonly');
+            var req = tx.objectStore(store).get(key);
+            req.onsuccess = function () { resolve(req.result || null); };
+            req.onerror = function () { resolve(null); };
+          });
+        }
+
+        function homeGetAll(db, store) {
+          return new Promise(function (resolve) {
+            var tx = db.transaction(store, 'readonly');
+            var req = tx.objectStore(store).getAll();
+            req.onsuccess = function () { resolve(Array.isArray(req.result) ? req.result : []); };
+            req.onerror = function () { resolve([]); };
+          });
+        }
+
+        function homeGetMediaUrl(db, mediaId) {
+          return new Promise(function (resolve) {
+            if (!mediaId) { resolve(null); return; }
+            homeGetRecord(db, MEDIA_STORE, mediaId).then(function (rec) {
+              if (!rec || !rec.data) { resolve(null); return; }
+              try {
+                var blob = new Blob([rec.data], { type: rec.type || 'image/jpeg' });
+                resolve(URL.createObjectURL(blob));
+              } catch (e) { resolve(null); }
+            }).catch(function () { resolve(null); });
+          });
+        }
+
+        function homeEscapeHtml(text) {
+          return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+        }
+
+        function homeGetInitials(name, username) {
+          var source = String(name || username || 'ZG').trim();
+          var parts = source.split(/\s+/).filter(Boolean).slice(0, 2);
+          return parts.map(function (p) { return p.charAt(0).toUpperCase(); }).join('') || source.slice(0, 2).toUpperCase();
+        }
+
+        function homeGetAvatarColor(seed) {
+          var palette = ['#cc2222', '#991b1b', '#7c3aed', '#1d4ed8', '#0f766e', '#b45309'];
+          var text = String(seed || 'zorexium');
+          var total = 0;
+          for (var i = 0; i < text.length; i++) total += text.charCodeAt(i);
+          return palette[total % palette.length];
+        }
+
+        function homeTimeAgo(ts) {
+          if (!ts) return '';
+          var diff = Math.max(0, Date.now() - ts);
+          var sec = Math.floor(diff / 1000);
+          if (sec < 60) return 'just now';
+          var min = Math.floor(sec / 60);
+          if (min < 60) return min + ' min ago';
+          var hr = Math.floor(min / 60);
+          if (hr < 24) return hr + ' hr ago';
+          return Math.floor(hr / 24) + ' d ago';
+        }
+
+        function buildHomePostCard(post, user, mediaUrl) {
+          var article = document.createElement('article');
+          article.className = 'post-card';
+          article.setAttribute('data-post-id', post.id);
+
+          var name = user ? (user.name || user.username || 'Unknown') : 'Unknown';
+          var handle = user ? ('@' + (user.username || 'user')) : '';
+          var initials = homeGetInitials(name, user && user.username);
+          var color = homeGetAvatarColor(user && user.username);
+          var timeStr = homeTimeAgo(post.createdAt);
+
+          var headerHtml = '<div class="post-header">' +
+            '<div class="post-avatar" style="background:' + color + ';">' + homeEscapeHtml(initials) + '</div>' +
+            '<div class="post-meta">' +
+            '<span class="post-username">' + homeEscapeHtml(name) + '</span>' +
+            '<span class="post-handle">' + homeEscapeHtml(handle) + (timeStr ? ' &middot; ' + homeEscapeHtml(timeStr) : '') + '</span>' +
+            '</div></div>';
+
+          var bodyHtml = '<div class="post-body">' + homeEscapeHtml(post.text || '') + '</div>';
+
+          var mediaHtml = '';
+          if (mediaUrl) {
+            mediaHtml = '<div class="post-media-grid single"><div class="post-media-item"><img class="post-media-image" src="' + mediaUrl + '" alt="" /></div></div>';
+          }
+
+          var actionsHtml = '<div class="post-actions">' +
+            '<button class="post-action" type="button" data-action="like"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> 0</button>' +
+            '<button class="post-action" type="button" data-action="comment"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> 0</button>' +
+            '<button class="post-action" type="button" data-action="save"><span class="post-action-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span></button>' +
+            '</div>';
+
+          article.innerHTML = headerHtml + bodyHtml + mediaHtml + actionsHtml;
+          return article;
+        }
+
+        function renderHomeFollowingFeed() {
+          var container = document.getElementById('home-feed-following');
+          if (!container) return;
+          container.innerHTML = '';
+
+          if (!homeCurrentUser) {
+            var emptyEl = document.createElement('div');
+            emptyEl.className = 'home-following-empty';
+            emptyEl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3>Log in to see your Following feed</h3><p>Sign in to see posts from accounts you follow.</p>';
+            container.appendChild(emptyEl);
+            return;
+          }
+
+          openHomeDb().then(function (db) {
+            return Promise.all([
+              homeGetAll(db, POSTS_STORE),
+              homeGetAll(db, ACCOUNTS_STORE)
+            ]).then(function (results) {
+              var posts = results[0];
+              var accounts = results[1];
+              var accountMap = {};
+              accounts.forEach(function (a) { accountMap[a.id] = a; });
+
+              // Following tab: show posts by the logged-in user.
+              // A full follow-graph is not yet stored in this app (only counts are
+              // saved). When follow relationships are persisted, this filter should
+              // use the logged-in user's list of followed IDs.
+              var myPosts = posts.filter(function (p) { return p.userId === homeCurrentUser.id; });
+              myPosts.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+              if (!myPosts.length) {
+                var emptyEl = document.createElement('div');
+                emptyEl.className = 'home-following-empty';
+                emptyEl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><h3>No posts yet</h3><p>Your posts will appear here. Create a post to get started.</p>';
+                container.appendChild(emptyEl);
+                return;
+              }
+
+              var promises = myPosts.map(function (post) {
+                var user = accountMap[post.userId] || null;
+                var mediaId = (post.imageMediaIds && post.imageMediaIds[0]) || null;
+                return homeGetMediaUrl(db, mediaId).then(function (url) {
+                  return buildHomePostCard(post, user, url);
+                });
+              });
+
+              Promise.all(promises).then(function (cards) {
+                cards.forEach(function (card) { container.appendChild(card); });
+              });
+            });
+          }).catch(function () {
+            var emptyEl = document.createElement('div');
+            emptyEl.className = 'home-following-empty';
+            emptyEl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><h3>Could not load posts</h3><p>Please try again later.</p>';
+            container.appendChild(emptyEl);
+          });
+        }
+
+        function switchHomeTab(tab) {
+          if (tab === activeHomeTab) return;
+          activeHomeTab = tab;
+          document.querySelectorAll('.home-tab-btn').forEach(function (btn) {
+            var isActive = btn.getAttribute('data-home-tab') === tab;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          });
+          var forYou = document.getElementById('home-feed-for-you');
+          var following = document.getElementById('home-feed-following');
+          if (forYou) forYou.style.display = tab === 'for-you' ? '' : 'none';
+          if (following) following.classList.toggle('active-tab', tab === 'following');
+          if (tab === 'following') renderHomeFollowingFeed();
+        }
+
+        document.querySelectorAll('.home-tab-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            switchHomeTab(btn.getAttribute('data-home-tab'));
+          });
+        });
+
+        // Resolve current user for the following feed
+        openHomeDb().then(function (db) {
+          return homeGetRecord(db, SESSION_STORE, 'current').then(function (session) {
+            if (!session || !session.userId) return;
+            return homeGetRecord(db, ACCOUNTS_STORE, session.userId).then(function (account) {
+              homeCurrentUser = account || null;
+            });
+          });
+        }).catch(function () {});
+      }());
 
     </script>
     <script src="app.js"></script>
