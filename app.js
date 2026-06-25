@@ -14,6 +14,28 @@
   const MARKETPLACE_PAGE_PATH = 'marketplace.html';
   const MARKETPLACE_LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
   const EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
+  const API_STORE_NAME_MAP = Object.freeze({
+    accounts: 'accounts',
+    posts: 'posts',
+    comments: 'comments',
+    notifications: 'notifications',
+    articles: 'articles',
+    media: 'media'
+  });
+  const LOCAL_ONLY_STORES = Object.freeze({
+    session: true
+  });
+  const ALLOWED_TYPED_ARRAY_CTORS = Object.freeze({
+    Int8Array: true,
+    Uint8Array: true,
+    Uint8ClampedArray: true,
+    Int16Array: true,
+    Uint16Array: true,
+    Int32Array: true,
+    Uint32Array: true,
+    Float32Array: true,
+    Float64Array: true
+  });
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -106,6 +128,7 @@
 
   let currentUser = null;
   let appDbPromise = null;
+  let serverStoreUnavailable = false;
   let generatedMediaUrls = [];
   let lastMediaWheelZoomAt = 0;
   let profileEditEscapeHandlerAttached = false;
@@ -345,7 +368,119 @@
     return appDbPromise;
   }
 
-  async function getAllRecords(storeName) {
+  function shouldUseServerStore(storeName) {
+    if (serverStoreUnavailable) return false;
+    if (!storeName || LOCAL_ONLY_STORES[storeName]) return false;
+    return Object.prototype.hasOwnProperty.call(API_STORE_NAME_MAP, storeName);
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chars = new Array(bytes.length);
+    for (let index = 0; index < bytes.length; index += 1) {
+      chars[index] = String.fromCharCode(bytes[index]);
+    }
+    const binary = chars.join('');
+    return btoa(binary);
+  }
+
+  function base64ToArrayBuffer(base64) {
+    const binary = atob(String(base64 || ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes.buffer;
+  }
+
+  function serializeRecordForServer(value) {
+    if (value instanceof ArrayBuffer) {
+      return {
+        __zorexiumType: 'arrayBuffer',
+        base64: arrayBufferToBase64(value)
+      };
+    }
+    if (ArrayBuffer.isView(value)) {
+      return {
+        __zorexiumType: 'typedArray',
+        ctor: value && value.constructor && value.constructor.name ? value.constructor.name : 'Uint8Array',
+        base64: arrayBufferToBase64(value.buffer),
+        byteOffset: value.byteOffset || 0,
+        byteLength: value.byteLength || value.length || 0
+      };
+    }
+    if (Array.isArray(value)) {
+      return value.map(serializeRecordForServer);
+    }
+    if (value && typeof value === 'object') {
+      const serialized = {};
+      Object.keys(value).forEach(function (key) {
+        serialized[key] = serializeRecordForServer(value[key]);
+      });
+      return serialized;
+    }
+    return value;
+  }
+
+  function deserializeRecordFromServer(value) {
+    if (!value || typeof value !== 'object') return value;
+    if (value.__zorexiumType === 'arrayBuffer' && typeof value.base64 === 'string') {
+      return base64ToArrayBuffer(value.base64);
+    }
+    if (value.__zorexiumType === 'typedArray' && typeof value.base64 === 'string') {
+      const full = base64ToArrayBuffer(value.base64);
+      const offset = Number(value.byteOffset || 0);
+      const length = Number(value.byteLength || 0);
+      const view = new Uint8Array(full, offset, length);
+      const ctorName = String(value.ctor || '');
+      const ctor = (typeof window !== 'undefined' && ALLOWED_TYPED_ARRAY_CTORS[ctorName]) ? window[ctorName] : null;
+      if (typeof ctor === 'function' && ctor.BYTES_PER_ELEMENT && ctorName !== 'DataView') {
+        return new ctor(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength));
+      }
+      return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+    }
+    if (Array.isArray(value)) {
+      return value.map(deserializeRecordFromServer);
+    }
+    const deserialized = {};
+    Object.keys(value).forEach(function (key) {
+      deserialized[key] = deserializeRecordFromServer(value[key]);
+    });
+    return deserialized;
+  }
+
+  async function requestServerStore(method, storeName, key, record) {
+    const serverStoreName = API_STORE_NAME_MAP[storeName];
+    if (!serverStoreName) throw new Error('No server mapping for store.');
+    const encodedStore = encodeURIComponent(serverStoreName);
+    const encodedKey = key ? '/' + encodeURIComponent(String(key)) : '';
+    const endpoint = '/api/store/' + encodedStore + encodedKey;
+    const options = { method: method };
+    if (record !== undefined) {
+      options.headers = { 'Content-Type': 'application/json' };
+      options.body = JSON.stringify({ record: serializeRecordForServer(record) });
+    }
+    let response;
+    try {
+      response = await fetch(endpoint, options);
+    } catch (error) {
+      serverStoreUnavailable = true;
+      throw error;
+    }
+    if (!response.ok) {
+      throw new Error('Server store request failed with status ' + response.status + '.');
+    }
+    const payload = await response.json();
+    if (payload && payload.record) {
+      payload.record = deserializeRecordFromServer(payload.record);
+    }
+    if (payload && Array.isArray(payload.records)) {
+      payload.records = payload.records.map(deserializeRecordFromServer);
+    }
+    return payload;
+  }
+
+  async function getAllRecordsLocal(storeName) {
     const database = await openAppDb();
     const transaction = database.transaction(storeName, 'readonly');
     const store = transaction.objectStore(storeName);
@@ -354,7 +489,7 @@
     return records;
   }
 
-  async function getRecord(storeName, key) {
+  async function getRecordLocal(storeName, key) {
     const database = await openAppDb();
     const transaction = database.transaction(storeName, 'readonly');
     const store = transaction.objectStore(storeName);
@@ -363,7 +498,7 @@
     return record || null;
   }
 
-  async function putRecord(storeName, record) {
+  async function putRecordLocal(storeName, record) {
     const database = await openAppDb();
     const transaction = database.transaction(storeName, 'readwrite');
     const request = transaction.objectStore(storeName).put(record);
@@ -371,12 +506,62 @@
     await transactionDone(transaction);
   }
 
-  async function deleteRecord(storeName, key) {
+  async function deleteRecordLocal(storeName, key) {
     const database = await openAppDb();
     const transaction = database.transaction(storeName, 'readwrite');
     const request = transaction.objectStore(storeName).delete(key);
     await requestToPromise(request);
     await transactionDone(transaction);
+  }
+
+  async function getAllRecords(storeName) {
+    if (shouldUseServerStore(storeName)) {
+      try {
+        const payload = await requestServerStore('GET', storeName);
+        return payload && Array.isArray(payload.records) ? payload.records : [];
+      } catch (error) {
+        console.warn('[Zorexium] Falling back to local storage for "' + storeName + '" reads.', error);
+      }
+    }
+    return getAllRecordsLocal(storeName);
+  }
+
+  async function getRecord(storeName, key) {
+    if (shouldUseServerStore(storeName)) {
+      try {
+        const payload = await requestServerStore('GET', storeName, key);
+        return payload ? (payload.record || null) : null;
+      } catch (error) {
+        console.warn('[Zorexium] Falling back to local storage for "' + storeName + '" record reads.', error);
+      }
+    }
+    return getRecordLocal(storeName, key);
+  }
+
+  async function putRecord(storeName, record) {
+    if (shouldUseServerStore(storeName)) {
+      const key = record && (Object.prototype.hasOwnProperty.call(record, 'id') ? record.id : record.key);
+      if (!key) throw new Error('Cannot persist record without id/key.');
+      try {
+        await requestServerStore('PUT', storeName, key, record);
+        return;
+      } catch (error) {
+        console.warn('[Zorexium] Falling back to local storage for "' + storeName + '" writes.', error);
+      }
+    }
+    await putRecordLocal(storeName, record);
+  }
+
+  async function deleteRecord(storeName, key) {
+    if (shouldUseServerStore(storeName)) {
+      try {
+        await requestServerStore('DELETE', storeName, key);
+        return;
+      } catch (error) {
+        console.warn('[Zorexium] Falling back to local storage for "' + storeName + '" deletes.', error);
+      }
+    }
+    await deleteRecordLocal(storeName, key);
   }
 
   function getWindowSession() {
