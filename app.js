@@ -95,7 +95,6 @@
   const headerNotificationsButton = document.getElementById('header-notifications-btn');
   const headerMessagesButton = document.getElementById('header-messages-btn');
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
-  const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
   const stickyFooterMarketplaceButton = document.getElementById('sticky-footer-marketplace');
   const JOBS_EVENTS_NAV_LABEL = 'Jobs and Events';
   const dashboardRoot = document.getElementById('account-dashboard-root');
@@ -4771,11 +4770,11 @@
       return logout();
     });
 
-    [headerProfileButton, headerNotificationsButton, headerMessagesButton, stickyFooterProfileButton, stickyFooterNotificationsButton].forEach(function (button) {
+    [headerProfileButton, headerNotificationsButton, headerMessagesButton, stickyFooterProfileButton].forEach(function (button) {
       attachAuthenticatedClickGuard(button, function () {
         if (button === headerProfileButton || button === stickyFooterProfileButton) {
           navigateToDashboard();
-        } else if (button === headerNotificationsButton || button === stickyFooterNotificationsButton) {
+        } else if (button === headerNotificationsButton) {
           navigateToNotifications();
         } else if (button === headerMessagesButton) {
           navigateToMessages();
