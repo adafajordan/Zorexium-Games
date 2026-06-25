@@ -1113,6 +1113,12 @@
           var raw = localStorage.getItem(LISTINGS_LS_KEY);
           var list = raw ? JSON.parse(raw) : [];
           if (!Array.isArray(list)) return null;
+          var result = purgeExpiredListingsFromArray(list);
+          if (result.removedIds.length) {
+            localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(result.kept));
+            cleanEventAttendanceStore(result.removedIds);
+          }
+          list = result.kept;
           for (var index = 0; index < list.length; index += 1) {
             var entry = list[index];
             if (entry && entry.id === listingId) return entry;
@@ -1554,7 +1560,7 @@
         overflow-y: auto;
       }
       .event-detail-overlay.open { display: block; }
-      .event-detail-body { padding-bottom: 40px; }
+      .event-detail-body { padding-bottom: 92px; }
       .event-detail-hero {
         width: 100%;
         aspect-ratio: 16 / 8;
@@ -1580,10 +1586,11 @@
         flex-direction: column;
         gap: 18px;
       }
-      .event-detail-date { margin: 0; font-size: 14px; color: var(--text-soft); }
-      .event-detail-title { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.08; font-weight: 800; color: var(--text); }
-      .event-detail-subtitle { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.5; }
-      .event-detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .event-detail-date { margin: 0; font-size: 14px; color: var(--text-soft); text-align: center; }
+      .event-detail-title { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.08; font-weight: 800; color: var(--text); text-align: center; }
+      .event-detail-subtitle { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.5; text-align: center; }
+      .event-detail-subtitle-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+      .event-detail-subtitle-link:hover { text-decoration: underline; }
       .event-detail-action, .event-detail-invite-btn {
         border-radius: 14px;
         border: 1px solid var(--border);
@@ -1596,12 +1603,7 @@
       }
       .event-detail-action.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
       .event-detail-grid,
-      .event-detail-panel {
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        background: #fff;
-        padding: 16px;
-      }
+      .event-detail-panel { padding: 0; border: none; border-radius: 0; background: transparent; }
       .event-detail-meta-list {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1613,6 +1615,18 @@
         align-items: flex-start;
         font-size: 14px;
         color: var(--text-muted);
+      }
+      .event-detail-meta-icon,
+      .jd-term-icon {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+        margin-top: 1px;
       }
       .event-detail-meta-row strong { color: var(--text); display: block; }
       .event-detail-tabs {
@@ -1735,8 +1749,41 @@
       .event-suggested-track .listing-card-actions {
         padding-top: 2px;
       }
+      .event-detail-attendance-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 12;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(6px);
+        border-top: 1px solid var(--border);
+        padding: 8px 16px;
+      }
+      .event-detail-attendance-inner {
+        width: min(900px, 100%);
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .event-detail-attendance-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        min-width: 220px;
+      }
+      .event-detail-attendance-counts {
+        display: inline-flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+      .event-detail-attendance-counts strong { color: var(--text); }
       @media (max-width: 720px) {
-        .event-detail-actions { grid-template-columns: 1fr; }
+        .event-detail-attendance-inner { flex-direction: column; align-items: stretch; }
+        .event-detail-attendance-actions { min-width: 0; }
+        .event-detail-attendance-counts { justify-content: center; }
         .event-detail-content { padding-inline: 14px; }
       }
     </style>
@@ -1817,9 +1864,8 @@
               <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
             </div>
             <div class="listing-card-body">
-              <div class="listing-meta">Tonight · Public</div>
+              <div class="listing-meta">Tonight</div>
               <h3 class="listing-title">Indie Creators Meetup</h3>
-              <div class="listing-highlight">Free RSVP</div>
               <div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>Atlanta, GA</div>
             </div>
           </article>
@@ -1843,9 +1889,8 @@
               <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
             </div>
             <div class="listing-card-body">
-              <div class="listing-meta">Weekend · In person</div>
+              <div class="listing-meta">Weekend</div>
               <h3 class="listing-title">Southeast Esports Expo</h3>
-              <div class="listing-highlight">Tickets available</div>
               <div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>Charlotte, NC</div>
             </div>
           </article>
@@ -2092,14 +2137,14 @@
       <a class="sticky-footer-item" href="articles.html" aria-label="Articles">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg>
       </a>
-      <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
-        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </button>
       <button id="sticky-footer-notifications" class="sticky-footer-item" type="button" aria-label="Notifications">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
       <button id="sticky-footer-marketplace" class="sticky-footer-item active" type="button" aria-label="Jobs and Events" title="Jobs and Events">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
+      </button>
+      <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
     </footer>
 
@@ -2393,6 +2438,7 @@
         var ARTICLES_STORE = 'articles';
         var LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
         var EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
+        var EVENT_EXPIRY_GRACE_MS = 2 * 60 * 60 * 1000;
         var listingDataMap = {};
         var viewIds = {
           feed: 'jobs-events-feed-view',
@@ -2501,6 +2547,7 @@
 
         function saveListingToStorage(data) {
           if (!data || !data.id) return;
+          if (isEventExpired(data)) return;
           try {
             var raw = localStorage.getItem(LISTINGS_LS_KEY);
             var list = raw ? JSON.parse(raw) : [];
@@ -2517,6 +2564,7 @@
 
         function upsertListingInStorage(data) {
           if (!data || !data.id) return;
+          if (isEventExpired(data)) return;
           try {
             var raw = localStorage.getItem(LISTINGS_LS_KEY);
             var list = raw ? JSON.parse(raw) : [];
@@ -2541,6 +2589,63 @@
             return parsed && typeof parsed === 'object' ? parsed : {};
           } catch (error) {
             return {};
+          }
+        }
+
+        function cleanEventAttendanceStore(removedIds) {
+          if (!Array.isArray(removedIds) || !removedIds.length) return;
+          var attendanceStore = getEventAttendanceStore();
+          var dirty = false;
+          Object.keys(attendanceStore).forEach(function (userId) {
+            var userStore = attendanceStore[userId];
+            if (!userStore || typeof userStore !== 'object') return;
+            removedIds.forEach(function (eventId) {
+              if (userStore[eventId]) {
+                delete userStore[eventId];
+                dirty = true;
+              }
+            });
+          });
+          if (!dirty) return;
+          try {
+            localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendanceStore));
+          } catch (error) {}
+        }
+
+        function isEventExpired(data, nowMs) {
+          if (!data || String(data.type || '').toLowerCase() !== 'event') return false;
+          if (!data.eventStart) return false;
+          var start = new Date(data.eventStart);
+          if (isNaN(start.getTime())) return false;
+          var current = typeof nowMs === 'number' ? nowMs : Date.now();
+          return current >= (start.getTime() + EVENT_EXPIRY_GRACE_MS);
+        }
+
+        function purgeExpiredListingsFromArray(list, nowMs) {
+          var current = typeof nowMs === 'number' ? nowMs : Date.now();
+          var removedIds = [];
+          var kept = (Array.isArray(list) ? list : []).filter(function (item) {
+            if (!isEventExpired(item, current)) return true;
+            if (item && item.id) removedIds.push(item.id);
+            return false;
+          });
+          return { kept: kept, removedIds: removedIds };
+        }
+
+        function purgeExpiredListingsFromStorage() {
+          try {
+            var raw = localStorage.getItem(LISTINGS_LS_KEY);
+            if (!raw) return [];
+            var list = JSON.parse(raw);
+            if (!Array.isArray(list)) return [];
+            var result = purgeExpiredListingsFromArray(list);
+            if (result.removedIds.length) {
+              localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(result.kept));
+              cleanEventAttendanceStore(result.removedIds);
+            }
+            return result.removedIds;
+          } catch (error) {
+            return [];
           }
         }
 
@@ -2583,7 +2688,21 @@
             return false;
           }
           upsertListingInStorage(eventData);
+          updateEventAttendanceFooter(eventData.id);
           return true;
+        }
+
+        function getEventAttendanceCounts(eventId) {
+          var attendanceStore = getEventAttendanceStore();
+          var counts = { interested: 0, going: 0 };
+          if (!eventId) return counts;
+          Object.keys(attendanceStore).forEach(function (userId) {
+            var entry = attendanceStore[userId] && attendanceStore[userId][eventId];
+            var status = entry && typeof entry === 'object' ? String(entry.status || '') : String(entry || '');
+            if (status === 'interested') counts.interested += 1;
+            if (status === 'going') counts.going += 1;
+          });
+          return counts;
         }
 
         function syncEventActionButtons(eventId) {
@@ -2596,6 +2715,15 @@
             var baseLabel = button.getAttribute('data-event-action-label') || button.textContent.replace(/\s+✓$/, '');
             button.textContent = isActive ? (baseLabel + ' ✓') : baseLabel;
           });
+        }
+
+        function updateEventAttendanceFooter(eventId) {
+          if (!eventId || viewState.activeEventDetailId !== eventId) return;
+          var counts = getEventAttendanceCounts(eventId);
+          var interestedEl = document.getElementById('event-detail-interested-count');
+          var goingEl = document.getElementById('event-detail-going-count');
+          if (interestedEl) interestedEl.textContent = String(counts.interested);
+          if (goingEl) goingEl.textContent = String(counts.going);
         }
 
         function attachEventActionButtons(container, eventData) {
@@ -2632,12 +2760,57 @@
             if (!raw) return;
             var list = JSON.parse(raw);
             if (!Array.isArray(list)) return;
-            list.forEach(function (data) {
+            var result = purgeExpiredListingsFromArray(list);
+            if (result.removedIds.length) {
+              localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(result.kept));
+              cleanEventAttendanceStore(result.removedIds);
+            }
+            result.kept.forEach(function (data) {
               if (data && data.title) addListingCardToFeed(data);
             });
           } catch (err) {
             console.warn('[Zorexium] Could not load listings from localStorage:', err);
           }
+        }
+
+        function formatPayAmount(value) {
+          var source = String(value == null ? '' : value).trim();
+          if (!source) return '';
+          var numeric = Number(source);
+          if (!isFinite(numeric)) return source;
+          var hasFraction = Math.abs(numeric % 1) > 0;
+          return numeric.toLocaleString(undefined, {
+            minimumFractionDigits: hasFraction ? 2 : 0,
+            maximumFractionDigits: 2
+          });
+        }
+
+        function getPayUnitLabel(payType) {
+          var normalized = String(payType || '').trim().toLowerCase();
+          if (normalized === 'salary') return 'year';
+          if (normalized === 'daily' || normalized === 'day') return 'day';
+          if (normalized === 'project') return 'project';
+          return 'hour';
+        }
+
+        function formatJobPay(data) {
+          if (!data) return '';
+          var min = formatPayAmount(data.minPay);
+          var max = formatPayAmount(data.maxPay);
+          if (!min && !max) return '';
+          var unit = getPayUnitLabel(data.payType);
+          if (min && max) return '$' + min + '–$' + max + ' / ' + unit;
+          return '$' + (min || max) + ' / ' + unit;
+        }
+
+        function getIconSvg(iconName, className) {
+          var cls = className ? (' class="' + className + '"') : '';
+          if (iconName === 'cash') return '<svg' + cls + ' viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 12h.01M17 12h.01"/><path d="M12 9v6M10 10.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5S13.33 12 12.5 12h-1c-.83 0-1.5.67-1.5 1.5S10.67 15 11.5 15h1c.83 0 1.5-.67 1.5-1.5"/></svg>';
+          if (iconName === 'clock') return '<svg' + cls + ' viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+          if (iconName === 'folder') return '<svg' + cls + ' viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M3 7V5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2"/></svg>';
+          if (iconName === 'pin') return '<svg' + cls + ' viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>';
+          if (iconName === 'users') return '<svg' + cls + ' viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="11" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M2 21v-2a4 4 0 0 1 3-3.87"/></svg>';
+          return '';
         }
 
         function extractCoverDataUrl(elementId) {
@@ -2654,6 +2827,7 @@
           var grid = document.getElementById('jobs-events-listing-grid');
           if (!grid) return;
           var listingType = String(data.type || '').toLowerCase() === 'event' ? 'event' : 'job';
+          if (isEventExpired(Object.assign({}, data, { type: listingType }))) return;
           var listingLocale = navigator.language || 'en-US';
           var keywords = [
             listingType,
@@ -2675,9 +2849,9 @@
           }
           var metaText = listingType === 'job'
             ? (data.jobType || 'Listing')
-            : eventTimeLabel + ' · ' + formattedPrivacy;
+            : eventTimeLabel;
           var highlightText = listingType === 'job'
-            ? (data.minPay && data.maxPay ? '$' + data.minPay + '–$' + data.maxPay + ' / ' + (data.payType || 'hr') : (data.minPay ? '$' + data.minPay + ' / ' + (data.payType || 'hr') : ''))
+            ? formatJobPay(data)
             : '';
           var iconSvg = listingType === 'job'
             ? '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>'
@@ -2726,15 +2900,6 @@
 
           article.appendChild(visualDiv);
           article.appendChild(bodyDiv);
-          if (listingType === 'event') {
-            var actions = document.createElement('div');
-            actions.className = 'listing-card-actions';
-            actions.innerHTML =
-              '<button type="button" class="listing-card-action" data-event-action="interested">Interested</button>' +
-              '<button type="button" class="listing-card-action" data-event-action="going">Going</button>';
-            article.appendChild(actions);
-            attachEventActionButtons(actions, listingDataMap[listingId]);
-          }
           grid.insertBefore(article, grid.firstChild);
           document.getElementById('jobs-events-empty-state').hidden = true;
         }
@@ -2781,6 +2946,7 @@
                 listingSummary: listingMeta && listingMeta.summary ? listingMeta.summary : '',
                 listingDetails: listingMeta && listingMeta.details ? listingMeta.details : '',
                 listingMeta: listingMeta && listingMeta.meta ? listingMeta.meta : '',
+                listingPay: listingMeta && listingMeta.pay ? listingMeta.pay : '',
                 listingLocation: listingMeta && listingMeta.location ? listingMeta.location : '',
                 listingDateTime: listingMeta && listingMeta.dateTime ? listingMeta.dateTime : '',
                 imageMediaIds: mediaId ? [mediaId] : [],
@@ -3084,17 +3250,13 @@
           var termsList = document.getElementById('jd-terms-list');
           termsList.innerHTML = '';
           var terms = [];
-          if (data.minPay || data.maxPay) {
-            var pay = '';
-            if (data.minPay && data.maxPay) pay = '$' + data.minPay + '–$' + data.maxPay + ' / ' + (data.payType || 'hr');
-            else pay = '$' + (data.minPay || data.maxPay) + ' / ' + (data.payType || 'hr');
-            terms.push({ icon: '💵', text: pay });
-          }
-          if (data.jobType) terms.push({ icon: '⏱️', text: data.jobType });
-          if (data.category) terms.push({ icon: '📁', text: data.category });
+          var pay = formatJobPay(data);
+          if (pay) terms.push({ icon: getIconSvg('cash', 'jd-term-icon'), text: pay });
+          if (data.jobType) terms.push({ icon: getIconSvg('clock', 'jd-term-icon'), text: data.jobType });
+          if (data.category) terms.push({ icon: getIconSvg('folder', 'jd-term-icon'), text: data.category });
           terms.forEach(function (term) {
             var li = document.createElement('li');
-            li.textContent = term.icon + ' ' + term.text;
+            li.innerHTML = term.icon + '<span>' + escapeHtml(term.text) + '</span>';
             termsList.appendChild(li);
           });
 
@@ -3184,6 +3346,7 @@
         function buildEventListingCardMarkup(data) {
           var fallbackId = data.id || generateListingId('event');
           var listingSnapshot = Object.assign({}, data, { id: data.id || fallbackId, type: data.type || 'event' });
+          if (isEventExpired(listingSnapshot)) return document.createDocumentFragment();
           listingDataMap[fallbackId] = listingSnapshot;
           var card = document.createElement('article');
           card.className = 'listing-card listing-card-clickable';
@@ -3201,12 +3364,7 @@
               '<div class="listing-meta">' + escapeHtml(formatEventDateTime(listingSnapshot.eventStart, listingSnapshot.eventEnd) || 'Upcoming event') + '</div>' +
               '<h3 class="listing-title">' + escapeHtml(listingSnapshot.title || 'Event') + '</h3>' +
               (listingSnapshot.location ? '<div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>' + escapeHtml(listingSnapshot.location) + '</div>' : '') +
-            '</div>' +
-            '<div class="listing-card-actions">' +
-              '<button type="button" class="listing-card-action" data-event-action="interested">Interested</button>' +
-              '<button type="button" class="listing-card-action" data-event-action="going">Going</button>' +
             '</div>';
-          attachEventActionButtons(card.querySelector('.listing-card-actions'), listingSnapshot);
           card.addEventListener('click', function (event) {
             if (event.target.closest('.listing-card-actions')) return;
             openEventDetail(listingSnapshot);
@@ -3234,6 +3392,7 @@
 
         function openEventDetail(data) {
           if (!data) return;
+          if (isEventExpired(data)) return;
           closeJobDetail();
           var overlay = document.getElementById('event-detail-overlay');
           if (!overlay) return;
@@ -3262,18 +3421,26 @@
           document.getElementById('event-detail-title').textContent = data.title || 'Event';
           document.getElementById('event-detail-date').textContent = formatEventDateTime(data.eventStart, data.eventEnd) || 'Schedule coming soon';
           var cohostCount = Array.isArray(data.cohosts) ? data.cohosts.length : 0;
-          document.getElementById('event-detail-subtitle').textContent = toTitleCase(data.privacy || 'Public') + ' · Event by ' + creatorName + (cohostCount ? (' and ' + cohostCount + ' others') : '');
-          attachEventActionButtons(document.querySelector('.event-detail-actions'), data);
+          var subtitleEl = document.getElementById('event-detail-subtitle');
+          var subtitlePrefix = escapeHtml(toTitleCase(data.privacy || 'Public') + ' event by ');
+          var subtitleSuffix = cohostCount ? (' and ' + cohostCount + ' others') : '';
+          if (creatorUserId) {
+            subtitleEl.innerHTML = subtitlePrefix + '<a class="event-detail-subtitle-link" href="' + escapeHtml(buildProfileHref(creatorUserId)) + '">' + escapeHtml(creatorName) + '</a>' + escapeHtml(subtitleSuffix);
+          } else {
+            subtitleEl.textContent = toTitleCase(data.privacy || 'Public') + ' event by ' + creatorName + subtitleSuffix;
+          }
+          attachEventActionButtons(document.getElementById('event-detail-attendance-actions'), data);
+          updateEventAttendanceFooter(data.id);
 
           var metaList = document.getElementById('event-detail-meta-list');
           metaList.innerHTML = '';
           [
-            { icon: '📍', title: 'Location', value: creatorLocation || 'Venue to be announced' },
-            { icon: '🌐', title: 'Audience', value: toTitleCase(data.privacy || 'Public') }
+            { icon: getIconSvg('pin', 'event-detail-meta-icon'), title: 'Location', value: creatorLocation || 'Venue to be announced' },
+            { icon: getIconSvg('users', 'event-detail-meta-icon'), title: 'Audience', value: toTitleCase(data.privacy || 'Public') }
           ].forEach(function (row) {
             var item = document.createElement('div');
             item.className = 'event-detail-meta-row';
-            item.innerHTML = '<span>' + row.icon + '</span><div><strong>' + escapeHtml(row.title) + '</strong><span>' + escapeHtml(row.value) + '</span></div>';
+            item.innerHTML = row.icon + '<div><strong>' + escapeHtml(row.title) + '</strong><span>' + escapeHtml(row.value) + '</span></div>';
             metaList.appendChild(item);
           });
 
@@ -3346,7 +3513,7 @@
             friendsContainer.appendChild(row);
           });
           if (!friendsContainer.childNodes.length) {
-            friendsContainer.innerHTML = '<p class="event-friends-copy">Invite friends once more accounts join your Zorexium network.</p>';
+            friendsContainer.innerHTML = '<p class="event-friends-copy">Invite friends once more accounts join your neter network.</p>';
           }
 
           var suggestedContainer = document.getElementById('event-detail-suggested-events');
@@ -3361,18 +3528,41 @@
           }
 
           var recentPostsContainer = document.getElementById('event-detail-recent-posts');
-          recentPostsContainer.innerHTML = '';
-          // Discussion posts are placeholder summaries derived from the current listing until a
-          // dedicated event discussion backend is available in this static app flow.
-          [
-            { title: 'Event announcement', copy: data.details || 'The host just shared the event announcement and timing details.' },
-            { title: 'Host update', copy: creatorName + ' is managing visibility set to ' + toTitleCase(data.privacy || 'Public') + '.' },
-            { title: 'Location update', copy: creatorLocation || 'Venue details will be shared closer to the event.' }
-          ].forEach(function (entry) {
-            var row = document.createElement('div');
-            row.className = 'event-post-row';
-            row.innerHTML = '<div><p class="event-host-name">' + escapeHtml(entry.title) + '</p><p class="event-post-meta">' + escapeHtml(entry.copy) + '</p></div><span class="event-post-meta">Just now</span>';
-            recentPostsContainer.appendChild(row);
+          recentPostsContainer.innerHTML = '<p class="event-post-meta">Loading discussions...</p>';
+          openDb().then(function (database) {
+            return getAllRecords(database, POSTS_STORE);
+          }).then(function (posts) {
+            var eventTitle = String(data.title || '').trim().toLowerCase();
+            var relatedPosts = (Array.isArray(posts) ? posts : []).filter(function (post) {
+              if (!post || typeof post !== 'object') return false;
+              if (String(post.listingId || '') === String(data.id || '')) return true;
+              var haystack = [
+                post.text,
+                post.listingTitle,
+                post.listingSummary,
+                post.listingDetails
+              ].join(' ').toLowerCase();
+              return eventTitle && haystack.indexOf(eventTitle) !== -1;
+            }).sort(function (a, b) {
+              return Number(b && b.createdAt || 0) - Number(a && a.createdAt || 0);
+            }).slice(0, 8);
+            recentPostsContainer.innerHTML = '';
+            if (!relatedPosts.length) {
+              recentPostsContainer.innerHTML = '<p class="event-post-meta">No discussion posts mention this event yet.</p>';
+              return;
+            }
+            relatedPosts.forEach(function (post) {
+              var row = document.createElement('div');
+              row.className = 'event-post-row';
+              var heading = String(post.listingTitle || post.text || 'Discussion post').trim() || 'Discussion post';
+              var copy = String(post.text || post.listingSummary || post.listingDetails || '').trim();
+              var timestamp = Number(post.createdAt || 0);
+              var timeLabel = timestamp ? new Date(timestamp).toLocaleString() : 'Recently';
+              row.innerHTML = '<div><p class="event-host-name">' + escapeHtml(heading.slice(0, 80)) + '</p><p class="event-post-meta">' + escapeHtml(copy || 'Post update') + '</p></div><span class="event-post-meta">' + escapeHtml(timeLabel) + '</span>';
+              recentPostsContainer.appendChild(row);
+            });
+          }).catch(function () {
+            recentPostsContainer.innerHTML = '<p class="event-post-meta">No discussion posts mention this event yet.</p>';
           });
 
           renderEventDetailTab('about');
@@ -3384,6 +3574,7 @@
 
         function openListingDetail(data) {
           if (!data) return;
+          if (isEventExpired(data)) return;
           if (String(data.type || '').toLowerCase() === 'event') openEventDetail(data);
           else openJobDetail(data);
         }
@@ -3414,18 +3605,6 @@
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-label', 'View details for ' + fallbackData.title);
             card.setAttribute('data-listing-id', fallbackData.id);
-            if (listingType === 'event') {
-              var existingActions = card.querySelector('.listing-card-actions');
-              if (!existingActions) {
-                existingActions = document.createElement('div');
-                existingActions.className = 'listing-card-actions';
-                existingActions.innerHTML =
-                  '<button type="button" class="listing-card-action" data-event-action="interested">Interested</button>' +
-                  '<button type="button" class="listing-card-action" data-event-action="going">Going</button>';
-                card.appendChild(existingActions);
-              }
-              attachEventActionButtons(existingActions, fallbackData);
-            }
           });
         }
 
@@ -3433,7 +3612,8 @@
           var params = new URLSearchParams(window.location.search);
           var listingId = params.get('listing');
           if (!listingId) return;
-          if (listingDataMap[listingId]) openListingDetail(listingDataMap[listingId]);
+          var listing = listingDataMap[listingId] || getListingFromStorageById(listingId);
+          if (listing && !isEventExpired(listing)) openListingDetail(listing);
         }
 
         function runWhenDomReady(callback) {
@@ -3660,8 +3840,10 @@
               creatorFollowers: currentUser && currentUser.profileFollowers || 0,
               creatorBio: currentUser && currentUser.profileBio || ''
             };
-            var postText = '📋 New Job: ' + jobData.title +
+            var jobPayText = formatJobPay(jobData);
+            var postText = 'New Job: ' + jobData.title +
               (jobData.jobType ? ' (' + jobData.jobType + ')' : '') +
+              (jobPayText ? ' · ' + jobPayText : '') +
               (jobData.location ? ' · ' + jobData.location : '') +
               (jobData.description ? '\n' + jobData.description : '');
             statusEl.textContent = 'Publishing…';
@@ -3675,6 +3857,7 @@
                 summary: jobData.description,
                 details: jobData.description,
                 meta: jobData.jobType || 'Listing',
+                pay: jobPayText,
                 location: jobData.location
               }).then(function () {
                 addListingCardToFeed(jobData);
@@ -3721,7 +3904,7 @@
               creatorBio: currentUser && currentUser.profileBio || '',
               creatorWebsite: currentUser && currentUser.profileEmail ? ('mailto:' + currentUser.profileEmail) : ''
             };
-            var postText = '📅 New Event: ' + eventData.title +
+            var postText = 'New Event: ' + eventData.title +
               (eventData.eventStart ? ' · ' + eventData.eventStart : '') +
               (eventData.location ? ' · ' + eventData.location : '') +
               (eventData.details ? '\n' + eventData.details : '');
@@ -3735,7 +3918,7 @@
                 title: eventData.title,
                 summary: eventData.details,
                 details: eventData.details,
-                meta: toTitleCase(eventData.privacy || 'Public'),
+                meta: '',
                 location: eventData.location,
                 dateTime: formatEventDateTime(eventData.eventStart, eventData.eventEnd)
               }).then(function () {
@@ -3757,6 +3940,18 @@
           syncBubbleState();
           handleRoute();
           window.addEventListener('hashchange', handleRoute);
+          setInterval(function () {
+            var removedIds = purgeExpiredListingsFromStorage();
+            if (!removedIds.length) return;
+            removedIds.forEach(function (eventId) {
+              delete listingDataMap[eventId];
+              Array.prototype.slice.call(document.querySelectorAll('[data-listing-id="' + eventId + '"]')).forEach(function (card) {
+                if (card && card.parentNode) card.parentNode.removeChild(card);
+              });
+              if (viewState.activeEventDetailId === eventId) closeEventDetail();
+            });
+            filterListings();
+          }, 60000);
         }
 
         function initializeStaticModalBindings() {
@@ -3784,6 +3979,7 @@
 
         initializeStaticModalBindings();
         initializeForms();
+        purgeExpiredListingsFromStorage();
         loadListingsFromStorage();
         hydrateExistingListingCards();
 
@@ -4072,18 +4268,13 @@
           <h1 class="event-detail-title" id="event-detail-title">Event title</h1>
           <p class="event-detail-subtitle" id="event-detail-subtitle"></p>
 
-          <div class="event-detail-actions">
-            <button class="event-detail-action primary" type="button" id="event-detail-interested-btn" data-event-action="interested">Interested</button>
-            <button class="event-detail-action" type="button" id="event-detail-going-btn" data-event-action="going">Going</button>
-          </div>
-
           <section class="event-detail-grid">
             <div class="event-detail-meta-list" id="event-detail-meta-list"></div>
           </section>
 
           <div class="event-detail-tabs" role="tablist" aria-label="Event detail sections">
             <button class="event-detail-tab active" type="button" id="event-detail-tab-about" data-event-tab="about" aria-selected="true">About</button>
-            <button class="event-detail-tab" type="button" id="event-detail-tab-discussion" data-event-tab="discussion" aria-selected="false">Discussion</button>
+            <button class="event-detail-tab" type="button" id="event-detail-tab-discussion" data-event-tab="discussion" aria-selected="false">Discussions</button>
           </div>
 
           <div class="event-detail-tab-panel" id="event-detail-panel-about">
@@ -4114,9 +4305,21 @@
 
           <div class="event-detail-tab-panel" id="event-detail-panel-discussion" hidden>
             <section class="event-detail-panel">
-              <h2 class="event-detail-heading">Recent posts</h2>
+              <h2 class="event-detail-heading">Discussions</h2>
               <div class="event-post-list" id="event-detail-recent-posts"></div>
             </section>
+          </div>
+        </div>
+        <div class="event-detail-attendance-footer">
+          <div class="event-detail-attendance-inner">
+            <div class="event-detail-attendance-actions" id="event-detail-attendance-actions">
+              <button class="event-detail-action primary" type="button" id="event-detail-interested-btn" data-event-action="interested">Interested</button>
+              <button class="event-detail-action" type="button" id="event-detail-going-btn" data-event-action="going">Going</button>
+            </div>
+            <div class="event-detail-attendance-counts">
+              <span><strong id="event-detail-interested-count">0</strong> interested</span>
+              <span><strong id="event-detail-going-count">0</strong> going</span>
+            </div>
           </div>
         </div>
       </div>

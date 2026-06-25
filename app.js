@@ -3186,7 +3186,7 @@
     body.appendChild(title);
 
     const summaryText = String(post.listingSummary || post.listingDetails || post.text || '').trim();
-    if (summaryText) {
+    if (summaryText && listingType !== 'event') {
       const excerpt = document.createElement('p');
       excerpt.className = 'article-companion-excerpt';
       excerpt.textContent = summaryText;
@@ -3194,9 +3194,14 @@
     }
 
     const metaParts = [];
-    if (post.listingMeta) metaParts.push(post.listingMeta);
-    if (post.listingDateTime && metaParts.indexOf(post.listingDateTime) === -1) metaParts.push(post.listingDateTime);
-    if (post.listingLocation && metaParts.indexOf(post.listingLocation) === -1) metaParts.push(post.listingLocation);
+    if (listingType === 'event') {
+      if (post.listingDateTime) metaParts.push(post.listingDateTime);
+      if (post.listingLocation) metaParts.push(post.listingLocation);
+    } else {
+      if (post.listingMeta) metaParts.push(post.listingMeta);
+      if (post.listingPay && metaParts.indexOf(post.listingPay) === -1) metaParts.push(post.listingPay);
+      if (post.listingLocation && metaParts.indexOf(post.listingLocation) === -1) metaParts.push(post.listingLocation);
+    }
 
     const footer = document.createElement('p');
     footer.className = 'article-companion-footer';
