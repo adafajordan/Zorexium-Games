@@ -41,6 +41,8 @@
   });
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+  const PROFILE_PIC_ID_PREFIX = 'profilepic-';
+  const PROFILE_BANNER_ID_PREFIX = 'profilebanner-';
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
   const MIN_MEDIA_SCALE = 1;
   const MAX_MEDIA_SCALE = 4;
@@ -4374,6 +4376,7 @@
     const profilePageEl = document.getElementById('profile-page');
     if (profilePageEl) {
       profilePageEl.classList.remove('profile-loading');
+      profilePageEl.removeAttribute('aria-busy');
     }
   }
 
@@ -4978,7 +4981,7 @@
             return;
           }
           try {
-            const mediaId = 'profilepic-' + currentUser.id;
+            const mediaId = PROFILE_PIC_ID_PREFIX + currentUser.id;
             const buffer = await avatarFile.arrayBuffer();
             await putRecord(MEDIA_STORE, { id: mediaId, data: buffer, type: avatarFile.type });
             profileImageMediaId = mediaId;
@@ -4998,7 +5001,7 @@
             return;
           }
           try {
-            const mediaId = 'profilebanner-' + currentUser.id;
+            const mediaId = PROFILE_BANNER_ID_PREFIX + currentUser.id;
             const buffer = await bannerFile.arrayBuffer();
             await putRecord(MEDIA_STORE, { id: mediaId, data: buffer, type: bannerFile.type });
             profileBannerMediaId = mediaId;
