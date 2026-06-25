@@ -2438,8 +2438,11 @@
         var ARTICLES_STORE = 'articles';
         var LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
         var EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
+        var LISTINGS_SERVER_STORE = 'marketplace_listings';
+        var ATTENDANCE_SERVER_STORE = 'event_attendance';
         var EVENT_EXPIRY_GRACE_MS = 2 * 60 * 60 * 1000;
         var listingDataMap = {};
+        var serverPersistenceUnavailable = false;
         var viewIds = {
           feed: 'jobs-events-feed-view',
           'create-job': 'create-job-view',
@@ -2539,6 +2542,101 @@
             } else {
               throw new Error('crypto unavailable');
             }
+
+            function apiStoreRequest(method, storeName, key, record) {
+              if (serverPersistenceUnavailable || typeof fetch !== 'function') {
+                return Promise.reject(new Error('Server persistence unavailable.'));
+              }
+              var endpoint = '/api/store/' + encodeURIComponent(storeName);
+              if (key) endpoint += '/' + encodeURIComponent(String(key));
+              var options = { method: method };
+              if (record !== undefined) {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify({ record: record });
+              }
+              return fetch(endpoint, options).then(function (response) {
+                if (!response.ok) throw new Error('Server persistence request failed (' + response.status + ').');
+                return response.json();
+              }).catch(function (error) {
+                serverPersistenceUnavailable = true;
+                throw error;
+              });
+            }
+
+            function readListingsFromServer() {
+              return apiStoreRequest('GET', LISTINGS_SERVER_STORE).then(function (payload) {
+                var records = payload && Array.isArray(payload.records) ? payload.records : [];
+                return records.filter(function (record) {
+                  return record && record.id;
+                });
+              });
+            }
+
+            function readAttendanceFromServer() {
+              return apiStoreRequest('GET', ATTENDANCE_SERVER_STORE).then(function (payload) {
+                var records = payload && Array.isArray(payload.records) ? payload.records : [];
+                var attendance = {};
+                records.forEach(function (record) {
+                  if (!record || !record.userId || !record.eventId) return;
+                  if (!attendance[record.userId] || typeof attendance[record.userId] !== 'object') attendance[record.userId] = {};
+                  attendance[record.userId][record.eventId] = {
+                    status: record.status || '',
+                    updatedAt: Number(record.updatedAt) || Date.now(),
+                    listingId: record.listingId || record.eventId
+                  };
+                });
+                return attendance;
+              });
+            }
+
+            function writeListingToServer(data) {
+              if (!data || !data.id) return Promise.resolve();
+              return apiStoreRequest('PUT', LISTINGS_SERVER_STORE, data.id, data).catch(function () {});
+            }
+
+            function removeListingFromServer(id) {
+              if (!id) return Promise.resolve();
+              return apiStoreRequest('DELETE', LISTINGS_SERVER_STORE, id).catch(function () {});
+            }
+
+            function writeAttendanceRecordToServer(userId, eventId, entry) {
+              if (!userId || !eventId || !entry) return Promise.resolve();
+              var key = userId + ':' + eventId;
+              return apiStoreRequest('PUT', ATTENDANCE_SERVER_STORE, key, {
+                id: key,
+                userId: userId,
+                eventId: eventId,
+                status: entry.status || '',
+                updatedAt: Number(entry.updatedAt) || Date.now(),
+                listingId: entry.listingId || eventId
+              }).catch(function () {});
+            }
+
+            function removeAttendanceRecordFromServer(userId, eventId) {
+              if (!userId || !eventId) return Promise.resolve();
+              return apiStoreRequest('DELETE', ATTENDANCE_SERVER_STORE, userId + ':' + eventId).catch(function () {});
+            }
+
+            function removeAttendanceForEventFromServer(eventId) {
+              if (!eventId) return;
+              apiStoreRequest('GET', ATTENDANCE_SERVER_STORE).then(function (payload) {
+                var records = payload && Array.isArray(payload.records) ? payload.records : [];
+                records.forEach(function (record) {
+                  if (!record || record.eventId !== eventId || !record.id) return;
+                  removeAttendanceRecordFromServer(record.userId, record.eventId);
+                });
+              }).catch(function () {});
+            }
+
+            function bootstrapServerPersistence() {
+              if (serverPersistenceUnavailable) return Promise.resolve();
+              return Promise.all([readListingsFromServer(), readAttendanceFromServer()]).then(function (results) {
+                var listings = Array.isArray(results[0]) ? results[0] : [];
+                var attendance = results[1] && typeof results[1] === 'object' ? results[1] : {};
+                try { localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(listings)); } catch (error) {}
+                try { localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendance)); } catch (error) {}
+              }).catch(function () {});
+            }
           } catch (e) {
             rand = Date.now().toString(36) + Math.random().toString(36).slice(2);
           }
@@ -2556,6 +2654,7 @@
             if (!exists) {
               list.push(data);
               localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(list));
+              writeListingToServer(data);
             }
           } catch (err) {
             console.warn('[Zorexium] Could not save listing to localStorage:', err);
@@ -2577,6 +2676,7 @@
             });
             if (!updated) list.push(data);
             localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(list));
+            writeListingToServer(data);
           } catch (err) {
             console.warn('[Zorexium] Could not update listing in localStorage:', err);
           }
@@ -2609,6 +2709,9 @@
           if (!dirty) return;
           try {
             localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendanceStore));
+            removedIds.forEach(function (eventId) {
+              removeAttendanceForEventFromServer(eventId);
+            });
           } catch (error) {}
         }
 
@@ -2642,6 +2745,9 @@
             if (result.removedIds.length) {
               localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(result.kept));
               cleanEventAttendanceStore(result.removedIds);
+              result.removedIds.forEach(function (eventId) {
+                removeListingFromServer(eventId);
+              });
             }
             return result.removedIds;
           } catch (error) {
@@ -2684,6 +2790,11 @@
           }
           try {
             localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendanceStore));
+            if (nextStatus) {
+              writeAttendanceRecordToServer(userId, eventData.id, attendanceStore[userId][eventData.id]);
+            } else {
+              removeAttendanceRecordFromServer(userId, eventData.id);
+            }
           } catch (error) {
             return false;
           }
@@ -3984,9 +4095,11 @@
 
         initializeStaticModalBindings();
         initializeForms();
-        purgeExpiredListingsFromStorage();
-        loadListingsFromStorage();
-        hydrateExistingListingCards();
+        bootstrapServerPersistence().then(function () {
+          purgeExpiredListingsFromStorage();
+          loadListingsFromStorage();
+          hydrateExistingListingCards();
+        });
 
         // Job detail overlay bindings
         (function () {

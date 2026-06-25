@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Neter — cross-platform app (iOS, Android, Web)",
   "scripts": {
+    "dev": "node server.js",
     "cap:sync": "npx cap sync",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
-    "start": "serve -l ${PORT:-10000} ."
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,8 @@
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
     "serve": "^14.2.6"
   }
 }
