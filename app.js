@@ -12,6 +12,7 @@
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const NOTIFICATIONS_PAGE_PATH = 'notifications.html';
   const MARKETPLACE_PAGE_PATH = 'marketplace.html';
+  const EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -1549,6 +1550,47 @@
     }
   }
 
+  function loadAttendedGoingEvents() {
+    try {
+      const raw = localStorage.getItem(EVENT_ATTENDANCE_LS_KEY);
+      if (!raw) return [];
+      const map = JSON.parse(raw);
+      if (!map || typeof map !== 'object') return [];
+      const locale = navigator.language || 'en-US';
+      return Object.values(map)
+        .filter(function (entry) { return entry && entry.status === 'going' && entry.eventData; })
+        .map(function (entry) {
+          const ev = entry.eventData;
+          let dateTime = '';
+          if (ev.eventStart) {
+            const d = new Date(ev.eventStart);
+            if (!isNaN(d.getTime())) {
+              dateTime = d.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+            }
+          }
+          return {
+            id: 'attendance-' + (ev.id || ''),
+            type: 'event',
+            listingId: ev.id || '',
+            listingTitle: ev.title || 'Event',
+            listingSummary: ev.details || '',
+            listingDetails: ev.details || '',
+            listingMeta: (ev.privacy ? ev.privacy.charAt(0).toUpperCase() + ev.privacy.slice(1).toLowerCase() : 'Public') + ' · Going ✓',
+            listingLocation: ev.location || '',
+            listingDateTime: dateTime,
+            userId: ev.creatorUserId || '',
+            staticAuthorName: ev.creatorName || 'Event host',
+            staticAuthorHandle: ev.creatorUsername || 'host',
+            isStaticMirror: true,
+            isAttendedEvent: true,
+            createdAt: Date.now()
+          };
+        });
+    } catch (err) {
+      return [];
+    }
+  }
+
   function buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections) {
     const savedIds = includePrivateCollections && user && user.savedPostIds ? user.savedPostIds : [];
     const allPostsList = Array.isArray(allPosts) ? allPosts : [];
@@ -1583,9 +1625,16 @@
       }),
       likes: [],
       saved: savedPosts,
-      marketplace: userPosts.filter(function (post) {
-        return post.type === 'job' || post.type === 'event';
-      })
+      marketplace: (function () {
+        const publishedEvents = userPosts.filter(function (post) {
+          return post.type === 'job' || post.type === 'event';
+        });
+        const publishedIds = new Set(publishedEvents.map(function (p) { return p.listingId || p.id; }));
+        const attendedGoingEvents = loadAttendedGoingEvents().filter(function (ev) {
+          return !publishedIds.has(ev.listingId);
+        });
+        return publishedEvents.concat(attendedGoingEvents);
+      }())
     };
   }
 
