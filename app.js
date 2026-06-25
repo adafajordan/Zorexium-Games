@@ -365,10 +365,11 @@
 
   function arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    let binary = '';
+    const chars = new Array(bytes.length);
     for (let index = 0; index < bytes.length; index += 1) {
-      binary += String.fromCharCode(bytes[index]);
+      chars[index] = String.fromCharCode(bytes[index]);
     }
+    const binary = chars.join('');
     return btoa(binary);
   }
 
@@ -391,6 +392,7 @@
     if (ArrayBuffer.isView(value)) {
       return {
         __zorexiumType: 'typedArray',
+        ctor: value && value.constructor && value.constructor.name ? value.constructor.name : 'Uint8Array',
         base64: arrayBufferToBase64(value.buffer),
         byteOffset: value.byteOffset || 0,
         byteLength: value.byteLength || value.length || 0
@@ -418,7 +420,13 @@
       const full = base64ToArrayBuffer(value.base64);
       const offset = Number(value.byteOffset || 0);
       const length = Number(value.byteLength || 0);
-      return full.slice(offset, offset + length);
+      const view = new Uint8Array(full, offset, length);
+      const ctorName = String(value.ctor || '');
+      const ctor = typeof window !== 'undefined' ? window[ctorName] : null;
+      if (typeof ctor === 'function' && ctor.BYTES_PER_ELEMENT && ctorName !== 'DataView') {
+        return new ctor(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength));
+      }
+      return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
     }
     if (Array.isArray(value)) {
       return value.map(deserializeRecordFromServer);

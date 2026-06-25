@@ -10,6 +10,8 @@ const DATABASE_URL = process.env.DATABASE_URL || '';
 const MAX_RECORD_PAYLOAD_BYTES = 12 * 1024 * 1024;
 const PUBLIC_ALLOWED_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.webmanifest', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.txt']);
 const PUBLIC_BLOCKLIST = new Set(['server.js', 'package.json', 'package-lock.json', 'STORAGE_AUDIT.md']);
+const STATIC_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const STATIC_RATE_LIMIT_MAX_REQUESTS = 180;
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '16mb' }));
@@ -36,6 +38,7 @@ const publicFiles = new Set(
     return PUBLIC_ALLOWED_EXTENSIONS.has(extension);
   })
 );
+const staticRequestLog = new Map();
 
 function isSafeStoreName(value) {
   return /^[a-zA-Z0-9_-]{1,64}$/.test(String(value || ''));
@@ -56,8 +59,23 @@ function tooLargePayload(data) {
   try {
     return Buffer.byteLength(JSON.stringify(data), 'utf8') > MAX_RECORD_PAYLOAD_BYTES;
   } catch (error) {
+    console.error('[api] failed to size-check payload', error);
     return true;
   }
+}
+
+function staticRateLimit(req, res, next) {
+  const identifier = String((req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown')).split(',')[0].trim();
+  const now = Date.now();
+  const windowStart = now - STATIC_RATE_LIMIT_WINDOW_MS;
+  const history = staticRequestLog.get(identifier) || [];
+  const recent = history.filter((timestamp) => timestamp > windowStart);
+  if (recent.length >= STATIC_RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).send('Too many requests');
+  }
+  recent.push(now);
+  staticRequestLog.set(identifier, recent);
+  return next();
 }
 
 async function ensureDatabaseTables() {
@@ -208,12 +226,15 @@ app.delete('/api/store/:storeName/:recordKey', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
+app.get('/', staticRateLimit, (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/:fileName', (req, res) => {
+app.get('/:fileName', staticRateLimit, (req, res) => {
   const fileName = String(req.params.fileName || '').trim();
+  if (!fileName || fileName.startsWith('.') || fileName.indexOf('..') !== -1) {
+    return res.status(404).send('Not found');
+  }
   if (!publicFiles.has(fileName)) {
     return res.status(404).send('Not found');
   }

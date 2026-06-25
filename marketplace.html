@@ -2597,12 +2597,16 @@
 
             function writeListingToServer(data) {
               if (!data || !data.id) return Promise.resolve();
-              return apiStoreRequest('PUT', LISTINGS_SERVER_STORE, data.id, data).catch(function () {});
+              return apiStoreRequest('PUT', LISTINGS_SERVER_STORE, data.id, data).catch(function (error) {
+                console.warn('[Zorexium] Failed to sync listing to server.', error);
+              });
             }
 
             function removeListingFromServer(id) {
               if (!id) return Promise.resolve();
-              return apiStoreRequest('DELETE', LISTINGS_SERVER_STORE, id).catch(function () {});
+              return apiStoreRequest('DELETE', LISTINGS_SERVER_STORE, id).catch(function (error) {
+                console.warn('[Zorexium] Failed to remove listing from server.', error);
+              });
             }
 
             function writeAttendanceRecordToServer(userId, eventId, entry) {
@@ -2615,12 +2619,16 @@
                 status: entry.status || '',
                 updatedAt: Number(entry.updatedAt) || Date.now(),
                 listingId: entry.listingId || eventId
-              }).catch(function () {});
+              }).catch(function (error) {
+                console.warn('[Zorexium] Failed to sync attendance record to server.', error);
+              });
             }
 
             function removeAttendanceRecordFromServer(userId, eventId) {
               if (!userId || !eventId) return Promise.resolve();
-              return apiStoreRequest('DELETE', ATTENDANCE_SERVER_STORE, userId + ':' + eventId).catch(function () {});
+              return apiStoreRequest('DELETE', ATTENDANCE_SERVER_STORE, userId + ':' + eventId).catch(function (error) {
+                console.warn('[Zorexium] Failed to remove attendance record from server.', error);
+              });
             }
 
             function removeAttendanceForEventFromServer(eventId) {
@@ -2631,7 +2639,9 @@
                   if (!record || record.eventId !== eventId || !record.id) return;
                   removeAttendanceRecordFromServer(record.userId, record.eventId);
                 });
-              }).catch(function () {});
+              }).catch(function (error) {
+                console.warn('[Zorexium] Failed to remove event attendance from server.', error);
+              });
             }
 
             function bootstrapServerPersistence() {
@@ -2641,6 +2651,23 @@
                 var attendance = results[1] && typeof results[1] === 'object' ? results[1] : {};
                 try { localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(listings)); } catch (error) {}
                 try { localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendance)); } catch (error) {}
+              }).catch(function (error) {
+                console.warn('[Zorexium] Failed to bootstrap server persistence.', error);
+              });
+            }
+
+            function retryServerPersistenceSync() {
+              if (!serverPersistenceUnavailable || typeof fetch !== 'function') return;
+              fetch('/api/health').then(function (response) {
+                if (!response.ok) throw new Error('Health check failed with status ' + response.status + '.');
+                serverPersistenceUnavailable = false;
+                serverPersistenceFailures = 0;
+                return bootstrapServerPersistence();
+              }).then(function () {
+                if (viewState.activeView === 'feed') {
+                  loadListingsFromStorage();
+                  filterListings();
+                }
               }).catch(function () {});
             }
           } catch (e) {
@@ -4074,6 +4101,7 @@
             });
             filterListings();
           }, 60000);
+          setInterval(retryServerPersistenceSync, 30000);
         }
 
         function initializeStaticModalBindings() {
