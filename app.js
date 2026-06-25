@@ -14,6 +14,8 @@
   const MARKETPLACE_PAGE_PATH = 'marketplace.html';
   const MARKETPLACE_LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
   const EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
+  const MARKETPLACE_LISTINGS_SERVER_STORE = 'marketplace_listings';
+  const EVENT_ATTENDANCE_SERVER_STORE = 'event_attendance';
   const API_STORE_NAME_MAP = Object.freeze({
     accounts: 'accounts',
     posts: 'posts',
@@ -1510,12 +1512,50 @@
     }
   }
 
-  function buildDashboardAttendancePosts(user) {
+  async function readMarketplaceListingsForDashboard() {
+    try {
+      const response = await fetch('/api/store/' + encodeURIComponent(MARKETPLACE_LISTINGS_SERVER_STORE));
+      if (!response.ok) throw new Error('Failed to read marketplace listings from server.');
+      const payload = await response.json();
+      const records = payload && Array.isArray(payload.records) ? payload.records : [];
+      return records.filter(function (listing) {
+        return listing && listing.id;
+      });
+    } catch (error) {
+      return readMarketplaceListingsFromStorage();
+    }
+  }
+
+  async function readEventAttendanceForDashboard() {
+    try {
+      const response = await fetch('/api/store/' + encodeURIComponent(EVENT_ATTENDANCE_SERVER_STORE));
+      if (!response.ok) throw new Error('Failed to read event attendance from server.');
+      const payload = await response.json();
+      const records = payload && Array.isArray(payload.records) ? payload.records : [];
+      const attendance = {};
+      records.forEach(function (record) {
+        if (!record || !record.userId || !record.eventId) return;
+        if (!attendance[record.userId] || typeof attendance[record.userId] !== 'object') {
+          attendance[record.userId] = {};
+        }
+        attendance[record.userId][record.eventId] = {
+          status: record.status || '',
+          updatedAt: Number(record.updatedAt) || Date.now(),
+          listingId: record.listingId || record.eventId
+        };
+      });
+      return attendance;
+    } catch (error) {
+      return readEventAttendanceFromStorage();
+    }
+  }
+
+  async function buildDashboardAttendancePosts(user) {
     if (!user || !user.id) return [];
-    const attendanceStore = readEventAttendanceFromStorage();
+    const attendanceStore = await readEventAttendanceForDashboard();
     const userAttendance = attendanceStore[user.id];
     if (!userAttendance || typeof userAttendance !== 'object') return [];
-    const listings = readMarketplaceListingsFromStorage();
+    const listings = await readMarketplaceListingsForDashboard();
     const listingById = new Map(listings.filter(function (listing) {
       return listing && listing.id;
     }).map(function (listing) {
@@ -3864,7 +3904,7 @@
       event.preventDefault();
     };
 
-    const attendancePosts = buildDashboardAttendancePosts(viewedUser);
+    const attendancePosts = await buildDashboardAttendancePosts(viewedUser);
     await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile, attendancePosts);
   }
 

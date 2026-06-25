@@ -2532,6 +2532,133 @@
           });
         }
 
+        function apiStoreRequest(method, storeName, key, record) {
+          if (serverPersistenceUnavailable || typeof fetch !== 'function') {
+            return Promise.reject(new Error('Server persistence unavailable.'));
+          }
+          var endpoint = '/api/store/' + encodeURIComponent(storeName);
+          if (key) endpoint += '/' + encodeURIComponent(String(key));
+          var options = { method: method };
+          if (record !== undefined) {
+            options.headers = { 'Content-Type': 'application/json' };
+            options.body = JSON.stringify({ record: record });
+          }
+          return fetch(endpoint, options).then(function (response) {
+            if (!response.ok) throw new Error('Server persistence request failed (' + response.status + ').');
+            serverPersistenceFailures = 0;
+            return response.json();
+          }).catch(function (error) {
+            serverPersistenceFailures += 1;
+            if (serverPersistenceFailures >= SERVER_PERSISTENCE_FAILURE_LIMIT) {
+              serverPersistenceUnavailable = true;
+              console.warn('[Zorexium] Server persistence disabled after repeated sync failures. Retrying in background.');
+            }
+            throw error;
+          });
+        }
+
+        function readListingsFromServer() {
+          return apiStoreRequest('GET', LISTINGS_SERVER_STORE).then(function (payload) {
+            var records = payload && Array.isArray(payload.records) ? payload.records : [];
+            return records.filter(function (record) {
+              return record && record.id;
+            });
+          });
+        }
+
+        function readAttendanceFromServer() {
+          return apiStoreRequest('GET', ATTENDANCE_SERVER_STORE).then(function (payload) {
+            var records = payload && Array.isArray(payload.records) ? payload.records : [];
+            var attendance = {};
+            records.forEach(function (record) {
+              if (!record || !record.userId || !record.eventId) return;
+              if (!attendance[record.userId] || typeof attendance[record.userId] !== 'object') attendance[record.userId] = {};
+              attendance[record.userId][record.eventId] = {
+                status: record.status || '',
+                updatedAt: Number(record.updatedAt) || Date.now(),
+                listingId: record.listingId || record.eventId
+              };
+            });
+            return attendance;
+          });
+        }
+
+        function writeListingToServer(data) {
+          if (!data || !data.id) return Promise.resolve();
+          return apiStoreRequest('PUT', LISTINGS_SERVER_STORE, data.id, data).catch(function (error) {
+            console.warn('[Zorexium] Failed to sync listing to server.', error);
+          });
+        }
+
+        function removeListingFromServer(id) {
+          if (!id) return Promise.resolve();
+          return apiStoreRequest('DELETE', LISTINGS_SERVER_STORE, id).catch(function (error) {
+            console.warn('[Zorexium] Failed to remove listing from server.', error);
+          });
+        }
+
+        function writeAttendanceRecordToServer(userId, eventId, entry) {
+          if (!userId || !eventId || !entry) return Promise.resolve();
+          var key = userId + ':' + eventId;
+          return apiStoreRequest('PUT', ATTENDANCE_SERVER_STORE, key, {
+            id: key,
+            userId: userId,
+            eventId: eventId,
+            status: entry.status || '',
+            updatedAt: Number(entry.updatedAt) || Date.now(),
+            listingId: entry.listingId || eventId
+          }).catch(function (error) {
+            console.warn('[Zorexium] Failed to sync attendance record to server.', error);
+          });
+        }
+
+        function removeAttendanceRecordFromServer(userId, eventId) {
+          if (!userId || !eventId) return Promise.resolve();
+          return apiStoreRequest('DELETE', ATTENDANCE_SERVER_STORE, userId + ':' + eventId).catch(function (error) {
+            console.warn('[Zorexium] Failed to remove attendance record from server.', error);
+          });
+        }
+
+        function removeAttendanceForEventFromServer(eventId) {
+          if (!eventId) return;
+          apiStoreRequest('GET', ATTENDANCE_SERVER_STORE).then(function (payload) {
+            var records = payload && Array.isArray(payload.records) ? payload.records : [];
+            records.forEach(function (record) {
+              if (!record || record.eventId !== eventId || !record.id) return;
+              removeAttendanceRecordFromServer(record.userId, record.eventId);
+            });
+          }).catch(function (error) {
+            console.warn('[Zorexium] Failed to remove event attendance from server.', error);
+          });
+        }
+
+        function bootstrapServerPersistence() {
+          if (serverPersistenceUnavailable) return Promise.resolve();
+          return Promise.all([readListingsFromServer(), readAttendanceFromServer()]).then(function (results) {
+            var listings = Array.isArray(results[0]) ? results[0] : [];
+            var attendance = results[1] && typeof results[1] === 'object' ? results[1] : {};
+            try { localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(listings)); } catch (error) {}
+            try { localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendance)); } catch (error) {}
+          }).catch(function (error) {
+            console.warn('[Zorexium] Failed to bootstrap server persistence.', error);
+          });
+        }
+
+        function retryServerPersistenceSync() {
+          if (!serverPersistenceUnavailable || typeof fetch !== 'function') return;
+          fetch('/api/health').then(function (response) {
+            if (!response.ok) throw new Error('Health check failed with status ' + response.status + '.');
+            serverPersistenceUnavailable = false;
+            serverPersistenceFailures = 0;
+            return bootstrapServerPersistence();
+          }).then(function () {
+            if (viewState.activeView === 'feed') {
+              loadListingsFromStorage();
+              filterListings();
+            }
+          }).catch(function () {});
+        }
+
         function generateListingId(prefix) {
           var rand = '';
           try {
@@ -2543,133 +2670,6 @@
               rand = Array.prototype.map.call(arr, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
             } else {
               throw new Error('crypto unavailable');
-            }
-
-            function apiStoreRequest(method, storeName, key, record) {
-              if (serverPersistenceUnavailable || typeof fetch !== 'function') {
-                return Promise.reject(new Error('Server persistence unavailable.'));
-              }
-              var endpoint = '/api/store/' + encodeURIComponent(storeName);
-              if (key) endpoint += '/' + encodeURIComponent(String(key));
-              var options = { method: method };
-              if (record !== undefined) {
-                options.headers = { 'Content-Type': 'application/json' };
-                options.body = JSON.stringify({ record: record });
-              }
-              return fetch(endpoint, options).then(function (response) {
-                if (!response.ok) throw new Error('Server persistence request failed (' + response.status + ').');
-                serverPersistenceFailures = 0;
-                return response.json();
-              }).catch(function (error) {
-                serverPersistenceFailures += 1;
-                if (serverPersistenceFailures >= SERVER_PERSISTENCE_FAILURE_LIMIT) {
-                  serverPersistenceUnavailable = true;
-                  console.warn('[Zorexium] Server persistence disabled after repeated sync failures. Retrying in background.');
-                }
-                throw error;
-              });
-            }
-
-            function readListingsFromServer() {
-              return apiStoreRequest('GET', LISTINGS_SERVER_STORE).then(function (payload) {
-                var records = payload && Array.isArray(payload.records) ? payload.records : [];
-                return records.filter(function (record) {
-                  return record && record.id;
-                });
-              });
-            }
-
-            function readAttendanceFromServer() {
-              return apiStoreRequest('GET', ATTENDANCE_SERVER_STORE).then(function (payload) {
-                var records = payload && Array.isArray(payload.records) ? payload.records : [];
-                var attendance = {};
-                records.forEach(function (record) {
-                  if (!record || !record.userId || !record.eventId) return;
-                  if (!attendance[record.userId] || typeof attendance[record.userId] !== 'object') attendance[record.userId] = {};
-                  attendance[record.userId][record.eventId] = {
-                    status: record.status || '',
-                    updatedAt: Number(record.updatedAt) || Date.now(),
-                    listingId: record.listingId || record.eventId
-                  };
-                });
-                return attendance;
-              });
-            }
-
-            function writeListingToServer(data) {
-              if (!data || !data.id) return Promise.resolve();
-              return apiStoreRequest('PUT', LISTINGS_SERVER_STORE, data.id, data).catch(function (error) {
-                console.warn('[Zorexium] Failed to sync listing to server.', error);
-              });
-            }
-
-            function removeListingFromServer(id) {
-              if (!id) return Promise.resolve();
-              return apiStoreRequest('DELETE', LISTINGS_SERVER_STORE, id).catch(function (error) {
-                console.warn('[Zorexium] Failed to remove listing from server.', error);
-              });
-            }
-
-            function writeAttendanceRecordToServer(userId, eventId, entry) {
-              if (!userId || !eventId || !entry) return Promise.resolve();
-              var key = userId + ':' + eventId;
-              return apiStoreRequest('PUT', ATTENDANCE_SERVER_STORE, key, {
-                id: key,
-                userId: userId,
-                eventId: eventId,
-                status: entry.status || '',
-                updatedAt: Number(entry.updatedAt) || Date.now(),
-                listingId: entry.listingId || eventId
-              }).catch(function (error) {
-                console.warn('[Zorexium] Failed to sync attendance record to server.', error);
-              });
-            }
-
-            function removeAttendanceRecordFromServer(userId, eventId) {
-              if (!userId || !eventId) return Promise.resolve();
-              return apiStoreRequest('DELETE', ATTENDANCE_SERVER_STORE, userId + ':' + eventId).catch(function (error) {
-                console.warn('[Zorexium] Failed to remove attendance record from server.', error);
-              });
-            }
-
-            function removeAttendanceForEventFromServer(eventId) {
-              if (!eventId) return;
-              apiStoreRequest('GET', ATTENDANCE_SERVER_STORE).then(function (payload) {
-                var records = payload && Array.isArray(payload.records) ? payload.records : [];
-                records.forEach(function (record) {
-                  if (!record || record.eventId !== eventId || !record.id) return;
-                  removeAttendanceRecordFromServer(record.userId, record.eventId);
-                });
-              }).catch(function (error) {
-                console.warn('[Zorexium] Failed to remove event attendance from server.', error);
-              });
-            }
-
-            function bootstrapServerPersistence() {
-              if (serverPersistenceUnavailable) return Promise.resolve();
-              return Promise.all([readListingsFromServer(), readAttendanceFromServer()]).then(function (results) {
-                var listings = Array.isArray(results[0]) ? results[0] : [];
-                var attendance = results[1] && typeof results[1] === 'object' ? results[1] : {};
-                try { localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(listings)); } catch (error) {}
-                try { localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendance)); } catch (error) {}
-              }).catch(function (error) {
-                console.warn('[Zorexium] Failed to bootstrap server persistence.', error);
-              });
-            }
-
-            function retryServerPersistenceSync() {
-              if (!serverPersistenceUnavailable || typeof fetch !== 'function') return;
-              fetch('/api/health').then(function (response) {
-                if (!response.ok) throw new Error('Health check failed with status ' + response.status + '.');
-                serverPersistenceUnavailable = false;
-                serverPersistenceFailures = 0;
-                return bootstrapServerPersistence();
-              }).then(function () {
-                if (viewState.activeView === 'feed') {
-                  loadListingsFromStorage();
-                  filterListings();
-                }
-              }).catch(function () {});
             }
           } catch (e) {
             rand = Date.now().toString(36) + Math.random().toString(36).slice(2);
