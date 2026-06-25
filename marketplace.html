@@ -2536,7 +2536,7 @@
             }
             localStorage.setItem(EVENT_ATTENDANCE_KEY, JSON.stringify(map));
           } catch (err) {
-            console.warn('[Zorexium] Could not save event attendance:', err);
+            console.warn('[Zorexium] Could not save event attendance for event ' + eventId + ':', err);
           }
         }
 
@@ -3302,7 +3302,7 @@
               hostCard.style.cursor = 'pointer';
               hostCard.setAttribute('tabindex', '0');
               hostCard.setAttribute('role', 'button');
-              hostCard.setAttribute('aria-label', 'View ' + person.name + '\'s profile');
+              hostCard.setAttribute('aria-label', 'View ' + escapeHtml(person.name) + '\'s profile');
               (function (profileId) {
                 hostCard.addEventListener('click', function (e) {
                   if (e.target.closest('button, a')) return;
@@ -3363,7 +3363,7 @@
           });
 
           renderEventDetailTab('about');
-          overlay.setAttribute('data-current-event-id', data.id || '');
+          overlay.setAttribute('data-current-event-id', data.id ? String(data.id) : '');
           overlay.classList.add('open');
           overlay.setAttribute('aria-hidden', 'false');
           overlay.scrollTop = 0;

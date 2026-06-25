@@ -1558,7 +1558,7 @@
       if (!map || typeof map !== 'object') return [];
       const locale = navigator.language || 'en-US';
       return Object.values(map)
-        .filter(function (entry) { return entry && entry.status === 'going' && entry.eventData; })
+        .filter(function (entry) { return entry && entry.status === 'going' && entry.eventData && entry.eventData.id; })
         .map(function (entry) {
           const ev = entry.eventData;
           let dateTime = '';
