@@ -102,6 +102,20 @@
         position: relative;
       }
       .avatar-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .avatar-chip-static { cursor: default; }
+
+      /* thread header user info */
+      .thread-header-center { justify-content: flex-start; padding-left: 2px; }
+      .thread-user-name {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+      }
+      .thread-user-handle { font-size: 12px; color: var(--text-soft); font-weight: 400; }
 
       /* ── INBOX view ─────────────────────────────────────────────── */
       #inbox-view {
@@ -439,12 +453,12 @@
           <button id="thread-back-btn" class="msg-icon-btn" type="button" aria-label="Back to inbox">
             <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <div id="thread-header-avatar" class="avatar-chip" style="cursor:default;" aria-hidden="true">?</div>
+          <div id="thread-header-avatar" class="avatar-chip avatar-chip-static" aria-hidden="true">?</div>
         </div>
-        <div class="msg-header-center" style="justify-content:flex-start; padding-left:2px;">
+        <div class="msg-header-center thread-header-center">
           <div>
-            <div id="thread-header-name" style="font-size:15px; font-weight:700; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">Direct Message</div>
-            <div id="thread-header-handle" style="font-size:12px; color:var(--text-soft); font-weight:400;"></div>
+            <div id="thread-header-name" class="thread-user-name">Direct Message</div>
+            <div id="thread-header-handle" class="thread-user-handle"></div>
           </div>
         </div>
         <div class="msg-header-right">
@@ -502,6 +516,7 @@
         var SESSION_STORE  = 'session';
         var MESSAGES_STORE = 'messages';
         var WINDOW_SESSION_PREFIX = 'zorexium-session:';
+        var MSG_EMPTY_DEFAULT = 'Start a conversation from a user\'s profile';
 
         /* ── DOM refs ──────────────────────────────────────────────── */
         var inboxView      = document.getElementById('inbox-view');
@@ -571,12 +586,19 @@
         /* ── Session helpers ───────────────────────────────────────── */
         function getWindowSession() {
           if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
-          try { var p = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length)); return (p && p.userId) ? p : null; } catch (e) { return null; }
+          try {
+            var p = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+            return (p && p.userId) ? p : null;
+          } catch (e) {
+            return null;
+          }
         }
         function getUserSession() {
           var ws = getWindowSession();
           if (ws) return Promise.resolve(ws);
-          return getLocal(SESSION_STORE, 'current').then(function (s) { return (s && s.userId) ? s : null; });
+          return getLocal(SESSION_STORE, 'current').then(function (s) {
+            return (s && s.userId) ? s : null;
+          });
         }
 
         /* ── Utility ───────────────────────────────────────────────── */
@@ -670,19 +692,21 @@
         /* ── Avatar rendering ──────────────────────────────────────── */
         function setAvatar(el, user) {
           if (!user) { el.textContent = '?'; el.style.background = '#93a2b7'; return; }
-          var color = getAvatarColor(user.username || user.id);
-          el.style.background = color;
+          el.style.background = getAvatarColor(user.username || user.id);
           var img = el.querySelector('img');
+          var span = el.querySelector('span');
           if (img && user.profilePictureDataUrl) {
             img.src = user.profilePictureDataUrl;
             img.hidden = false;
-            el.querySelector('span') && (el.querySelector('span').hidden = true);
+            if (span) span.hidden = true;
           } else if (img) {
             img.hidden = true;
-            el.querySelector('span') && (el.querySelector('span').hidden = false);
+            if (span) span.hidden = false;
           }
-          var span = el.querySelector('span') || el;
-          if (!img) span.textContent = getInitials(user.name, user.username);
+          if (!img) {
+            var textTarget = span || el;
+            textTarget.textContent = getInitials(user.name, user.username);
+          }
         }
 
         /* ── Inbox ─────────────────────────────────────────────────── */
@@ -716,7 +740,7 @@
             } else if (filterText) {
               inboxEmptySub.textContent = 'No conversations match your search';
             } else {
-              inboxEmptySub.textContent = 'Start a conversation from a user\'s profile';
+              inboxEmptySub.textContent = MSG_EMPTY_DEFAULT;
             }
             return;
           }
@@ -929,11 +953,25 @@
             var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
             dmWs = new WebSocket(proto + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId));
             dmWs.onmessage = function (ev) {
-              try { var d = JSON.parse(ev.data); if (d && d.type === 'dm-update' && d.conversationId === conversationId) pollMessages(); } catch (e) {}
+              try {
+                var d = JSON.parse(ev.data);
+                if (d && d.type === 'dm-update' && d.conversationId === conversationId) {
+                  pollMessages();
+                }
+              } catch (e) {
+                // malformed ws message — ignore
+              }
             };
-            dmWs.onclose = function () { dmWs = null; if (!pollIntervalId) pollIntervalId = setInterval(pollMessages, 10000); };
+            dmWs.onclose = function () {
+              dmWs = null;
+              if (!pollIntervalId) {
+                pollIntervalId = setInterval(pollMessages, 10000);
+              }
+            };
           } catch (e) {
-            if (!pollIntervalId) pollIntervalId = setInterval(pollMessages, 10000);
+            if (!pollIntervalId) {
+              pollIntervalId = setInterval(pollMessages, 10000);
+            }
           }
         }
 
