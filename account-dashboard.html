@@ -490,71 +490,6 @@
         color: var(--text);
         font-weight: 700;
       }
-      .profile-verify-box {
-        margin: 0 0 16px;
-        padding: 12px 14px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: var(--surface);
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-      }
-      .profile-verify-icon {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: var(--accent);
-        color: #fff;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        line-height: 1;
-      }
-      .profile-verify-icon svg {
-        width: 14px;
-        height: 14px;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 3;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .profile-verify-copy {
-        flex: 1;
-        min-width: 0;
-      }
-      .profile-verify-title {
-        font-weight: 600;
-        font-size: 13px;
-        color: var(--text);
-        margin: 0 0 2px;
-      }
-      .profile-verify-desc {
-        font-size: 12px;
-        color: var(--text-soft);
-        margin: 0 0 8px;
-        line-height: 1.5;
-      }
-      .profile-verify-cta {
-        display: inline-block;
-        padding: 7px 14px;
-        border-radius: 999px;
-        background: var(--accent);
-        color: #fff;
-        font-size: 12px;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-      }
-      .profile-verify-cta:hover {
-        background: #b01c1c;
-        color: #fff;
-        border-color: transparent;
-      }
-
       /* ── Follow list overlay ────────────────── */
       .follow-list-overlay {
         display: none;
@@ -614,11 +549,63 @@
         font-size: 16px;
         font-weight: 700;
         color: #fff;
+        background-size: cover;
+        background-position: center;
       }
       .follow-list-info { min-width: 0; flex: 1; }
       .follow-list-name { font-weight: 600; font-size: 14px; color: var(--text); }
       .follow-list-handle { font-size: 12px; color: var(--text-soft); margin-top: 1px; }
+      .follow-list-bio { font-size: 12px; color: var(--text-soft); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
       .follow-list-empty { padding: 40px 16px; text-align: center; color: var(--text-soft); font-size: 14px; }
+      .follow-list-follow-btn {
+        flex-shrink: 0;
+        padding: 6px 14px;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        background: none;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .follow-list-follow-btn:hover { background: var(--surface-soft); }
+      .follow-list-follow-btn.following { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .follow-list-follow-btn.following:hover { background: #b01c1c; border-color: #b01c1c; }
+
+      /* ── Profile page loading state (prevents flash) ─────────── */
+      #profile-page.profile-loading { visibility: hidden; }
+
+      /* ── Profile avatar image support ──────────────────────────── */
+      .profile-avatar { background-size: cover; background-position: center; }
+      .profile-banner { background-size: cover; background-position: center; }
+
+      /* ── Profile edit image fields ──────────────────────────────── */
+      .profile-edit-img-section { margin-bottom: 16px; }
+      .profile-edit-img-label { font-size: 13px; font-weight: 600; color: var(--text-soft); display: block; margin-bottom: 6px; }
+      .profile-edit-img-row { display: flex; align-items: center; gap: 12px; }
+      .profile-edit-avatar-preview {
+        width: 56px; height: 56px; border-radius: 50%;
+        background: var(--accent); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; flex-shrink: 0;
+        background-size: cover; background-position: center;
+        border: 2px solid var(--border);
+      }
+      .profile-edit-banner-preview {
+        width: 100%; height: 72px; border-radius: 8px;
+        background: var(--surface); border: 1px solid var(--border);
+        background-size: cover; background-position: center;
+        margin-bottom: 8px;
+      }
+      .profile-edit-img-btn {
+        display: inline-block; padding: 7px 14px;
+        border-radius: 999px; border: 1.5px solid var(--border);
+        background: none; color: var(--text);
+        font-size: 13px; font-weight: 600; cursor: pointer;
+      }
+      .profile-edit-img-btn:hover { background: var(--surface-soft); }
+      .profile-edit-img-hint { font-size: 11px; color: var(--text-soft); margin: 4px 0 0; }
 
       /* ── Profile tabs ───────────────────────── */
       .profile-tabs {
@@ -1984,6 +1971,24 @@
         <button id="profile-edit-close" class="auth-close" type="button" aria-label="Close">&#10005;</button>
         <h2 id="profile-edit-title" class="auth-title">Edit profile</h2>
         <form id="profile-edit-form" class="auth-form active" novalidate>
+          <div class="profile-edit-img-section">
+            <span class="profile-edit-img-label">Banner</span>
+            <div class="profile-edit-banner-preview" id="profile-edit-banner-preview"></div>
+            <label class="profile-edit-img-btn" for="profile-edit-banner-input">Choose banner</label>
+            <input type="file" id="profile-edit-banner-input" name="profile-banner" accept="image/*" style="display:none">
+            <p class="profile-edit-img-hint">Max 10 MB · JPG, PNG, GIF, WebP</p>
+          </div>
+          <div class="profile-edit-img-section">
+            <span class="profile-edit-img-label">Profile picture</span>
+            <div class="profile-edit-img-row">
+              <div id="profile-edit-avatar-preview" class="profile-edit-avatar-preview"></div>
+              <div>
+                <label class="profile-edit-img-btn" for="profile-edit-avatar-input">Choose photo</label>
+                <input type="file" id="profile-edit-avatar-input" name="profile-avatar" accept="image/*" style="display:none">
+                <p class="profile-edit-img-hint">Max 10 MB · JPG, PNG, GIF, WebP</p>
+              </div>
+            </div>
+          </div>
           <div class="auth-field">
             <label for="profile-edit-name">Name</label>
             <input id="profile-edit-name" name="profile-name" type="text" autocomplete="name" maxlength="80" required />
@@ -2002,7 +2007,7 @@
     </div>
 
     <!-- Profile page -->
-    <div class="profile-page">
+    <div class="profile-page profile-loading" id="profile-page">
       <!-- Banner -->
       <div class="profile-banner" id="profile-banner" aria-hidden="true"></div>
 
@@ -2039,15 +2044,6 @@
           <button class="profile-stat-btn" type="button" id="profile-following-stat"><strong id="profile-following-total">0</strong> Following</button>
         </div>
 
-        <!-- Not verified upsell -->
-        <div class="profile-verify-box" id="profile-verify-box">
-          <span class="profile-verify-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 7"/></svg></span>
-          <div class="profile-verify-copy">
-            <p class="profile-verify-title">Verification is still available for your account</p>
-            <p class="profile-verify-desc">Upgrade to unlock boosted replies, analytics, ad-free browsing, and more across your profile.</p>
-            <a class="profile-verify-cta" href="#">Get verified</a>
-          </div>
-        </div>
       </div>
 
       <!-- Tabs -->

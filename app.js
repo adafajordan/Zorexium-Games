@@ -372,6 +372,72 @@
     profileEditNameInput.minLength = PROFILE_NAME_MIN_LENGTH;
     profileEditBioInput.value = savedBio;
     setProfileEditStatus('');
+
+    // Populate avatar preview
+    const avatarPreview = document.getElementById('profile-edit-avatar-preview');
+    if (avatarPreview) {
+      const avatarColor = getAvatarColor(getAvatarSeed(currentUser.name, currentUser.username, currentUser.id));
+      avatarPreview.style.background = avatarColor;
+      avatarPreview.style.backgroundImage = '';
+      avatarPreview.textContent = getInitials(currentUser.name, currentUser.username);
+      if (currentUser.profileImageMediaId) {
+        getRecord(MEDIA_STORE, currentUser.profileImageMediaId).then(function (rec) {
+          return rec ? getRenderableMediaSource(rec) : null;
+        }).then(function (src) {
+          if (src && avatarPreview) {
+            avatarPreview.style.backgroundImage = 'url(' + src.url + ')';
+            avatarPreview.style.backgroundSize = 'cover';
+            avatarPreview.style.backgroundPosition = 'center';
+            avatarPreview.textContent = '';
+          }
+        }).catch(function () {});
+      }
+    }
+
+    // Populate banner preview
+    const bannerPreview = document.getElementById('profile-edit-banner-preview');
+    if (bannerPreview) {
+      bannerPreview.style.backgroundImage = '';
+      if (currentUser.profileBannerMediaId) {
+        getRecord(MEDIA_STORE, currentUser.profileBannerMediaId).then(function (rec) {
+          return rec ? getRenderableMediaSource(rec) : null;
+        }).then(function (src) {
+          if (src && bannerPreview) {
+            bannerPreview.style.backgroundImage = 'url(' + src.url + ')';
+            bannerPreview.style.backgroundSize = 'cover';
+            bannerPreview.style.backgroundPosition = 'center';
+          }
+        }).catch(function () {});
+      }
+    }
+
+    // Reset file inputs and wire live previews
+    const avatarInput = document.getElementById('profile-edit-avatar-input');
+    const bannerInput = document.getElementById('profile-edit-banner-input');
+    if (avatarInput) {
+      avatarInput.value = '';
+      avatarInput.onchange = function () {
+        const file = avatarInput.files && avatarInput.files[0];
+        if (!file || !avatarPreview) return;
+        const url = URL.createObjectURL(file);
+        avatarPreview.style.backgroundImage = 'url(' + url + ')';
+        avatarPreview.style.backgroundSize = 'cover';
+        avatarPreview.style.backgroundPosition = 'center';
+        avatarPreview.textContent = '';
+      };
+    }
+    if (bannerInput) {
+      bannerInput.value = '';
+      bannerInput.onchange = function () {
+        const file = bannerInput.files && bannerInput.files[0];
+        if (!file || !bannerPreview) return;
+        const url = URL.createObjectURL(file);
+        bannerPreview.style.backgroundImage = 'url(' + url + ')';
+        bannerPreview.style.backgroundSize = 'cover';
+        bannerPreview.style.backgroundPosition = 'center';
+      };
+    }
+
     profileEditModal.classList.add('open');
     profileEditModal.setAttribute('aria-hidden', 'false');
     window.requestAnimationFrame(function () {
@@ -4184,11 +4250,43 @@
     const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
 
     if (profileBanner) {
+      profileBanner.style.backgroundImage = '';
       profileBanner.style.background = profileThemeColor;
     }
+    profileAvatar.style.backgroundImage = '';
     profileAvatar.style.background = profileThemeColor;
     profileAvatar.textContent = viewedUser ? getInitials(viewedUser.name, viewedUser.username) : 'YA';
     profileAvatar.setAttribute('aria-label', viewedUser ? (viewedUser.name + ' avatar') : 'Your account avatar');
+
+    // Load profile image and banner if available
+    const profileImageMediaId = viewedUser ? (viewedUser.profileImageMediaId || null) : null;
+    const profileBannerMediaId = viewedUser ? (viewedUser.profileBannerMediaId || null) : null;
+    if (profileImageMediaId) {
+      const imgRecord = await getRecord(MEDIA_STORE, profileImageMediaId);
+      if (renderRequestId === dashboardRenderRequestId && imgRecord) {
+        const imgSrc = await getRenderableMediaSource(imgRecord);
+        if (renderRequestId === dashboardRenderRequestId && imgSrc) {
+          if (imgSrc.isObjectUrl) generatedMediaUrls.push(imgSrc.url);
+          profileAvatar.style.backgroundImage = 'url(' + imgSrc.url + ')';
+          profileAvatar.style.backgroundSize = 'cover';
+          profileAvatar.style.backgroundPosition = 'center';
+          profileAvatar.textContent = '';
+        }
+      }
+    }
+    if (profileBanner && profileBannerMediaId) {
+      const bannerRecord = await getRecord(MEDIA_STORE, profileBannerMediaId);
+      if (renderRequestId === dashboardRenderRequestId && bannerRecord) {
+        const bannerSrc = await getRenderableMediaSource(bannerRecord);
+        if (renderRequestId === dashboardRenderRequestId && bannerSrc) {
+          if (bannerSrc.isObjectUrl) generatedMediaUrls.push(bannerSrc.url);
+          profileBanner.style.background = '';
+          profileBanner.style.backgroundImage = 'url(' + bannerSrc.url + ')';
+          profileBanner.style.backgroundSize = 'cover';
+          profileBanner.style.backgroundPosition = 'center';
+        }
+      }
+    }
     profileName.textContent = viewedUser ? viewedUser.name : 'Your account';
     profileHandle.textContent = viewedUser ? formatHandle(viewedUser.username) : '@yourprofile';
     profileBio.textContent = bioValue;
@@ -4239,11 +4337,6 @@
       }
     }
 
-    const profileVerifyBox = document.getElementById('profile-verify-box');
-    if (profileVerifyBox) {
-      profileVerifyBox.hidden = !isOwnProfile;
-    }
-
     const profileDmBtn = document.getElementById('profile-dm-btn');
     if (profileDmBtn) {
       if (viewedUser && !isOwnProfile && currentUser) {
@@ -4276,6 +4369,12 @@
 
     const attendancePosts = await buildDashboardAttendancePosts(viewedUser);
     await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile, attendancePosts);
+
+    // Reveal the profile page (removes the flash-prevention loading class)
+    const profilePageEl = document.getElementById('profile-page');
+    if (profilePageEl) {
+      profilePageEl.classList.remove('profile-loading');
+    }
   }
 
   async function openFollowListOverlay(userId, listType) {
@@ -4305,8 +4404,8 @@
     }
     const allAccounts = await readAccounts();
     const accountMap = new Map(allAccounts.map(function (a) { return [a.id, a]; }));
-    ids.forEach(function (userId) {
-      const account = accountMap.get(userId);
+    ids.forEach(function (accountId) {
+      const account = accountMap.get(accountId);
       if (!account) return;
       const item = document.createElement('div');
       item.className = 'follow-list-item';
@@ -4316,6 +4415,22 @@
       avatar.className = 'follow-list-avatar';
       avatar.style.background = avatarColor;
       avatar.textContent = getInitials(account.name, account.username);
+
+      // Load profile image for avatar if available
+      if (account.profileImageMediaId) {
+        getRecord(MEDIA_STORE, account.profileImageMediaId).then(function (rec) {
+          if (!rec) return;
+          return getRenderableMediaSource(rec);
+        }).then(function (src) {
+          if (src) {
+            avatar.style.backgroundImage = 'url(' + src.url + ')';
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.textContent = '';
+          }
+        }).catch(function () {});
+      }
+
       const info = document.createElement('div');
       info.className = 'follow-list-info';
       const name = document.createElement('div');
@@ -4326,8 +4441,42 @@
       handle.textContent = formatHandle(account.username);
       info.appendChild(name);
       info.appendChild(handle);
+
+      const bioText = normalizeProfileBio(account.profileBio);
+      if (bioText) {
+        const bio = document.createElement('div');
+        bio.className = 'follow-list-bio';
+        bio.textContent = bioText;
+        info.appendChild(bio);
+      }
+
       item.appendChild(avatar);
       item.appendChild(info);
+
+      // Follow button (only show for other users when logged in)
+      if (currentUser && account.id !== currentUser.id) {
+        const isAlreadyFollowing = Boolean(
+          currentUser.followingIds && currentUser.followingIds.indexOf(account.id) !== -1
+        );
+        const followBtn = document.createElement('button');
+        followBtn.type = 'button';
+        followBtn.className = isAlreadyFollowing ? 'follow-list-follow-btn following' : 'follow-list-follow-btn';
+        followBtn.textContent = isAlreadyFollowing ? 'Following' : 'Follow';
+        followBtn.addEventListener('click', async function (e) {
+          e.stopPropagation();
+          followBtn.disabled = true;
+          try {
+            const nowFollowing = await toggleFollow(account.id);
+            followBtn.textContent = nowFollowing ? 'Following' : 'Follow';
+            followBtn.className = nowFollowing ? 'follow-list-follow-btn following' : 'follow-list-follow-btn';
+          } catch (err) {
+            console.warn('Follow toggle failed', err);
+          }
+          followBtn.disabled = false;
+        });
+        item.appendChild(followBtn);
+      }
+
       item.addEventListener('click', function () {
         overlay.classList.remove('open');
         overlay.setAttribute('aria-hidden', 'true');
@@ -4818,9 +4967,52 @@
           }
           return;
         }
+
+        // Handle profile picture upload
+        let profileImageMediaId = currentUser.profileImageMediaId || null;
+        const avatarInput = document.getElementById('profile-edit-avatar-input');
+        if (avatarInput && avatarInput.files && avatarInput.files[0]) {
+          const avatarFile = avatarInput.files[0];
+          if (avatarFile.size > MAX_IMAGE_SIZE) {
+            setProfileEditStatus('Profile picture must be under 10 MB.', 'error');
+            return;
+          }
+          try {
+            const mediaId = 'profilepic-' + currentUser.id;
+            const buffer = await avatarFile.arrayBuffer();
+            await putRecord(MEDIA_STORE, { id: mediaId, data: buffer, type: avatarFile.type });
+            profileImageMediaId = mediaId;
+          } catch (err) {
+            setProfileEditStatus('Failed to save profile picture. Please try again.', 'error');
+            return;
+          }
+        }
+
+        // Handle banner upload
+        let profileBannerMediaId = currentUser.profileBannerMediaId || null;
+        const bannerInput = document.getElementById('profile-edit-banner-input');
+        if (bannerInput && bannerInput.files && bannerInput.files[0]) {
+          const bannerFile = bannerInput.files[0];
+          if (bannerFile.size > MAX_IMAGE_SIZE) {
+            setProfileEditStatus('Banner must be under 10 MB.', 'error');
+            return;
+          }
+          try {
+            const mediaId = 'profilebanner-' + currentUser.id;
+            const buffer = await bannerFile.arrayBuffer();
+            await putRecord(MEDIA_STORE, { id: mediaId, data: buffer, type: bannerFile.type });
+            profileBannerMediaId = mediaId;
+          } catch (err) {
+            setProfileEditStatus('Failed to save banner. Please try again.', 'error');
+            return;
+          }
+        }
+
         const updatedUser = Object.assign({}, currentUser, {
           name: nextName,
-          profileBio: nextBio
+          profileBio: nextBio,
+          profileImageMediaId: profileImageMediaId,
+          profileBannerMediaId: profileBannerMediaId
         });
         try {
           await putRecord(ACCOUNTS_STORE, updatedUser);
