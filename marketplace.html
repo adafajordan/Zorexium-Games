@@ -1495,6 +1495,208 @@
         cursor: pointer;
         color: var(--text-muted);
       }
+      .jd-close-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text);
+        padding: 6px 8px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .jd-close-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+      /* ── Event detail fullscreen overlay ───────────────────── */
+      .event-detail-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 610;
+        background: #fff;
+        overflow-y: auto;
+      }
+      .event-detail-overlay.open { display: block; }
+      .event-detail-body { padding-bottom: 40px; }
+      .event-detail-hero {
+        width: 100%;
+        aspect-ratio: 16 / 8;
+        position: relative;
+        background: linear-gradient(135deg, #e7eef7 0%, #d6e5f5 100%);
+        overflow: hidden;
+      }
+      .event-detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .event-detail-hero-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-placeholder);
+      }
+      .event-detail-hero-placeholder svg { width: 56px; height: 56px; fill: none; stroke: currentColor; stroke-width: 1.5; opacity: .45; }
+      .event-detail-content {
+        width: min(900px, 100%);
+        margin: 0 auto;
+        padding: 18px 18px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .event-detail-date { margin: 0; font-size: 14px; color: var(--text-soft); }
+      .event-detail-title { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.08; font-weight: 800; color: var(--text); }
+      .event-detail-subtitle { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.5; }
+      .event-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .event-detail-action, .event-detail-page-btn, .event-detail-invite-btn {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #fff;
+        padding: 12px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .event-detail-action.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .event-detail-grid,
+      .event-detail-venue,
+      .event-detail-panel {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: #fff;
+        padding: 16px;
+      }
+      .event-detail-meta-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+      .event-detail-meta-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+      .event-detail-meta-row strong { color: var(--text); display: block; }
+      .event-detail-tabs {
+        display: inline-flex;
+        padding: 4px;
+        background: var(--surface);
+        border-radius: 999px;
+        gap: 4px;
+        align-self: flex-start;
+      }
+      .event-detail-tab {
+        border: none;
+        background: transparent;
+        border-radius: 999px;
+        padding: 9px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-soft);
+        cursor: pointer;
+      }
+      .event-detail-tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+      .event-detail-tab-panel[hidden] { display: none; }
+      .event-detail-heading { margin: 0 0 12px; font-size: 17px; font-weight: 700; color: var(--text); }
+      .event-detail-copy {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.65;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 5;
+        overflow: hidden;
+      }
+      .event-detail-copy.expanded { -webkit-line-clamp: unset; overflow: visible; display: block; }
+      .event-detail-see-more {
+        margin-top: 12px;
+        border: none;
+        background: none;
+        padding: 0;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .event-hosts-track,
+      .event-suggested-track,
+      .event-regional-track {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(220px, 1fr);
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .event-host-card,
+      .event-suggested-card,
+      .event-regional-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+        background: var(--surface-soft);
+      }
+      .event-host-card { display: flex; flex-direction: column; gap: 10px; }
+      .event-host-top { display: flex; align-items: center; gap: 12px; }
+      .event-host-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+      }
+      .event-host-name { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
+      .event-host-subtitle, .event-post-meta, .event-venue-copy, .event-friends-copy { margin: 0; font-size: 13px; color: var(--text-soft); line-height: 1.55; }
+      .event-host-actions, .event-friends-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+      .event-inline-link {
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .event-follow-btn, .event-inline-btn {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .event-friends-list, .event-post-list { display: flex; flex-direction: column; gap: 12px; }
+      .event-friend-row, .event-post-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid var(--border);
+        padding-top: 12px;
+      }
+      .event-friend-row:first-child, .event-post-row:first-child { border-top: none; padding-top: 0; }
+      .event-friend-meta { display: flex; gap: 12px; align-items: center; }
+      .event-suggested-card img, .event-regional-card img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        border-radius: 12px;
+        display: block;
+        margin-bottom: 10px;
+        background: #dbe6f3;
+      }
+      .event-suggested-card strong, .event-regional-card strong { display: block; color: var(--text); margin-bottom: 4px; }
+      .event-detail-page-btn { width: 100%; }
+      @media (max-width: 720px) {
+        .event-detail-actions { grid-template-columns: 1fr; }
+        .event-detail-content { padding-inline: 14px; }
+      }
     </style>
   </head>
   <body>
@@ -2392,17 +2594,15 @@
           listingDataMap[listingId] = Object.assign({}, data, { id: listingId });
 
           var article = document.createElement('article');
-          article.className = listingType === 'job' ? 'listing-card listing-card-clickable' : 'listing-card';
+          article.className = 'listing-card listing-card-clickable';
           article.setAttribute('role', 'listitem');
           article.setAttribute('data-type', listingType);
           article.setAttribute('data-location', data.location || '');
           article.setAttribute('data-keywords', keywords);
           article.setAttribute('data-listing-id', listingId);
-          if (listingType === 'job') {
-            article.style.cursor = 'pointer';
-            article.setAttribute('tabindex', '0');
-            article.setAttribute('aria-label', 'View details for ' + (data.title || 'job'));
-          }
+          article.style.cursor = 'pointer';
+          article.setAttribute('tabindex', '0');
+          article.setAttribute('aria-label', 'View details for ' + (data.title || listingType));
 
           var visualDiv = document.createElement('div');
           visualDiv.className = 'listing-visual';
@@ -2464,6 +2664,7 @@
         }
 
         function publishToMainFeed(database, postText, coverDataUrl, userId) {
+          var listingMeta = arguments.length > 4 ? arguments[4] : null;
           return new Promise(function (resolve) {
             if (!database || !userId) { resolve(); return; }
             storeCoverMediaRecord(database, coverDataUrl).then(function (mediaId) {
@@ -2471,6 +2672,14 @@
                 id: generateListingId('post'),
                 userId: userId,
                 text: postText,
+                type: listingMeta && listingMeta.type ? listingMeta.type : '',
+                listingId: listingMeta && listingMeta.id ? listingMeta.id : '',
+                listingTitle: listingMeta && listingMeta.title ? listingMeta.title : '',
+                listingSummary: listingMeta && listingMeta.summary ? listingMeta.summary : '',
+                listingDetails: listingMeta && listingMeta.details ? listingMeta.details : '',
+                listingMeta: listingMeta && listingMeta.meta ? listingMeta.meta : '',
+                listingLocation: listingMeta && listingMeta.location ? listingMeta.location : '',
+                listingDateTime: listingMeta && listingMeta.dateTime ? listingMeta.dateTime : '',
                 imageMediaIds: mediaId ? [mediaId] : [],
                 videoMediaId: null,
                 gifUrl: '',
@@ -2484,21 +2693,61 @@
         }
 
         function getInitials(name, username) {
-          var source = String(name || username || 'ZG').trim();
-          if (!source) return 'ZG';
-          var parts = source.split(/\s+/).filter(Boolean).slice(0, 2);
-          var letters = parts.map(function (part) { return part.charAt(0).toUpperCase(); }).join('');
-          return letters || source.slice(0, 2).toUpperCase();
+          var source = String(name || username || '').trim();
+          if (!source) return 'ZU';
+          var words = source.split(/\s+/).filter(Boolean);
+          if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+          return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
         }
 
         function getAvatarColor(seed) {
-          var palette = ['#cc2222', '#991b1b', '#7c3aed', '#1d4ed8', '#0f766e', '#b45309'];
+          var palette = ['#b91c1c', '#1d4ed8', '#15803d', '#6d28d9', '#92400e', '#0f766e', '#be185d', '#065f46'];
           var text = String(seed || 'zorexium');
-          var total = 0;
+          var hash = 0;
           for (var index = 0; index < text.length; index += 1) {
-            total += text.charCodeAt(index);
+            hash = ((hash << 5) - hash) + text.charCodeAt(index);
+            hash |= 0;
           }
-          return palette[total % palette.length];
+          return palette[Math.abs(hash) % palette.length];
+        }
+
+        function getAvatarSeed(name, username, fallback) {
+          return String(username || fallback || name || 'zorexium').trim().toLowerCase();
+        }
+
+        function buildProfileHref(userId) {
+          var normalizedUserId = String(userId || '').trim();
+          return normalizedUserId ? ('account-dashboard.html?user=' + encodeURIComponent(normalizedUserId)) : 'account-dashboard.html';
+        }
+
+        function formatEventDateTime(value, endValue) {
+          if (!value) return '';
+          var startDate = new Date(value);
+          if (isNaN(startDate.getTime())) return String(value);
+          var locale = navigator.language || 'en-US';
+          var startText = startDate.toLocaleString(locale, {
+            weekday: 'short',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          });
+          if (!endValue) return startText;
+          var endDate = new Date(endValue);
+          if (isNaN(endDate.getTime())) return startText;
+          return startText + ' – ' + endDate.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+        }
+
+        function getListingOwner(data) {
+          if (data && data.creatorUserId) {
+            for (var index = 0; index < viewState.allAccounts.length; index += 1) {
+              if (viewState.allAccounts[index].id === data.creatorUserId) {
+                return viewState.allAccounts[index];
+              }
+            }
+          }
+          return null;
         }
 
         function getProfileLocation(user) {
@@ -2522,7 +2771,7 @@
           var name = document.getElementById('job-user-name');
           var displayName = user ? (user.name || user.username || 'Your account') : 'Your account';
           avatar.textContent = getInitials(user && user.name, user && user.username);
-          avatar.style.background = 'linear-gradient(135deg, ' + getAvatarColor(user && user.username) + ', #111111)';
+          avatar.style.background = 'linear-gradient(135deg, ' + getAvatarColor(getAvatarSeed(user && user.name, user && user.username, user && user.id)) + ', #111111)';
           name.textContent = displayName;
           var locationValue = getProfileLocation(user);
           if (locationValue) {
@@ -2576,7 +2825,7 @@
             var avatar = document.createElement('div');
             avatar.className = 'person-avatar';
             avatar.textContent = getInitials(person.name, person.username);
-            avatar.style.background = 'linear-gradient(135deg, ' + getAvatarColor(person.username) + ', #111111)';
+            avatar.style.background = 'linear-gradient(135deg, ' + getAvatarColor(getAvatarSeed(person.name, person.username, person.id)) + ', #111111)';
             var checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = 'cohost-' + person.id;
@@ -2711,8 +2960,10 @@
 
         function openJobDetail(data) {
           if (!data) return;
+          closeEventDetail();
           var overlay = document.getElementById('job-detail-overlay');
           if (!overlay) return;
+          var owner = getListingOwner(data);
 
           // Top bar
           document.getElementById('jd-top-bar-title').textContent = data.title || 'Job Details';
@@ -2735,11 +2986,12 @@
           }
 
           // Creator node
-          var creatorName = (viewState.currentUser && (viewState.currentUser.name || viewState.currentUser.username)) || 'Your Company';
-          var creatorLocation = data.location || (viewState.currentUser && getProfileLocation(viewState.currentUser)) || '';
+          var creatorName = data.creatorName || (owner && (owner.name || owner.username)) || 'Your Company';
+          var creatorUsername = data.creatorUsername || (owner && owner.username) || '';
+          var creatorLocation = data.location || data.creatorLocation || (owner && getProfileLocation(owner)) || '';
           var avatarEl = document.getElementById('jd-creator-avatar');
-          avatarEl.textContent = getInitials(creatorName, null);
-          avatarEl.style.background = 'linear-gradient(135deg,' + getAvatarColor(creatorName) + ',#111111)';
+          avatarEl.textContent = getInitials(creatorName, creatorUsername);
+          avatarEl.style.background = 'linear-gradient(135deg,' + getAvatarColor(getAvatarSeed(creatorName, creatorUsername, data.creatorUserId || (owner && owner.id))) + ',#111111)';
           document.getElementById('jd-creator-name').textContent = creatorName;
           document.getElementById('jd-creator-location').textContent = creatorLocation;
 
@@ -2796,12 +3048,12 @@
 
           // About creator card
           var cardAvatarEl = document.getElementById('jd-card-avatar');
-          cardAvatarEl.textContent = getInitials(creatorName, null);
-          cardAvatarEl.style.background = 'linear-gradient(135deg,' + getAvatarColor(creatorName) + ',#111111)';
+          cardAvatarEl.textContent = getInitials(creatorName, creatorUsername);
+          cardAvatarEl.style.background = 'linear-gradient(135deg,' + getAvatarColor(getAvatarSeed(creatorName, creatorUsername, data.creatorUserId || (owner && owner.id))) + ',#111111)';
           document.getElementById('jd-card-name').textContent = creatorName;
-          var followers = viewState.currentUser ? (viewState.currentUser.profileFollowers || 0) : 0;
-          document.getElementById('jd-card-followers').textContent = followers ? followers + ' followers' : 'New on Zorexium';
-          var bio = (viewState.currentUser && viewState.currentUser.profileBio) || '';
+          var followers = data.creatorFollowers || (owner && owner.profileFollowers) || 0;
+          document.getElementById('jd-card-followers').textContent = followers ? followers + ' followers' : '';
+          var bio = data.creatorBio || (owner && owner.profileBio) || '';
           document.getElementById('jd-card-bio').textContent = bio;
           var mapLabel = document.getElementById('jd-map-label');
           mapLabel.textContent = creatorLocation || 'Location not specified';
@@ -2815,6 +3067,12 @@
           // Reset message input
           var msgInput = document.getElementById('jd-msg-input');
           if (msgInput) msgInput.value = '';
+          var viewPageBtn = document.getElementById('jd-view-page-btn');
+          if (viewPageBtn) {
+            viewPageBtn.onclick = function () {
+              window.location.href = buildProfileHref(data.creatorUserId || (owner && owner.id) || '');
+            };
+          }
 
           overlay.classList.add('open');
           overlay.setAttribute('aria-hidden', 'false');
@@ -2828,6 +3086,270 @@
           overlay.classList.remove('open');
           overlay.setAttribute('aria-hidden', 'true');
           document.body.style.overflow = '';
+        }
+
+        function closeEventDetail() {
+          var overlay = document.getElementById('event-detail-overlay');
+          if (!overlay) return;
+          overlay.classList.remove('open');
+          overlay.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
+        }
+
+        function buildEventListingCardMarkup(data) {
+          var card = document.createElement('button');
+          card.className = 'event-suggested-card';
+          card.type = 'button';
+          if (data.coverDataUrl) {
+            var img = document.createElement('img');
+            img.src = data.coverDataUrl;
+            img.alt = '';
+            img.setAttribute('aria-hidden', 'true');
+            card.appendChild(img);
+          }
+          var title = document.createElement('strong');
+          title.textContent = data.title || 'Event';
+          var meta = document.createElement('p');
+          meta.className = 'event-post-meta';
+          meta.textContent = formatEventDateTime(data.eventStart, data.eventEnd) || 'Upcoming event';
+          var venue = document.createElement('p');
+          venue.className = 'event-post-meta';
+          venue.textContent = data.location || data.logistics || 'Venue to be announced';
+          card.appendChild(title);
+          card.appendChild(meta);
+          card.appendChild(venue);
+          card.addEventListener('click', function () {
+            openEventDetail(data);
+          });
+          return card;
+        }
+
+        function renderEventDetailTab(tabName) {
+          var aboutPanel = document.getElementById('event-detail-panel-about');
+          var discussionPanel = document.getElementById('event-detail-panel-discussion');
+          Array.prototype.slice.call(document.querySelectorAll('.event-detail-tab')).forEach(function (button) {
+            var selected = button.getAttribute('data-event-tab') === tabName;
+            button.classList.toggle('active', selected);
+            button.setAttribute('aria-selected', selected ? 'true' : 'false');
+          });
+          aboutPanel.hidden = tabName !== 'about';
+          discussionPanel.hidden = tabName !== 'discussion';
+        }
+
+        function openEventDetail(data) {
+          if (!data) return;
+          closeJobDetail();
+          var overlay = document.getElementById('event-detail-overlay');
+          if (!overlay) return;
+          var owner = getListingOwner(data);
+          var creatorName = data.creatorName || (owner && (owner.name || owner.username)) || 'Event host';
+          var creatorUsername = data.creatorUsername || (owner && owner.username) || '';
+          var creatorUserId = data.creatorUserId || (owner && owner.id) || '';
+          var creatorLocation = data.location || data.creatorLocation || (owner && getProfileLocation(owner)) || '';
+          var hero = document.getElementById('event-detail-hero');
+          var heroPlaceholder = document.getElementById('event-detail-hero-placeholder');
+          var existingHero = hero.querySelector('img');
+          if (existingHero) hero.removeChild(existingHero);
+          if (data.coverDataUrl) {
+            var heroImg = document.createElement('img');
+            heroImg.src = data.coverDataUrl;
+            heroImg.alt = '';
+            heroImg.setAttribute('aria-hidden', 'true');
+            hero.insertBefore(heroImg, heroPlaceholder);
+            heroPlaceholder.style.display = 'none';
+          } else {
+            heroPlaceholder.style.display = '';
+          }
+
+          document.getElementById('event-detail-top-bar-title').textContent = data.title || 'Event Details';
+          document.getElementById('event-detail-title').textContent = data.title || 'Event';
+          document.getElementById('event-detail-date').textContent = formatEventDateTime(data.eventStart, data.eventEnd) || 'Schedule coming soon';
+          var cohostCount = Array.isArray(data.cohosts) ? data.cohosts.length : 0;
+          document.getElementById('event-detail-subtitle').textContent = toTitleCase(data.privacy || 'Public') + ' · Event by ' + creatorName + (cohostCount ? (' and ' + cohostCount + ' others') : '');
+          document.getElementById('event-detail-interested-btn').classList.add('primary');
+          document.getElementById('event-detail-interested-btn').textContent = 'Interested';
+          document.getElementById('event-detail-going-btn').classList.remove('primary');
+          document.getElementById('event-detail-going-btn').textContent = 'Going';
+
+          var metaList = document.getElementById('event-detail-meta-list');
+          metaList.innerHTML = '';
+          [
+            { icon: '📍', title: 'Location', value: creatorLocation || data.logistics || 'Venue to be announced' },
+            { icon: '✅', title: 'Attendance', value: (cohostCount + 12) + ' going · ' + (cohostCount + 24) + ' interested' },
+            { icon: '🎫', title: 'Tickets', value: data.creatorWebsite || 'Tickets available on request' },
+            { icon: '🌐', title: 'Audience', value: toTitleCase(data.privacy || 'Public') }
+          ].forEach(function (row) {
+            var item = document.createElement('div');
+            item.className = 'event-detail-meta-row';
+            item.innerHTML = '<span>' + row.icon + '</span><div><strong>' + escapeHtml(row.title) + '</strong><span>' + escapeHtml(row.value) + '</span></div>';
+            metaList.appendChild(item);
+          });
+
+          var whatToExpect = document.getElementById('event-detail-what-to-expect');
+          var whatToExpectText = data.details || data.logistics || data.title || 'Event details coming soon.';
+          whatToExpect.textContent = whatToExpectText;
+          whatToExpect.classList.remove('expanded');
+          var seeMoreBtn = document.getElementById('event-detail-see-more');
+          seeMoreBtn.hidden = true;
+          requestAnimationFrame(function () {
+            if (whatToExpect.scrollHeight > whatToExpect.clientHeight + 4) {
+              seeMoreBtn.hidden = false;
+            }
+          });
+
+          var hostsContainer = document.getElementById('event-detail-hosts');
+          hostsContainer.innerHTML = '';
+          var hosts = [{ id: creatorUserId, name: creatorName, username: creatorUsername, subtitle: 'Primary host', website: data.creatorWebsite || '' }]
+            .concat((data.cohosts || []).map(function (person, index) {
+              return {
+                id: person.id || ('cohost-' + index),
+                name: person.name || person.username || 'Co-host',
+                username: person.username || '',
+                subtitle: 'Co-host',
+                website: ''
+              };
+            }));
+          hosts.forEach(function (person) {
+            var hostCard = document.createElement('article');
+            hostCard.className = 'event-host-card';
+            hostCard.innerHTML = '<div class="event-host-top"><div class="event-host-avatar" style="background:' + getAvatarColor(getAvatarSeed(person.name, person.username, person.id)) + ';">' + escapeHtml(getInitials(person.name, person.username)) + '</div><div><p class="event-host-name">' + escapeHtml(person.name) + '</p><p class="event-host-subtitle">' + escapeHtml(person.subtitle) + '</p></div></div>';
+            var actionRow = document.createElement('div');
+            actionRow.className = 'event-host-actions';
+            if (person.website) {
+              var link = document.createElement('a');
+              link.className = 'event-inline-link';
+              link.href = person.website;
+              link.textContent = person.website.replace(/^mailto:/, '');
+              actionRow.appendChild(link);
+            }
+            var followBtn = document.createElement('button');
+            followBtn.className = 'event-follow-btn';
+            followBtn.type = 'button';
+            followBtn.textContent = '+ Follow';
+            actionRow.appendChild(followBtn);
+            hostCard.appendChild(actionRow);
+            hostsContainer.appendChild(hostCard);
+          });
+
+          var friendsContainer = document.getElementById('event-detail-friends');
+          friendsContainer.innerHTML = '';
+          getSuggestedPeople(viewState.allAccounts).slice(0, 3).forEach(function (person) {
+            var row = document.createElement('div');
+            row.className = 'event-friend-row';
+            row.innerHTML = '<div class="event-friend-meta"><div class="event-host-avatar" style="background:' + getAvatarColor(getAvatarSeed(person.name, person.username, person.id)) + ';">' + escapeHtml(getInitials(person.name, person.username)) + '</div><div><p class="event-host-name">' + escapeHtml(person.name) + '</p><p class="event-friends-copy">@' + escapeHtml(person.username || 'user') + '</p></div></div>';
+            var inviteBtn = document.createElement('button');
+            inviteBtn.className = 'event-inline-btn';
+            inviteBtn.type = 'button';
+            inviteBtn.textContent = 'Invite';
+            row.appendChild(inviteBtn);
+            friendsContainer.appendChild(row);
+          });
+          if (!friendsContainer.childNodes.length) {
+            friendsContainer.innerHTML = '<p class="event-friends-copy">Invite friends once more accounts join your Zorexium network.</p>';
+          }
+
+          var suggestedContainer = document.getElementById('event-detail-suggested-events');
+          suggestedContainer.innerHTML = '';
+          Object.keys(listingDataMap).map(function (key) { return listingDataMap[key]; }).filter(function (item) {
+            return item && item.id !== data.id && String(item.type || '').toLowerCase() === 'event';
+          }).slice(0, 6).forEach(function (eventItem) {
+            suggestedContainer.appendChild(buildEventListingCardMarkup(eventItem));
+          });
+          if (!suggestedContainer.childNodes.length) {
+            suggestedContainer.innerHTML = '<p class="event-post-meta">Suggested events will appear here as more event listings are published.</p>';
+          }
+
+          var venueCopy = document.getElementById('event-detail-venue-copy');
+          venueCopy.innerHTML = '<p class="event-venue-copy"><strong>Get directions:</strong> ' + escapeHtml(creatorLocation || 'Venue details pending') + '</p>' +
+            '<p class="event-venue-copy"><strong>Phone:</strong> ' + escapeHtml((owner && owner.profileEmail) || 'Contact the host from their page') + '</p>' +
+            '<p class="event-venue-copy"><strong>About:</strong> ' + escapeHtml(data.creatorBio || (owner && owner.profileBio) || data.details || 'Venue information will be added by the host.') + '</p>';
+          document.getElementById('event-detail-page-btn').onclick = function () {
+            window.location.href = buildProfileHref(creatorUserId);
+          };
+
+          var regionalHeading = document.getElementById('event-detail-regional-heading');
+          var cityLabel = creatorLocation ? creatorLocation.split(',')[0] : 'your area';
+          regionalHeading.textContent = 'More events in ' + cityLabel;
+          var regionalContainer = document.getElementById('event-detail-regional-events');
+          regionalContainer.innerHTML = '';
+          Object.keys(listingDataMap).map(function (key) { return listingDataMap[key]; }).filter(function (item) {
+            return item && item.id !== data.id && String(item.type || '').toLowerCase() === 'event' && String(item.location || '').indexOf(cityLabel) !== -1;
+          }).slice(0, 6).forEach(function (eventItem) {
+            regionalContainer.appendChild(buildEventListingCardMarkup(eventItem));
+          });
+          if (!regionalContainer.childNodes.length) {
+            regionalContainer.innerHTML = '<p class="event-post-meta">More local events will appear here when nearby hosts publish them.</p>';
+          }
+
+          var recentPostsContainer = document.getElementById('event-detail-recent-posts');
+          recentPostsContainer.innerHTML = '';
+          [
+            { title: 'Event announcement', copy: data.details || 'The host just shared the event announcement and timing details.' },
+            { title: 'Host update', copy: creatorName + ' is managing visibility set to ' + toTitleCase(data.privacy || 'Public') + '.' },
+            { title: 'Logistics update', copy: data.logistics || creatorLocation || 'Venue details will be shared closer to the event.' }
+          ].forEach(function (entry) {
+            var row = document.createElement('div');
+            row.className = 'event-post-row';
+            row.innerHTML = '<div><p class="event-host-name">' + escapeHtml(entry.title) + '</p><p class="event-post-meta">' + escapeHtml(entry.copy) + '</p></div><span class="event-post-meta">Just now</span>';
+            recentPostsContainer.appendChild(row);
+          });
+
+          renderEventDetailTab('about');
+          overlay.classList.add('open');
+          overlay.setAttribute('aria-hidden', 'false');
+          overlay.scrollTop = 0;
+          document.body.style.overflow = 'hidden';
+        }
+
+        function openListingDetail(data) {
+          if (!data) return;
+          if (String(data.type || '').toLowerCase() === 'event') openEventDetail(data);
+          else openJobDetail(data);
+        }
+
+        function hydrateExistingListingCards() {
+          Array.prototype.slice.call(document.querySelectorAll('#jobs-events-listing-grid .listing-card')).forEach(function (card) {
+            if (card.getAttribute('data-listing-id')) return;
+            var listingType = card.getAttribute('data-type') === 'event' ? 'event' : 'job';
+            var titleEl = card.querySelector('.listing-title');
+            var metaEl = card.querySelector('.listing-meta');
+            var locationEl = card.querySelector('.listing-location');
+            var imageEl = card.querySelector('.listing-visual img');
+            var fallbackData = {
+              id: generateListingId('seed-' + listingType),
+              type: listingType,
+              title: titleEl ? titleEl.textContent.trim() : (listingType === 'event' ? 'Event' : 'Job'),
+              location: locationEl ? locationEl.textContent.trim() : (card.getAttribute('data-location') || ''),
+              jobType: listingType === 'job' && metaEl ? metaEl.textContent.trim() : '',
+              privacy: listingType === 'event' ? 'Public' : '',
+              coverDataUrl: imageEl ? imageEl.src : '',
+              details: '',
+              description: '',
+              eventStart: '',
+              logistics: locationEl ? locationEl.textContent.trim() : ''
+            };
+            listingDataMap[fallbackData.id] = fallbackData;
+            card.classList.add('listing-card-clickable');
+            card.style.cursor = 'pointer';
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', 'View details for ' + fallbackData.title);
+            card.setAttribute('data-listing-id', fallbackData.id);
+          });
+        }
+
+        function openRequestedListingFromQuery() {
+          var params = new URLSearchParams(window.location.search);
+          var listingId = params.get('listing');
+          if (!listingId) return;
+          if (listingDataMap[listingId]) openListingDetail(listingDataMap[listingId]);
+        }
+
+        function runWhenDomReady(callback) {
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', callback, { once: true });
+          } else {
+            callback();
+          }
         }
 
         function openCreateFlow(type) {
@@ -3059,6 +3581,7 @@
             event.preventDefault();
             var statusEl = document.getElementById('job-submit-status');
             var title = String(document.getElementById('job-title').value || '').trim();
+            var currentUser = viewState.currentUser;
             if (!title) {
               statusEl.textContent = 'Please enter a job title.';
               statusEl.className = 'submit-status error';
@@ -3075,7 +3598,13 @@
               payType: document.getElementById('pay-type').value,
               minPay: String(document.getElementById('minimum-pay').value || '').trim(),
               maxPay: String(document.getElementById('maximum-pay').value || '').trim(),
-              coverDataUrl: extractCoverDataUrl('job-cover-preview')
+              coverDataUrl: extractCoverDataUrl('job-cover-preview'),
+              creatorUserId: currentUser && currentUser.id || '',
+              creatorName: currentUser && (currentUser.name || currentUser.username) || 'Your account',
+              creatorUsername: currentUser && currentUser.username || '',
+              creatorLocation: currentUser && getProfileLocation(currentUser) || '',
+              creatorFollowers: currentUser && currentUser.profileFollowers || 0,
+              creatorBio: currentUser && currentUser.profileBio || ''
             };
             var postText = '📋 New Job: ' + jobData.title +
               (jobData.jobType ? ' (' + jobData.jobType + ')' : '') +
@@ -3084,8 +3613,16 @@
             statusEl.textContent = 'Publishing…';
             statusEl.className = 'submit-status';
             openDb().then(function (database) {
-              var userId = viewState.currentUser ? viewState.currentUser.id : null;
-              return publishToMainFeed(database, postText, jobData.coverDataUrl, userId).then(function () {
+              var userId = currentUser ? currentUser.id : null;
+              return publishToMainFeed(database, postText, jobData.coverDataUrl, userId, {
+                id: jobData.id,
+                type: jobData.type,
+                title: jobData.title,
+                summary: jobData.description,
+                details: jobData.description,
+                meta: jobData.jobType || 'Listing',
+                location: jobData.location
+              }).then(function () {
                 addListingCardToFeed(jobData);
                 saveListingToStorage(jobData);
                 statusEl.textContent = 'Job published to your listings and main feed.';
@@ -3104,6 +3641,7 @@
             event.preventDefault();
             var statusEl = document.getElementById('event-submit-status');
             var title = String(document.getElementById('event-name').value || '').trim();
+            var currentUser = viewState.currentUser;
             if (!title) {
               statusEl.textContent = 'Please enter an event name.';
               statusEl.className = 'submit-status error';
@@ -3114,6 +3652,7 @@
               type: 'event',
               title: title,
               eventStart: document.getElementById('event-start').value,
+              eventEnd: String(document.getElementById('event-end').value || '').trim(),
               details: String(document.getElementById('event-details').value || '').trim(),
               privacy: document.getElementById('event-privacy').value,
               logistics: viewState.logistics.mode === 'person'
@@ -3122,7 +3661,16 @@
               location: viewState.logistics.mode === 'person'
                 ? (viewState.logistics.inPersonLocation || '')
                 : 'Virtual',
-              coverDataUrl: extractCoverDataUrl('event-cover-preview')
+              coverDataUrl: extractCoverDataUrl('event-cover-preview'),
+              cohosts: viewState.selectedCohosts.slice(),
+              settings: Object.assign({}, viewState.settings),
+              creatorUserId: currentUser && currentUser.id || '',
+              creatorName: currentUser && (currentUser.name || currentUser.username) || 'Your account',
+              creatorUsername: currentUser && currentUser.username || '',
+              creatorLocation: currentUser && getProfileLocation(currentUser) || '',
+              creatorFollowers: currentUser && currentUser.profileFollowers || 0,
+              creatorBio: currentUser && currentUser.profileBio || '',
+              creatorWebsite: currentUser && currentUser.profileEmail ? ('mailto:' + currentUser.profileEmail) : ''
             };
             var postText = '📅 New Event: ' + eventData.title +
               (eventData.eventStart ? ' · ' + eventData.eventStart : '') +
@@ -3131,8 +3679,17 @@
             statusEl.textContent = 'Publishing…';
             statusEl.className = 'submit-status';
             openDb().then(function (database) {
-              var userId = viewState.currentUser ? viewState.currentUser.id : null;
-              return publishToMainFeed(database, postText, eventData.coverDataUrl, userId).then(function () {
+              var userId = currentUser ? currentUser.id : null;
+              return publishToMainFeed(database, postText, eventData.coverDataUrl, userId, {
+                id: eventData.id,
+                type: eventData.type,
+                title: eventData.title,
+                summary: eventData.details,
+                details: eventData.details,
+                meta: toTitleCase(eventData.privacy || 'Public'),
+                location: eventData.location,
+                dateTime: formatEventDateTime(eventData.eventStart, eventData.eventEnd)
+              }).then(function () {
                 addListingCardToFeed(eventData);
                 saveListingToStorage(eventData);
                 statusEl.textContent = 'Event published to your listings and main feed.';
@@ -3179,107 +3736,159 @@
         initializeStaticModalBindings();
         initializeForms();
         loadListingsFromStorage();
+        hydrateExistingListingCards();
 
         // Job detail overlay bindings
         (function () {
-          var grid = document.getElementById('jobs-events-listing-grid');
-          if (grid) {
-            grid.addEventListener('click', function (event) {
-              var card = event.target.closest('[data-listing-id]');
-              if (!card) return;
-              if (card.getAttribute('data-type') !== 'job') return;
-              var id = card.getAttribute('data-listing-id');
-              var data = listingDataMap[id];
-              if (data) openJobDetail(data);
-            });
-            grid.addEventListener('keydown', function (event) {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              var card = event.target.closest('[data-listing-id]');
-              if (!card || card.getAttribute('data-type') !== 'job') return;
-              event.preventDefault();
-              var id = card.getAttribute('data-listing-id');
-              var data = listingDataMap[id];
-              if (data) openJobDetail(data);
-            });
-          }
-          var backBtn = document.getElementById('jd-back-btn');
-          if (backBtn) backBtn.addEventListener('click', closeJobDetail);
-          var overlay = document.getElementById('job-detail-overlay');
-          if (overlay) {
-            document.addEventListener('keydown', function (event) {
-              if (event.key === 'Escape' && overlay.classList.contains('open')) closeJobDetail();
-            });
-          }
-
-          var seeMoreBtn = document.getElementById('jd-see-more-btn');
-          if (seeMoreBtn) {
-            seeMoreBtn.addEventListener('click', function () {
-              var descEl = document.getElementById('jd-description');
-              descEl.classList.remove('collapsed');
-              seeMoreBtn.style.display = 'none';
-            });
-          }
-
-          var shareBtn = document.getElementById('jd-share-btn');
-          if (shareBtn) {
-            shareBtn.addEventListener('click', function () {
-              if (navigator.share) {
-                // User cancellation (AbortError) is intentional; log other errors.
-                navigator.share({ title: document.getElementById('jd-title').textContent, url: window.location.href }).catch(function (err) {
-                  if (err && err.name !== 'AbortError') console.warn('[Zorexium] Share failed:', err);
-                });
-              } else {
-                navigator.clipboard.writeText(window.location.href).then(function () {
-                  var originalHtml = shareBtn.innerHTML;
-                  shareBtn.textContent = 'Copied!';
-                  setTimeout(function () { shareBtn.innerHTML = originalHtml; }, 1500);
-                }).catch(function (err) {
-                  console.warn('[Zorexium] Clipboard write failed:', err);
-                  shareBtn.textContent = 'Copy failed';
-                  setTimeout(function () { shareBtn.textContent = 'Share'; }, 1500);
-                });
-              }
-            });
-          }
-
-          var saveBtn = document.getElementById('jd-save-btn');
-          if (saveBtn) {
-            saveBtn.addEventListener('click', function () {
-              var saved = saveBtn.getAttribute('data-saved') === 'true';
-              saveBtn.setAttribute('data-saved', saved ? 'false' : 'true');
-              saveBtn.style.color = saved ? '' : 'var(--accent)';
-            });
-          }
-
-          var moreBtn = document.getElementById('jd-more-btn');
-          var moreSheet = document.getElementById('jd-more-sheet');
-          var moreCancelBtn = document.getElementById('jd-more-cancel-btn');
-          if (moreBtn && moreSheet) {
-            moreBtn.addEventListener('click', function () {
-              moreSheet.classList.add('open');
-              moreSheet.setAttribute('aria-hidden', 'false');
-            });
-            moreSheet.addEventListener('click', function (event) {
-              if (event.target === moreSheet) {
-                moreSheet.classList.remove('open');
-                moreSheet.setAttribute('aria-hidden', 'true');
-              }
-            });
-            if (moreCancelBtn) {
-              moreCancelBtn.addEventListener('click', function () {
-                moreSheet.classList.remove('open');
-                moreSheet.setAttribute('aria-hidden', 'true');
+          runWhenDomReady(function () {
+            var grid = document.getElementById('jobs-events-listing-grid');
+            if (grid) {
+              grid.addEventListener('click', function (event) {
+                var card = event.target.closest('[data-listing-id]');
+                if (!card) return;
+                var id = card.getAttribute('data-listing-id');
+                var data = listingDataMap[id];
+                if (data) openListingDetail(data);
+              });
+              grid.addEventListener('keydown', function (event) {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                var card = event.target.closest('[data-listing-id]');
+                if (!card) return;
+                event.preventDefault();
+                var id = card.getAttribute('data-listing-id');
+                var data = listingDataMap[id];
+                if (data) openListingDetail(data);
               });
             }
-            ['jd-report-job-btn', 'jd-report-creator-btn', 'jd-get-help-btn'].forEach(function (btnId) {
-              var btn = document.getElementById(btnId);
-              if (btn) btn.addEventListener('click', function () {
-                moreSheet.classList.remove('open');
-                moreSheet.setAttribute('aria-hidden', 'true');
-                alert(btn.textContent.trim() + ' — this feature is coming soon.');
+            var backBtn = document.getElementById('jd-back-btn');
+            if (backBtn) backBtn.addEventListener('click', closeJobDetail);
+            var closeBtn = document.getElementById('jd-close-btn');
+            if (closeBtn) closeBtn.addEventListener('click', closeJobDetail);
+            var overlay = document.getElementById('job-detail-overlay');
+            if (overlay) {
+              overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) closeJobDetail();
+              });
+              document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && overlay.classList.contains('open')) closeJobDetail();
+              });
+            }
+            var eventOverlay = document.getElementById('event-detail-overlay');
+            var eventBackBtn = document.getElementById('event-detail-back-btn');
+            var eventCloseBtn = document.getElementById('event-detail-close-btn');
+            if (eventBackBtn) eventBackBtn.addEventListener('click', closeEventDetail);
+            if (eventCloseBtn) eventCloseBtn.addEventListener('click', closeEventDetail);
+            if (eventOverlay) {
+              eventOverlay.addEventListener('click', function (event) {
+                if (event.target === eventOverlay) closeEventDetail();
+              });
+              document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && eventOverlay.classList.contains('open')) closeEventDetail();
+              });
+            }
+
+            var seeMoreBtn = document.getElementById('jd-see-more-btn');
+            if (seeMoreBtn) {
+              seeMoreBtn.addEventListener('click', function () {
+                var descEl = document.getElementById('jd-description');
+                descEl.classList.remove('collapsed');
+                seeMoreBtn.style.display = 'none';
+              });
+            }
+            var eventSeeMoreBtn = document.getElementById('event-detail-see-more');
+            if (eventSeeMoreBtn) {
+              eventSeeMoreBtn.addEventListener('click', function () {
+                document.getElementById('event-detail-what-to-expect').classList.add('expanded');
+                eventSeeMoreBtn.hidden = true;
+              });
+            }
+            Array.prototype.slice.call(document.querySelectorAll('.event-detail-tab')).forEach(function (button) {
+              button.addEventListener('click', function () {
+                renderEventDetailTab(button.getAttribute('data-event-tab'));
               });
             });
-          }
+            [['event-detail-interested-btn', 'Interested'], ['event-detail-going-btn', 'Going']].forEach(function (entry) {
+              var actionButton = document.getElementById(entry[0]);
+              if (!actionButton) return;
+              actionButton.addEventListener('click', function () {
+                actionButton.classList.toggle('primary');
+                actionButton.textContent = actionButton.classList.contains('primary') ? (entry[1] + ' ✓') : entry[1];
+              });
+            });
+            var eventMoreBtn = document.getElementById('event-detail-more-btn');
+            if (eventMoreBtn) {
+              eventMoreBtn.addEventListener('click', function () {
+                alert('More event actions are coming soon.');
+              });
+            }
+            var inviteAllBtn = document.getElementById('event-detail-invite-all-btn');
+            if (inviteAllBtn) {
+              inviteAllBtn.addEventListener('click', function () {
+                alert('Invite flow coming soon.');
+              });
+            }
+
+            var shareBtn = document.getElementById('jd-share-btn');
+            if (shareBtn) {
+              shareBtn.addEventListener('click', function () {
+                if (navigator.share) {
+                  // User cancellation (AbortError) is intentional; log other errors.
+                  navigator.share({ title: document.getElementById('jd-title').textContent, url: window.location.href }).catch(function (err) {
+                    if (err && err.name !== 'AbortError') console.warn('[Zorexium] Share failed:', err);
+                  });
+                } else {
+                  navigator.clipboard.writeText(window.location.href).then(function () {
+                    var originalHtml = shareBtn.innerHTML;
+                    shareBtn.textContent = 'Copied!';
+                    setTimeout(function () { shareBtn.innerHTML = originalHtml; }, 1500);
+                  }).catch(function (err) {
+                    console.warn('[Zorexium] Clipboard write failed:', err);
+                    shareBtn.textContent = 'Copy failed';
+                    setTimeout(function () { shareBtn.textContent = 'Share'; }, 1500);
+                  });
+                }
+              });
+            }
+
+            var saveBtn = document.getElementById('jd-save-btn');
+            if (saveBtn) {
+              saveBtn.addEventListener('click', function () {
+                var saved = saveBtn.getAttribute('data-saved') === 'true';
+                saveBtn.setAttribute('data-saved', saved ? 'false' : 'true');
+                saveBtn.style.color = saved ? '' : 'var(--accent)';
+              });
+            }
+
+            var moreBtn = document.getElementById('jd-more-btn');
+            var moreSheet = document.getElementById('jd-more-sheet');
+            var moreCancelBtn = document.getElementById('jd-more-cancel-btn');
+            if (moreBtn && moreSheet) {
+              moreBtn.addEventListener('click', function () {
+                moreSheet.classList.add('open');
+                moreSheet.setAttribute('aria-hidden', 'false');
+              });
+              moreSheet.addEventListener('click', function (event) {
+                if (event.target === moreSheet) {
+                  moreSheet.classList.remove('open');
+                  moreSheet.setAttribute('aria-hidden', 'true');
+                }
+              });
+              if (moreCancelBtn) {
+                moreCancelBtn.addEventListener('click', function () {
+                  moreSheet.classList.remove('open');
+                  moreSheet.setAttribute('aria-hidden', 'true');
+                });
+              }
+              ['jd-report-job-btn', 'jd-report-creator-btn', 'jd-get-help-btn'].forEach(function (btnId) {
+                var btn = document.getElementById(btnId);
+                if (btn) btn.addEventListener('click', function () {
+                  moreSheet.classList.remove('open');
+                  moreSheet.setAttribute('aria-hidden', 'true');
+                  alert(btn.textContent.trim() + ' — this feature is coming soon.');
+                });
+              });
+            }
+          });
         }());
 
         openDb().then(function (database) {
@@ -3295,10 +3904,12 @@
             }
             setJobIdentity(viewState.currentUser);
             renderCohosts();
+            runWhenDomReady(openRequestedListingFromQuery);
           });
         }).catch(function () {
           setJobIdentity(null);
           renderCohosts();
+          runWhenDomReady(openRequestedListingFromQuery);
         });
       }());
     </script>
@@ -3309,6 +3920,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <span class="jd-top-bar-title" id="jd-top-bar-title">Job Details</span>
+        <button class="jd-close-btn" id="jd-close-btn" type="button" aria-label="Close job details">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
       <div class="jd-body">
         <div class="jd-hero" id="jd-hero">
@@ -3397,6 +4011,89 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               <span id="jd-ratings-text">No reviews yet</span>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="event-detail-overlay" class="event-detail-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="event-detail-title">
+      <div class="jd-top-bar">
+        <button class="jd-back-btn" id="event-detail-back-btn" type="button" aria-label="Go back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="jd-top-bar-title" id="event-detail-top-bar-title">Event Details</span>
+        <button class="jd-close-btn" id="event-detail-close-btn" type="button" aria-label="Close event details">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="event-detail-body">
+        <div class="event-detail-hero" id="event-detail-hero">
+          <div class="event-detail-hero-placeholder" id="event-detail-hero-placeholder">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
+          </div>
+        </div>
+        <div class="event-detail-content">
+          <p class="event-detail-date" id="event-detail-date"></p>
+          <h1 class="event-detail-title" id="event-detail-title">Event title</h1>
+          <p class="event-detail-subtitle" id="event-detail-subtitle"></p>
+
+          <div class="event-detail-actions">
+            <button class="event-detail-action primary" type="button" id="event-detail-interested-btn">Interested</button>
+            <button class="event-detail-action" type="button" id="event-detail-going-btn">Going</button>
+            <button class="event-detail-action" type="button" id="event-detail-more-btn">More</button>
+          </div>
+
+          <section class="event-detail-grid">
+            <div class="event-detail-meta-list" id="event-detail-meta-list"></div>
+          </section>
+
+          <div class="event-detail-tabs" role="tablist" aria-label="Event detail sections">
+            <button class="event-detail-tab active" type="button" id="event-detail-tab-about" data-event-tab="about" aria-selected="true">About</button>
+            <button class="event-detail-tab" type="button" id="event-detail-tab-discussion" data-event-tab="discussion" aria-selected="false">Discussion</button>
+          </div>
+
+          <div class="event-detail-tab-panel" id="event-detail-panel-about">
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading">What to expect</h2>
+              <p class="event-detail-copy" id="event-detail-what-to-expect"></p>
+              <button class="event-detail-see-more" id="event-detail-see-more" type="button" hidden>See more</button>
+            </section>
+
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading">Meet your hosts</h2>
+              <div class="event-hosts-track" id="event-detail-hosts"></div>
+            </section>
+
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading">Go with friends</h2>
+              <div class="event-friends-actions">
+                <button class="event-detail-invite-btn" id="event-detail-invite-all-btn" type="button">Invite friends</button>
+              </div>
+              <div class="event-friends-list" id="event-detail-friends"></div>
+            </section>
+
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading">Suggested events</h2>
+              <div class="event-suggested-track" id="event-detail-suggested-events"></div>
+            </section>
+
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading" id="event-detail-venue-heading">About the Venue</h2>
+              <div class="event-venue-copy" id="event-detail-venue-copy"></div>
+              <button class="event-detail-page-btn" type="button" id="event-detail-page-btn">Go to Page</button>
+            </section>
+
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading" id="event-detail-regional-heading">More events nearby</h2>
+              <div class="event-regional-track" id="event-detail-regional-events"></div>
+            </section>
+          </div>
+
+          <div class="event-detail-tab-panel" id="event-detail-panel-discussion" hidden>
+            <section class="event-detail-panel">
+              <h2 class="event-detail-heading">Recent posts</h2>
+              <div class="event-post-list" id="event-detail-recent-posts"></div>
+            </section>
           </div>
         </div>
       </div>

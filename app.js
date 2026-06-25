@@ -43,6 +43,7 @@
   const MENTION_PATTERN = /@([a-zA-Z0-9_]+)/g;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
   const NPC_CHAR_LIMIT = 280;
+  const NPC_ENFORCE_CHAR_LIMIT = false;
   const NPC_MAX_IMAGES = 4;
 
   const authModal = document.getElementById('auth-modal');
@@ -805,6 +806,7 @@
       const header = article.querySelector('.post-header');
       const body = article.querySelector('.post-body');
       const imagePlaceholder = article.querySelector('.post-image-placeholder');
+      const companionCards = Array.from(article.querySelectorAll('.article-companion-card'));
       const mediaGrids = Array.from(article.querySelectorAll('.post-media-grid'));
       const mediaWrapper = article.querySelector('.post-media-wrapper');
       const videoShell = article.querySelector('.post-video-shell');
@@ -813,6 +815,9 @@
       if (header) postContainer.appendChild(header.cloneNode(true));
       if (body) postContainer.appendChild(body.cloneNode(true));
       if (imagePlaceholder) postContainer.appendChild(imagePlaceholder.cloneNode(true));
+      companionCards.forEach(function (card) {
+        postContainer.appendChild(card.cloneNode(true));
+      });
       mediaGrids.forEach(function (grid) {
         postContainer.appendChild(grid.cloneNode(true));
       });
@@ -985,7 +990,7 @@
     }, true);
 
     document.addEventListener('click', function (event) {
-      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, .post-poll, [data-action], .post-detail-modal, .post-video-shell')) {
+      if (event.target.closest('.post-actions, .post-comment-box, .post-media-toolbar, .post-poll, [data-action], [data-companion-link], .post-detail-modal, .post-video-shell')) {
         return;
       }
       const article = event.target.closest && event.target.closest('[data-post-id]');
@@ -1279,6 +1284,28 @@
     return palette[Math.abs(hash) % palette.length];
   }
 
+  function getAvatarSeed(name, username, fallback) {
+    return String(username || fallback || name || 'zorexium').trim().toLowerCase();
+  }
+
+  function buildProfileHref(userId) {
+    const normalizedUserId = String(userId || '').trim();
+    return normalizedUserId ? (ACCOUNT_DASHBOARD_PATH + '?user=' + encodeURIComponent(normalizedUserId)) : ACCOUNT_DASHBOARD_PATH;
+  }
+
+  function buildMarketplaceListingHref(listingId, listingType) {
+    const params = new URLSearchParams();
+    if (listingId) params.set('listing', String(listingId));
+    if (listingType) params.set('type', String(listingType));
+    const query = params.toString();
+    return MARKETPLACE_PAGE_PATH + (query ? ('?' + query) : '');
+  }
+
+  function getRequestedProfileUserId() {
+    if (!dashboardRoot) return '';
+    return new URLSearchParams(window.location.search).get('user') || '';
+  }
+
   function formatRelativeTime(timestamp) {
     const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
     if (seconds < 60) return 'Just now';
@@ -1373,10 +1400,11 @@
 
   function syncDashboardTriggers() {
     document.querySelectorAll('.post-avatar, .post-username').forEach(function (node) {
-      if (currentUser) {
+      const targetUserId = node.getAttribute('data-profile-user-id');
+      if (targetUserId || currentUser) {
         node.setAttribute('role', 'button');
         node.setAttribute('tabindex', '0');
-        node.setAttribute('aria-label', 'Open your account dashboard');
+        node.setAttribute('aria-label', targetUserId ? 'Open profile' : 'Open your account dashboard');
         node.style.cursor = 'pointer';
       } else {
         node.removeAttribute('role');
@@ -1519,8 +1547,8 @@
     }
   }
 
-  function buildDashboardTabCollections(userPosts, allPosts, user, userComments) {
-    const savedIds = user && user.savedPostIds ? user.savedPostIds : [];
+  function buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections) {
+    const savedIds = includePrivateCollections && user && user.savedPostIds ? user.savedPostIds : [];
     const allPostsList = Array.isArray(allPosts) ? allPosts : [];
     const commentList = Array.isArray(userComments) ? userComments : [];
     const postById = new Map(allPostsList.map(function (post) { return [post.id, post]; }));
@@ -1553,7 +1581,9 @@
       }),
       likes: [],
       saved: savedPosts,
-      marketplace: []
+      marketplace: userPosts.filter(function (post) {
+        return post.type === 'job' || post.type === 'event';
+      })
     };
   }
 
@@ -1691,15 +1721,21 @@
     header.appendChild(meta);
     article.appendChild(header);
 
-    if (post.text) {
+    if (post.text && post.type !== 'job' && post.type !== 'event') {
       const body = document.createElement('div');
       body.className = 'post-body';
       body.textContent = post.text;
       article.appendChild(body);
     }
 
+    avatar.setAttribute('data-profile-user-id', post.userId || '');
+    username.setAttribute('data-profile-user-id', post.userId || '');
+
     if (post.type === 'article') {
       const companionCard = await buildArticleCompanionCard(post);
+      article.appendChild(companionCard);
+    } else if (post.type === 'job' || post.type === 'event') {
+      const companionCard = await buildListingCompanionCard(post);
       article.appendChild(companionCard);
     } else {
       const mediaFragment = await buildMediaFragment(post);
@@ -1737,8 +1773,8 @@
     return article;
   }
 
-  async function renderDashboardTabs(userPosts, allPosts, user, userComments) {
-    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user, userComments);
+  async function renderDashboardTabs(userPosts, allPosts, user, userComments, includePrivateCollections) {
+    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections);
     for (let index = 0; index < profileTabPanels.length; index += 1) {
       const panel = profileTabPanels[index];
       const tabName = panel.getAttribute('data-panel') || 'posts';
@@ -2981,6 +3017,7 @@
     const card = document.createElement('a');
     card.className = 'article-companion-card';
     card.href = 'articles.html?read=' + encodeURIComponent(post.articleId || '');
+    card.setAttribute('data-companion-link', 'true');
 
     if (post.articleCoverMediaId) {
       const mediaRecord = await getMediaRecord(post.articleCoverMediaId);
@@ -2989,7 +3026,7 @@
         const img = document.createElement('img');
         img.className = 'article-companion-cover';
         if (isSafeMediaUrl(mediaSource.url)) img.src = mediaSource.url;
-        img.alt = escapeHtml(post.articleTitle || 'Article') + ' cover';
+        img.alt = String(post.articleTitle || 'Article') + ' cover';
         img.loading = 'lazy';
         card.appendChild(img);
       }
@@ -3013,6 +3050,61 @@
     const footer = document.createElement('p');
     footer.className = 'article-companion-footer';
     footer.innerHTML = ARTICLE_DOC_ICON + ' <span>Article</span>' + (post.articleReadTime ? ' <span class="article-companion-readtime">&middot; ' + escapeHtml(post.articleReadTime) + '</span>' : '');
+    body.appendChild(footer);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  async function buildListingCompanionCard(post) {
+    const listingType = String(post.type || '').toLowerCase() === 'event' ? 'event' : 'job';
+    const listingTypeLabel = listingType === 'event' ? 'Event' : 'Job';
+    const listingIcon = listingType === 'event'
+      ? '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>'
+      : '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>';
+    const card = document.createElement('a');
+    card.className = 'article-companion-card';
+    card.href = buildMarketplaceListingHref(post.listingId || post.id, listingType);
+    card.setAttribute('data-companion-link', 'true');
+
+    const coverMediaId = Array.isArray(post.imageMediaIds) && post.imageMediaIds.length ? post.imageMediaIds[0] : null;
+    if (coverMediaId) {
+      const mediaRecord = await getMediaRecord(coverMediaId);
+      const mediaSource = await getRenderableMediaSource(mediaRecord, { preferDataUrl: true });
+      if (mediaSource && mediaSource.url) {
+        const img = document.createElement('img');
+        img.className = 'article-companion-cover';
+        if (isSafeMediaUrl(mediaSource.url)) img.src = mediaSource.url;
+        img.alt = String(post.listingTitle || listingTypeLabel) + ' cover';
+        img.loading = 'lazy';
+        card.appendChild(img);
+      }
+    }
+
+    const body = document.createElement('div');
+    body.className = 'article-companion-body';
+
+    const title = document.createElement('p');
+    title.className = 'article-companion-title';
+    title.textContent = post.listingTitle || summarizePost(post);
+    body.appendChild(title);
+
+    const summaryText = String(post.listingSummary || post.listingDetails || post.text || '').trim();
+    if (summaryText) {
+      const excerpt = document.createElement('p');
+      excerpt.className = 'article-companion-excerpt';
+      excerpt.textContent = summaryText;
+      body.appendChild(excerpt);
+    }
+
+    const metaParts = [];
+    if (post.listingMeta) metaParts.push(post.listingMeta);
+    if (post.listingDateTime && metaParts.indexOf(post.listingDateTime) === -1) metaParts.push(post.listingDateTime);
+    if (post.listingLocation && metaParts.indexOf(post.listingLocation) === -1) metaParts.push(post.listingLocation);
+
+    const footer = document.createElement('p');
+    footer.className = 'article-companion-footer';
+    footer.innerHTML = listingIcon + ' <span>' + listingTypeLabel + '</span>' + (metaParts.length ? ' <span class="article-companion-readtime">&middot; ' + escapeHtml(metaParts.join(' · ')) + '</span>' : '');
     body.appendChild(footer);
 
     card.appendChild(body);
@@ -3071,7 +3163,7 @@
         const visibleMediaItems = mediaItems.slice(0, 4);
         const layoutCount = visibleMediaItems.length;
         const grid = document.createElement('div');
-        grid.className = 'post-media-grid g' + layoutCount + (layoutCount === 1 ? ' single' : '');
+        grid.className = 'post-media-grid g' + layoutCount + (layoutCount === 1 ? ' single feed-compact-single' : '');
         grid.setAttribute('data-media-viewer-gallery', registerMediaViewerGallery(mediaItems));
 
         visibleMediaItems.forEach(function (mediaItem, index) {
@@ -3211,15 +3303,21 @@
       header.appendChild(meta);
       article.appendChild(header);
 
-      if (post.text) {
+      if (post.text && post.type !== 'job' && post.type !== 'event') {
         const body = document.createElement('div');
         body.className = 'post-body';
         body.textContent = post.text;
         article.appendChild(body);
       }
 
+      avatar.setAttribute('data-profile-user-id', post.userId || '');
+      username.setAttribute('data-profile-user-id', post.userId || '');
+
       if (post.type === 'article') {
         const companionCard = await buildArticleCompanionCard(post);
+        article.appendChild(companionCard);
+      } else if (post.type === 'job' || post.type === 'event') {
+        const companionCard = await buildListingCompanionCard(post);
         article.appendChild(companionCard);
       } else {
         const mediaFragment = await buildMediaFragment(post);
@@ -3388,34 +3486,37 @@
     }
 
     clearGeneratedMediaUrls();
+    const requestedProfileUserId = getRequestedProfileUserId();
+    const viewedUser = requestedProfileUserId ? await getUserById(requestedProfileUserId) : currentUser;
+    const isOwnProfile = Boolean(viewedUser && currentUser && viewedUser.id === currentUser.id) || (!requestedProfileUserId && Boolean(currentUser));
     const [posts, comments] = await Promise.all([readPosts(), readAllComments()]);
-    const userPosts = currentUser ? posts.filter(function (post) {
-      return post.userId === currentUser.id;
+    const userPosts = viewedUser ? posts.filter(function (post) {
+      return post.userId === viewedUser.id;
     }).sort(function (left, right) {
       return getPostPublishTimestamp(right) - getPostPublishTimestamp(left);
     }) : [];
-    const userComments = currentUser ? comments.filter(function (comment) {
-      return comment.userId === currentUser.id;
+    const userComments = viewedUser ? comments.filter(function (comment) {
+      return comment.userId === viewedUser.id;
     }).sort(function (left, right) {
       return right.createdAt - left.createdAt;
     }) : [];
-    document.title = currentUser ? (currentUser.name + ' — Account dashboard') : 'Account dashboard';
-    const profileThemeColor = getAvatarColor(currentUser ? currentUser.username : 'guest');
-    const bioValue = currentUser ? normalizeProfileBio(currentUser.profileBio) : '';
-    const birthdayValue = currentUser ? String(currentUser.profileBirthday || '').trim() : '';
-    const profileEmailValue = currentUser ? String(currentUser.profileEmail || '').trim().toLowerCase() : '';
-    const followerCount = normalizeProfileMetric(currentUser ? currentUser.profileFollowers : 0);
-    const followingCount = normalizeProfileMetric(currentUser ? currentUser.profileFollowing : 0);
+    document.title = viewedUser ? (viewedUser.name + ' — Account dashboard') : 'Account dashboard';
+    const profileThemeColor = getAvatarColor(getAvatarSeed(viewedUser && viewedUser.name, viewedUser && viewedUser.username, viewedUser && viewedUser.id ? viewedUser.id : 'guest'));
+    const bioValue = viewedUser ? normalizeProfileBio(viewedUser.profileBio) : '';
+    const birthdayValue = viewedUser ? String(viewedUser.profileBirthday || '').trim() : '';
+    const profileEmailValue = viewedUser ? String(viewedUser.profileEmail || '').trim().toLowerCase() : '';
+    const followerCount = normalizeProfileMetric(viewedUser ? viewedUser.profileFollowers : 0);
+    const followingCount = normalizeProfileMetric(viewedUser ? viewedUser.profileFollowing : 0);
     const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
 
     if (profileBanner) {
       profileBanner.style.background = profileThemeColor;
     }
     profileAvatar.style.background = profileThemeColor;
-    profileAvatar.textContent = currentUser ? getInitials(currentUser.name, currentUser.username) : 'YA';
-    profileAvatar.setAttribute('aria-label', currentUser ? (currentUser.name + ' avatar') : 'Your account avatar');
-    profileName.textContent = currentUser ? currentUser.name : 'Your account';
-    profileHandle.textContent = currentUser ? formatHandle(currentUser.username) : '@yourprofile';
+    profileAvatar.textContent = viewedUser ? getInitials(viewedUser.name, viewedUser.username) : 'YA';
+    profileAvatar.setAttribute('aria-label', viewedUser ? (viewedUser.name + ' avatar') : 'Your account avatar');
+    profileName.textContent = viewedUser ? viewedUser.name : 'Your account';
+    profileHandle.textContent = viewedUser ? formatHandle(viewedUser.username) : '@yourprofile';
     profileBio.textContent = bioValue;
     profileBio.hidden = !bioValue;
     profileContactLink.textContent = hasProfileEmail ? profileEmailValue : '';
@@ -3432,8 +3533,16 @@
     profileFollowingTotal.textContent = String(followingCount);
 
     if (profileEditButton) {
-      profileEditButton.textContent = currentUser ? 'Edit profile' : 'Log in';
+      if (viewedUser && !isOwnProfile && currentUser) {
+        profileEditButton.textContent = 'Back to your profile';
+      } else {
+        profileEditButton.textContent = currentUser ? 'Edit profile' : 'Log in';
+      }
       profileEditButton.onclick = async function () {
+        if (viewedUser && !isOwnProfile && currentUser) {
+          navigateToDashboard(currentUser.id);
+          return;
+        }
         if (!currentUser) {
           openAuthModal('login');
           return;
@@ -3442,12 +3551,11 @@
       };
     }
 
-    profileContactLink.onclick = currentUser ? null : function (event) {
+    profileContactLink.onclick = hasProfileEmail ? null : function (event) {
       event.preventDefault();
-      openAuthModal('login');
     };
 
-    await renderDashboardTabs(userPosts, posts, currentUser, userComments);
+    await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile);
   }
 
   async function renderNotificationsPage() {
@@ -3483,17 +3591,19 @@
     });
   }
 
-  function navigateToDashboard() {
-    if (!currentUser) {
+  function navigateToDashboard(targetUserId) {
+    const normalizedTargetUserId = String(targetUserId || '').trim();
+    const nextProfileUserId = currentUser && normalizedTargetUserId === currentUser.id ? '' : normalizedTargetUserId;
+    if (!nextProfileUserId && !currentUser) {
       openAuthModal('login');
       return;
     }
-    if (isDashboardPage()) {
+    if (isDashboardPage() && getRequestedProfileUserId() === nextProfileUserId) {
       renderAccountDashboard().catch(function () {
       });
       return;
     }
-    window.location.href = ACCOUNT_DASHBOARD_PATH;
+    window.location.href = buildProfileHref(nextProfileUserId);
   }
 
   function navigateToNotifications() {
@@ -3744,7 +3854,7 @@
       if (!trigger) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      navigateToDashboard();
+      navigateToDashboard(trigger.getAttribute('data-profile-user-id') || '');
     }, true);
 
     document.addEventListener('keydown', function (event) {
@@ -3753,7 +3863,7 @@
       if (!trigger) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      navigateToDashboard();
+      navigateToDashboard(trigger.getAttribute('data-profile-user-id') || '');
     }, true);
   }
 
@@ -4002,6 +4112,15 @@
     if (!textarea || !ringFill || !charLabel) return;
 
     const len = textarea.value.length;
+    if (!NPC_ENFORCE_CHAR_LIMIT) {
+      ringFill.style.strokeDashoffset = '100';
+      ringFill.classList.remove('over');
+      charLabel.textContent = '';
+      charLabel.classList.remove('over');
+      npcUpdateSubmitButton();
+      return;
+    }
+
     const remaining = NPC_CHAR_LIMIT - len;
     const pct = Math.min(len / NPC_CHAR_LIMIT, 1);
     const circumference = 100;
@@ -4034,7 +4153,7 @@
 
     const hasContent = text.length > 0 || npcState.images.length > 0 ||
       npcState.videoFile || npcState.gifUrl || npcState.poll;
-    const overLimit = len > NPC_CHAR_LIMIT;
+    const overLimit = NPC_ENFORCE_CHAR_LIMIT && len > NPC_CHAR_LIMIT;
     const uploading = npcState.isUploading;
 
     btn.disabled = !hasContent || overLimit || uploading;
