@@ -8,7 +8,7 @@
     "cap:open:android": "npx cap open android",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
-    "start": "npx serve -l ${PORT:-10000} ."
+    "start": "serve -l ${PORT:-10000} ."
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "@capacitor/android": "^8.4.1",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1"
+    "@capacitor/ios": "^8.4.1",
+    "serve": "^14.2.6"
   }
 }
