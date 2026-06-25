@@ -43,6 +43,8 @@
   const MENTION_PATTERN = /@([a-zA-Z0-9_]+)/g;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
   const NPC_CHAR_LIMIT = 280;
+  // Regular post length is intentionally unrestricted now; keep the legacy counter threshold
+  // only as a dormant constant so existing UI code paths remain stable.
   const NPC_ENFORCE_CHAR_LIMIT = false;
   const NPC_MAX_IMAGES = 4;
 
@@ -1265,7 +1267,7 @@
 
   function getInitials(name, username) {
     const source = String(name || username || '').trim();
-    if (!source) return 'ZU';
+    if (!source) return 'ZG';
     const words = source.split(/\s+/).filter(Boolean);
     if (words.length === 1) {
       return words[0].slice(0, 2).toUpperCase();

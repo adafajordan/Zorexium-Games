@@ -2680,7 +2680,7 @@
 
         function homeGetInitials(name, username) {
           var source = String(name || username || '').trim();
-          if (!source) return 'ZU';
+          if (!source) return 'ZG';
           var words = source.split(/\s+/).filter(Boolean);
           if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
           return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();

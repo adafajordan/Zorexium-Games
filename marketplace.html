@@ -2694,7 +2694,7 @@
 
         function getInitials(name, username) {
           var source = String(name || username || '').trim();
-          if (!source) return 'ZU';
+          if (!source) return 'ZG';
           var words = source.split(/\s+/).filter(Boolean);
           if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
           return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
@@ -3165,6 +3165,8 @@
           document.getElementById('event-detail-title').textContent = data.title || 'Event';
           document.getElementById('event-detail-date').textContent = formatEventDateTime(data.eventStart, data.eventEnd) || 'Schedule coming soon';
           var cohostCount = Array.isArray(data.cohosts) ? data.cohosts.length : 0;
+          var placeholderGoingCount = cohostCount + 12;
+          var placeholderInterestedCount = cohostCount + 24;
           document.getElementById('event-detail-subtitle').textContent = toTitleCase(data.privacy || 'Public') + ' · Event by ' + creatorName + (cohostCount ? (' and ' + cohostCount + ' others') : '');
           document.getElementById('event-detail-interested-btn').classList.add('primary');
           document.getElementById('event-detail-interested-btn').textContent = 'Interested';
@@ -3175,7 +3177,7 @@
           metaList.innerHTML = '';
           [
             { icon: '📍', title: 'Location', value: creatorLocation || data.logistics || 'Venue to be announced' },
-            { icon: '✅', title: 'Attendance', value: (cohostCount + 12) + ' going · ' + (cohostCount + 24) + ' interested' },
+            { icon: '✅', title: 'Attendance', value: placeholderGoingCount + ' going · ' + placeholderInterestedCount + ' interested' },
             { icon: '🎫', title: 'Tickets', value: data.creatorWebsite || 'Tickets available on request' },
             { icon: '🌐', title: 'Audience', value: toTitleCase(data.privacy || 'Public') }
           ].forEach(function (row) {
@@ -3283,6 +3285,8 @@
 
           var recentPostsContainer = document.getElementById('event-detail-recent-posts');
           recentPostsContainer.innerHTML = '';
+          // Discussion posts are placeholder summaries derived from the current listing until a
+          // dedicated event discussion backend is available in this static app flow.
           [
             { title: 'Event announcement', copy: data.details || 'The host just shared the event announcement and timing details.' },
             { title: 'Host update', copy: creatorName + ' is managing visibility set to ' + toTitleCase(data.privacy || 'Public') + '.' },
