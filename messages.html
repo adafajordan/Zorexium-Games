@@ -9,39 +9,231 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
       :root {
-        color-scheme: light;
-        --bg: #ffffff;
-        --surface: #f5f5f5;
-        --surface-soft: #eeeeee;
-        --text: #111111;
-        --text-muted: #333333;
-        --text-soft: #666666;
-        --text-placeholder: #999999;
-        --border: #e0e0e0;
-        --border-strong: #cccccc;
-        --focus: #e02020;
-        --accent: #cc2222;
-        --sticky-footer-height: 62px;
+        --bg: #f4f5f7;
+        --surface: #ffffff;
+        --surface-soft: #e7ebef;
+        --text: #111827;
+        --text-soft: #5b6b7a;
+        --border: #d4dbe2;
+        --accent: #1d9bf0;
+        --accent-dark: #1786cc;
+        --thread-accent: #cc2222;
+        --sticky-footer-height: 78px;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
+        min-height: 100dvh;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: var(--bg);
         color: var(--text);
-        display: flex;
-        flex-direction: column;
-        height: 100dvh;
-        overflow: hidden;
+        background: var(--bg);
       }
-      /* Header */
+      .page {
+        min-height: 100dvh;
+        padding-bottom: calc(var(--sticky-footer-height) + 18px);
+      }
+
+      /* Inbox layout */
+      .messages-inbox {
+        width: min(960px, 100%);
+        margin: 0 auto;
+        padding: 22px 18px 26px;
+      }
+      .inbox-top {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+      }
+      .profile-chip {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 0;
+        padding: 0;
+        position: relative;
+        overflow: hidden;
+        background: #93a2b7;
+        color: #fff;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .profile-chip img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .profile-chip-dot {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: var(--accent);
+        border: 2px solid var(--bg);
+      }
+      .inbox-title {
+        margin: 0;
+        text-align: center;
+        font-size: clamp(30px, 5vw, 44px);
+        letter-spacing: -0.02em;
+        font-weight: 700;
+      }
+      .inbox-filter {
+        border: 2px solid #c8d0d8;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--text);
+        min-width: 124px;
+        padding: 12px 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .inbox-filter svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.25;
+      }
+      .inbox-search {
+        margin-top: 22px;
+        width: 100%;
+        border: 0;
+        border-radius: 999px;
+        background: #dce1e6;
+        color: #4e5f70;
+        font-size: clamp(20px, 4vw, 58px);
+        line-height: 1;
+        padding: 18px 22px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .inbox-search svg {
+        flex-shrink: 0;
+        width: 1.05em;
+        height: 1.05em;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.2;
+      }
+      .inbox-search input {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+      .inbox-search input::placeholder { color: #607282; opacity: 1; }
+      .inbox-empty {
+        margin-top: 26px;
+        padding-left: 10px;
+      }
+      .inbox-empty-title {
+        margin: 0 0 8px;
+        font-size: clamp(34px, 5.2vw, 66px);
+        line-height: 1.1;
+      }
+      .inbox-empty-subtitle {
+        margin: 0;
+        color: var(--text-soft);
+        font-size: clamp(20px, 3.8vw, 46px);
+        line-height: 1.32;
+      }
+      .compose-fab {
+        position: fixed;
+        right: 26px;
+        bottom: calc(var(--sticky-footer-height) + 30px);
+        width: clamp(72px, 13vw, 164px);
+        height: clamp(72px, 13vw, 164px);
+        border: 0;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .compose-fab:hover { background: var(--accent-dark); }
+      .compose-fab svg {
+        width: 55%;
+        height: 55%;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--sticky-footer-height);
+        border-top: 1px solid var(--border);
+        background: rgba(250, 251, 252, 0.96);
+        backdrop-filter: blur(8px);
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        align-items: center;
+        z-index: 40;
+      }
+      .bottom-nav-item {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: none;
+        color: #0f172a;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        cursor: pointer;
+      }
+      .bottom-nav-item svg {
+        width: clamp(24px, 5vw, 44px);
+        height: clamp(24px, 5vw, 44px);
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.2;
+      }
+      .bottom-nav-item.active { color: #050f1e; }
+      .bottom-nav-item.active svg { fill: currentColor; stroke: none; }
+      .bottom-nav-dot {
+        position: absolute;
+        top: 11px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      /* Thread mode (existing DM thread) */
+      .dm-thread {
+        display: none;
+        min-height: 100dvh;
+        background: #fff;
+      }
       .dm-header {
         display: flex;
         align-items: center;
         gap: 10px;
         padding: 12px 16px;
         background: rgba(255,255,255,0.97);
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid #e0e0e0;
         backdrop-filter: blur(6px);
         position: sticky;
         top: 0;
@@ -54,14 +246,12 @@
         padding: 4px 8px;
         cursor: pointer;
         border-radius: 6px;
-        color: var(--text);
+        color: #111;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 0;
       }
       .dm-back-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-      .dm-back-btn:hover { background: var(--surface-soft); border-color: transparent; color: var(--accent); }
       .dm-header-avatar {
         width: 36px;
         height: 36px;
@@ -72,14 +262,13 @@
         font-size: 14px;
         font-weight: 700;
         color: #fff;
+        background: #8f9faf;
         flex-shrink: 0;
       }
       .dm-header-info { min-width: 0; flex: 1; }
       .dm-header-name { font-weight: 700; font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .dm-header-handle { font-size: 12px; color: var(--text-soft); }
-      /* Message list */
+      .dm-header-handle { font-size: 12px; color: #666; }
       .dm-messages {
-        flex: 1;
         overflow-y: auto;
         padding: 16px;
         display: flex;
@@ -88,6 +277,7 @@
         max-width: 640px;
         width: 100%;
         margin: 0 auto;
+        height: calc(100dvh - 122px);
       }
       .dm-bubble {
         max-width: 75%;
@@ -97,138 +287,155 @@
         line-height: 1.5;
         word-break: break-word;
       }
-      .dm-bubble-out {
-        align-self: flex-end;
-        background: var(--accent);
-        color: #fff;
-        border-bottom-right-radius: 4px;
-      }
-      .dm-bubble-in {
-        align-self: flex-start;
-        background: var(--surface);
-        color: var(--text);
-        border-bottom-left-radius: 4px;
-      }
-      .dm-bubble-meta {
-        font-size: 11px;
-        color: var(--text-soft);
-        margin-top: 2px;
-        text-align: right;
-      }
+      .dm-bubble-out { align-self: flex-end; background: var(--thread-accent); color: #fff; border-bottom-right-radius: 4px; }
+      .dm-bubble-in { align-self: flex-start; background: #f5f5f5; color: #111; border-bottom-left-radius: 4px; }
+      .dm-bubble-meta { font-size: 11px; color: #666; margin-top: 2px; text-align: right; }
       .dm-bubble-in .dm-bubble-meta { text-align: left; }
       .dm-empty {
-        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
         gap: 8px;
-        color: var(--text-soft);
+        color: #666;
         font-size: 14px;
         text-align: center;
         padding: 24px;
       }
-      .dm-empty-icon svg { width: 48px; height: 48px; stroke: var(--border-strong); fill: none; stroke-width: 1.5; }
-      /* Composer */
+      .dm-empty-icon svg { width: 48px; height: 48px; stroke: #ccc; fill: none; stroke-width: 1.5; }
       .dm-composer {
         display: flex;
         align-items: flex-end;
         gap: 10px;
         padding: 10px 16px;
-        border-top: 1px solid var(--border);
-        background: var(--bg);
-        flex-shrink: 0;
+        border-top: 1px solid #e0e0e0;
+        background: #fff;
         max-width: 640px;
         width: 100%;
         margin: 0 auto;
       }
       .dm-input {
         flex: 1;
-        border: 1px solid var(--border-strong);
+        border: 1px solid #ccc;
         border-radius: 20px;
         padding: 10px 14px;
         font-family: inherit;
         font-size: 14px;
         resize: none;
-        background: var(--surface);
-        color: var(--text);
+        background: #f5f5f5;
+        color: #111;
         min-height: 42px;
         max-height: 120px;
         overflow-y: auto;
         line-height: 1.4;
       }
-      .dm-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); background: #fff; }
       .dm-send-btn {
         width: 42px;
         height: 42px;
         border-radius: 50%;
-        background: var(--accent);
+        background: var(--thread-accent);
         border: none;
         color: #fff;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
         padding: 0;
       }
-      .dm-send-btn:hover { background: #b01c1c; border-color: transparent; color: #fff; }
       .dm-send-btn:disabled { opacity: 0.5; cursor: default; }
       .dm-send-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-      /* Auth notice */
-      .dm-auth-notice {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        gap: 12px;
-        color: var(--text-soft);
-        font-size: 14px;
-        text-align: center;
-        padding: 24px;
+
+      @media (max-width: 700px) {
+        .messages-inbox {
+          padding: 16px 12px 16px;
+        }
+        .inbox-filter {
+          min-width: 96px;
+          font-size: 16px;
+          padding: 10px 14px;
+        }
       }
-      .dm-auth-btn {
-        padding: 10px 24px;
-        border-radius: 999px;
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .dm-auth-btn:hover { background: #b01c1c; border-color: transparent; color: #fff; }
-      button { font-family: inherit; }
     </style>
   </head>
   <body>
-    <div class="dm-header" id="dm-header">
-      <button class="dm-back-btn" id="dm-back" aria-label="Go back" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <div class="dm-header-avatar" id="dm-header-avatar">?</div>
-      <div class="dm-header-info">
-        <div class="dm-header-name" id="dm-header-name">Direct Message</div>
-        <div class="dm-header-handle" id="dm-header-handle"></div>
-      </div>
-    </div>
-
-    <div class="dm-messages" id="dm-messages">
-      <div class="dm-empty" id="dm-empty" hidden>
-        <div class="dm-empty-icon">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div class="page">
+      <section class="messages-inbox" id="messages-inbox" aria-label="Messages inbox">
+        <div class="inbox-top">
+          <button id="inbox-profile-btn" class="profile-chip" type="button" aria-label="Profile">
+            <img id="inbox-avatar-image" alt="" hidden />
+            <span id="inbox-avatar-initials">?</span>
+            <span class="profile-chip-dot" aria-hidden="true"></span>
+          </button>
+          <h1 class="inbox-title">Chat</h1>
+          <button id="inbox-filter-btn" class="inbox-filter" type="button" aria-label="Filter chats">
+            <span id="inbox-filter-label">All</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+          </button>
         </div>
-        <p>No messages yet. Say hello!</p>
-      </div>
+
+        <label class="inbox-search" for="inbox-search-input">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          <input id="inbox-search-input" type="search" placeholder="Search" autocomplete="off" />
+        </label>
+
+        <div class="inbox-empty" id="inbox-empty-state">
+          <p class="inbox-empty-title">No chats yet</p>
+          <p class="inbox-empty-subtitle" id="inbox-empty-subtitle">Start chatting with end-to-end encryption</p>
+        </div>
+      </section>
+
+      <section class="dm-thread" id="dm-thread">
+        <div class="dm-header" id="dm-header">
+          <button class="dm-back-btn" id="dm-back" aria-label="Go back" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="dm-header-avatar" id="dm-header-avatar">?</div>
+          <div class="dm-header-info">
+            <div class="dm-header-name" id="dm-header-name">Direct Message</div>
+            <div class="dm-header-handle" id="dm-header-handle"></div>
+          </div>
+        </div>
+
+        <div class="dm-messages" id="dm-messages">
+          <div class="dm-empty" id="dm-empty" hidden>
+            <div class="dm-empty-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <p>No messages yet. Say hello!</p>
+          </div>
+        </div>
+
+        <div class="dm-composer" id="dm-composer">
+          <textarea class="dm-input" id="dm-input" placeholder="Type a message…" rows="1" aria-label="Message text"></textarea>
+          <button class="dm-send-btn" id="dm-send" type="button" aria-label="Send" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </section>
     </div>
 
-    <div class="dm-composer" id="dm-composer">
-      <textarea class="dm-input" id="dm-input" placeholder="Type a message…" rows="1" aria-label="Message text"></textarea>
-      <button class="dm-send-btn" id="dm-send" type="button" aria-label="Send" disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <button class="compose-fab" id="compose-fab" type="button" aria-label="Start a new message">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h11"/><line x1="18" y1="3" x2="18" y2="11"/><line x1="14" y1="7" x2="22" y2="7"/></svg>
+    </button>
+
+    <nav class="bottom-nav" aria-label="Primary">
+      <button class="bottom-nav-item" type="button" data-nav-target="index.html" aria-label="Home">
+        <span class="bottom-nav-dot" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
-    </div>
+      <button class="bottom-nav-item" type="button" data-nav-target="search" aria-label="Search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="bottom-nav-item" type="button" data-nav-target="articles.html" aria-label="Explore">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 5.6A8.5 8.5 0 0 0 5.6 18.4"/><path d="M5.6 5.6A8.5 8.5 0 0 0 18.4 18.4"/><circle cx="12" cy="12" r="1.7"/></svg>
+      </button>
+      <button class="bottom-nav-item" type="button" data-nav-target="notifications.html" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button class="bottom-nav-item active" type="button" data-nav-target="messages.html" aria-label="Messages">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    </nav>
 
     <script src="app.js"></script>
     <script>
@@ -239,12 +446,17 @@
         var SESSION_STORE = 'session';
         var MESSAGES_SERVER_STORE = 'messages';
         var WINDOW_SESSION_PREFIX = 'zorexium-session:';
-        var API_STORE_NAME_MAP = { messages: 'messages', accounts: 'accounts' };
 
-        var currentUser = null;
-        var otherUser = null;
-        var conversationId = '';
-        var pollIntervalId = null;
+        var inboxView = document.getElementById('messages-inbox');
+        var threadView = document.getElementById('dm-thread');
+        var inboxProfileBtn = document.getElementById('inbox-profile-btn');
+        var inboxAvatarImage = document.getElementById('inbox-avatar-image');
+        var inboxAvatarInitials = document.getElementById('inbox-avatar-initials');
+        var filterBtn = document.getElementById('inbox-filter-btn');
+        var filterLabel = document.getElementById('inbox-filter-label');
+        var searchInput = document.getElementById('inbox-search-input');
+        var composeFab = document.getElementById('compose-fab');
+        var emptySubtitle = document.getElementById('inbox-empty-subtitle');
 
         var messagesEl = document.getElementById('dm-messages');
         var emptyEl = document.getElementById('dm-empty');
@@ -255,44 +467,15 @@
         var headerAvatar = document.getElementById('dm-header-avatar');
         var backBtn = document.getElementById('dm-back');
 
-        backBtn.addEventListener('click', function () { history.back(); });
-
-        // -- Helpers ---------------------------------------------------------
-
-        function getWithUserId() {
-          var params = new URLSearchParams(window.location.search);
-          return params.get('with') || '';
-        }
-
-        function buildConversationId(idA, idB) {
-          var sorted = [idA, idB].sort();
-          return sorted[0] + ':' + sorted[1];
-        }
-
-        function formatTime(ts) {
-          try {
-            return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          } catch (e) { return ''; }
-        }
-
-        function getInitials(name, username) {
-          var n = String(name || username || '').trim();
-          var parts = n.split(/\s+/);
-          if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-          return n.slice(0, 2).toUpperCase() || '?';
-        }
-
-        function getAvatarColor(seed) {
-          var colors = ['#e02020','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#d81b60','#546e7a'];
-          var hash = 0;
-          var s = String(seed || '');
-          for (var i = 0; i < s.length; i++) { hash = (hash * 31 + s.charCodeAt(i)) & 0xffffffff; }
-          return colors[Math.abs(hash) % colors.length];
-        }
-
-        // -- IndexedDB helpers -----------------------------------------------
-
         var appDbPromise = null;
+        var currentUser = null;
+        var otherUser = null;
+        var conversationId = '';
+        var pollIntervalId = null;
+        var dmWs = null;
+        var serverUnavailable = false;
+        var lastMessageCount = 0;
+
         function openAppDb() {
           if (appDbPromise) return appDbPromise;
           appDbPromise = new Promise(function (resolve, reject) {
@@ -325,9 +508,57 @@
           });
         }
 
-        // -- Server API helpers ----------------------------------------------
+        function getWithUserId() {
+          var params = new URLSearchParams(window.location.search);
+          return params.get('with') || '';
+        }
 
-        var serverUnavailable = false;
+        function buildConversationId(idA, idB) {
+          var sorted = [idA, idB].sort();
+          return sorted[0] + ':' + sorted[1];
+        }
+
+        function formatTime(ts) {
+          try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
+        }
+
+        function getInitials(name, username) {
+          var n = String(name || username || '').trim();
+          var parts = n.split(/\s+/);
+          if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+          return n.slice(0, 2).toUpperCase() || '?';
+        }
+
+        function getAvatarColor(seed) {
+          var colors = ['#e02020','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#d81b60','#546e7a'];
+          var hash = 0;
+          var s = String(seed || '');
+          for (var i = 0; i < s.length; i++) { hash = (hash * 31 + s.charCodeAt(i)) & 0xffffffff; }
+          return colors[Math.abs(hash) % colors.length];
+        }
+
+        function getWindowSession() {
+          if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
+          try {
+            var payload = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+            return payload && payload.userId ? payload : null;
+          } catch (e) { return null; }
+        }
+
+        function getUserSession() {
+          var ws = getWindowSession();
+          if (ws) return Promise.resolve(ws);
+          return getRecordLocal(SESSION_STORE, 'current').then(function (s) {
+            return s && s.userId ? s : null;
+          });
+        }
+
+        function lookupUserById(userId, accounts) {
+          for (var i = 0; i < accounts.length; i++) {
+            if (accounts[i].id === userId) return accounts[i];
+          }
+          return null;
+        }
 
         function serverFetch(method, storeKey, body) {
           if (serverUnavailable) return Promise.reject(new Error('server unavailable'));
@@ -354,51 +585,20 @@
 
         function saveConversation(record) {
           return serverFetch('PUT', conversationId, record).catch(function (err) {
-            console.warn('Failed to save message', err);
+            console.warn('Failed to save conversation', err);
           });
         }
-
-        // -- Session / auth --------------------------------------------------
-
-        function getWindowSession() {
-          if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
-          try {
-            var p = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
-            return p && p.userId ? p : null;
-          } catch (e) { return null; }
-        }
-
-        function getUserSession() {
-          var ws = getWindowSession();
-          if (ws) return Promise.resolve(ws);
-          return getRecordLocal(SESSION_STORE, 'current').then(function (s) {
-            return s && s.userId ? s : null;
-          });
-        }
-
-        function lookupUserById(userId, accounts) {
-          for (var i = 0; i < accounts.length; i++) {
-            if (accounts[i].id === userId) return accounts[i];
-          }
-          return null;
-        }
-
-        // -- Render messages -------------------------------------------------
 
         function renderMessages(record) {
           var messages = (record && Array.isArray(record.messages)) ? record.messages : [];
-          // Remove old bubbles
-          var existing = messagesEl.querySelectorAll('.dm-bubble-wrap');
-          existing.forEach(function (el) { el.remove(); });
+          messagesEl.querySelectorAll('.dm-bubble-wrap').forEach(function (el) { el.remove(); });
 
           if (!messages.length) {
             emptyEl.hidden = false;
             return;
           }
           emptyEl.hidden = true;
-          messages.forEach(function (msg) {
-            appendBubble(msg);
-          });
+          messages.forEach(function (msg) { appendBubble(msg); });
           messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
@@ -423,10 +623,8 @@
           messagesEl.insertBefore(wrap, emptyEl);
         }
 
-        // -- Increment a numeric field on the server --------------------------
-
-        function serverIncrement(apiStore, recordKey, field, by) {
-          var url = '/api/store/' + encodeURIComponent(apiStore) + '/' + encodeURIComponent(recordKey) + '/increment';
+        function incrementAccountField(recordKey, field, by) {
+          var url = '/api/store/accounts/' + encodeURIComponent(recordKey) + '/increment';
           return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -434,27 +632,23 @@
           }).catch(function () {});
         }
 
-        // -- Reset this user's unread DM count --------------------------------
-
         function resetUnreadDmCount() {
           if (!currentUser || serverUnavailable) return;
           var url = '/api/store/accounts/' + encodeURIComponent(currentUser.id);
           fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
             if (!data || !data.record) return;
-            var updated = Object.assign({}, data.record, { unreadDmCount: 0 });
             return fetch(url, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ record: updated })
+              body: JSON.stringify({ record: Object.assign({}, data.record, { unreadDmCount: 0 }) })
             });
           }).catch(function () {});
         }
 
-        // -- Send message ----------------------------------------------------
-
         function sendMessage() {
           var text = (inputEl.value || '').trim();
           if (!text || !currentUser || !conversationId) return;
+
           inputEl.value = '';
           sendBtn.disabled = true;
           updateSendBtn();
@@ -466,7 +660,6 @@
             createdAt: Date.now()
           };
 
-          // Optimistic UI
           emptyEl.hidden = true;
           appendBubble(msg);
           messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -474,30 +667,23 @@
           loadConversation().then(function (record) {
             var existing = (record && Array.isArray(record.messages)) ? record.messages : [];
             existing.push(msg);
-            var updated = {
+            return saveConversation({
               id: conversationId,
               participants: [currentUser.id, otherUser ? otherUser.id : ''],
               messages: existing,
               updatedAt: Date.now()
-            };
-            return saveConversation(updated);
+            });
           }).then(function () {
-            // Increment recipient's unread count
             if (otherUser && otherUser.id) {
-              serverIncrement('accounts', otherUser.id, 'unreadDmCount', 1);
+              incrementAccountField(otherUser.id, 'unreadDmCount', 1).catch(function (err) {
+                console.warn('Failed to increment unread count', err);
+              });
             }
-          }).catch(function (err) {
-            console.warn('Message send failed', err);
           }).finally(function () {
             sendBtn.disabled = false;
           });
         }
 
-        // -- Poll for new messages (fallback when WebSocket is unavailable) ---
-
-        var DM_FALLBACK_POLL_MS = 10000;
-
-        var lastMessageCount = 0;
         function pollMessages() {
           loadConversation().then(function (record) {
             var messages = (record && Array.isArray(record.messages)) ? record.messages : [];
@@ -508,99 +694,104 @@
           }).catch(function () {});
         }
 
-        // -- WebSocket for real-time delivery ---------------------------------
-
-        var dmWs = null;
         function connectDmWebSocket() {
           if (!conversationId) return;
           try {
             var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            var wsUrl = protocol + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId);
-            dmWs = new WebSocket(wsUrl);
-
+            dmWs = new WebSocket(protocol + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId));
             dmWs.onmessage = function (event) {
               try {
                 var data = JSON.parse(event.data);
-                if (data && data.type === 'dm-update' && data.conversationId === conversationId) {
-                  pollMessages();
-                }
+                if (data && data.type === 'dm-update' && data.conversationId === conversationId) pollMessages();
               } catch (e) {}
             };
-
             dmWs.onclose = function () {
               dmWs = null;
-              // Fall back to polling at a reduced rate
-              if (!pollIntervalId) {
-                pollIntervalId = setInterval(pollMessages, DM_FALLBACK_POLL_MS);
-              }
-            };
-
-            dmWs.onerror = function () {
-              // onclose will fire next and install the fallback
+              if (!pollIntervalId) pollIntervalId = setInterval(pollMessages, 10000);
             };
           } catch (e) {
-            // WebSocket unavailable — use polling immediately
-            if (!pollIntervalId) {
-              pollIntervalId = setInterval(pollMessages, DM_FALLBACK_POLL_MS);
-            }
+            if (!pollIntervalId) pollIntervalId = setInterval(pollMessages, 10000);
           }
         }
-
-        // -- Update send button state ----------------------------------------
 
         function updateSendBtn() {
           sendBtn.disabled = !(inputEl.value || '').trim();
         }
 
-        // -- Init ------------------------------------------------------------
+        function setInboxAvatar(user) {
+          if (!user) return;
+          var initials = getInitials(user.name, user.username);
+          inboxAvatarInitials.textContent = initials;
+          inboxProfileBtn.style.background = getAvatarColor(user.username || user.id);
 
-        function initPage(session, accounts) {
+          var hasPicture = !!user.profilePictureDataUrl;
+          if (hasPicture) inboxAvatarImage.src = user.profilePictureDataUrl;
+          inboxAvatarImage.hidden = !hasPicture;
+          inboxAvatarInitials.hidden = hasPicture;
+        }
+
+        function initInboxMode(session, accounts) {
+          threadView.style.display = 'none';
+          inboxView.style.display = '';
+          document.title = 'Messages';
+
+          currentUser = session ? lookupUserById(session.userId, accounts) : null;
+          setInboxAvatar(currentUser);
+
+          inboxProfileBtn.addEventListener('click', function () {
+            if (!currentUser) {
+              window.location.href = 'index.html';
+              return;
+            }
+            window.location.href = 'account-dashboard.html';
+          });
+
+          filterBtn.addEventListener('click', function () {
+            filterLabel.textContent = (filterLabel.textContent === 'All') ? 'Unread' : 'All';
+          });
+
+          searchInput.addEventListener('input', function () {
+            var hasQuery = String(searchInput.value || '').trim().length > 0;
+            document.getElementById('inbox-empty-state').style.display = hasQuery ? 'none' : '';
+          });
+
+          composeFab.addEventListener('click', function () {
+            if (!currentUser) {
+              window.location.href = 'index.html';
+              return;
+            }
+            emptySubtitle.textContent = 'No chats yet. Start from a profile to message someone.';
+          });
+        }
+
+        function initThreadMode(session, accounts) {
+          inboxView.style.display = 'none';
+          composeFab.style.display = 'none';
+          document.querySelector('.bottom-nav').style.display = 'none';
+          threadView.style.display = 'block';
+
           var sessionUser = lookupUserById(session.userId, accounts);
           if (!sessionUser) {
-            showAuthNotice();
+            window.location.href = 'index.html';
             return;
           }
           currentUser = sessionUser;
 
           var withId = getWithUserId();
-          if (!withId) {
-            headerName.textContent = 'Messages';
-            return;
-          }
-
           otherUser = lookupUserById(withId, accounts);
           conversationId = buildConversationId(session.userId, withId);
 
           if (otherUser) {
-            var color = getAvatarColor(otherUser.username || otherUser.id);
-            headerAvatar.style.background = color;
+            headerAvatar.style.background = getAvatarColor(otherUser.username || otherUser.id);
             headerAvatar.textContent = getInitials(otherUser.name, otherUser.username);
             headerName.textContent = otherUser.name || otherUser.username || 'User';
             headerHandle.textContent = '@' + (otherUser.username || '');
-          } else {
-            headerName.textContent = 'User';
-            headerHandle.textContent = '';
           }
 
-          document.title = 'Messages — ' + (otherUser ? (otherUser.name || otherUser.username) : 'Chat');
+          backBtn.addEventListener('click', function () { history.back(); });
 
-          // Show composer
-          document.getElementById('dm-composer').style.display = '';
-
-          // Load initial messages and mark as read
-          loadConversation().then(function (record) {
-            lastMessageCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;
-            renderMessages(record);
-            resetUnreadDmCount();
-          });
-
-          // Use WebSocket for real-time updates; polling is the fallback
-          connectDmWebSocket();
-
-          // Composer events
           inputEl.addEventListener('input', function () {
             updateSendBtn();
-            // Auto-grow
             inputEl.style.height = 'auto';
             inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
           });
@@ -611,40 +802,55 @@
             }
           });
           sendBtn.addEventListener('click', sendMessage);
+
+          loadConversation().then(function (record) {
+            lastMessageCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;
+            renderMessages(record);
+            resetUnreadDmCount();
+          });
+          connectDmWebSocket();
         }
 
-        function showAuthNotice() {
-          var notice = document.createElement('div');
-          notice.className = 'dm-auth-notice';
-          var p = document.createElement('p');
-          p.textContent = 'Sign in to use Direct Messages.';
-          var btn = document.createElement('button');
-          btn.className = 'dm-auth-btn';
-          btn.textContent = 'Go to home';
-          btn.addEventListener('click', function () { window.location.href = 'index.html'; });
-          notice.appendChild(p);
-          notice.appendChild(btn);
-          messagesEl.innerHTML = '';
-          messagesEl.appendChild(notice);
-          document.getElementById('dm-composer').style.display = 'none';
+        function loadAccountsFromServerOrLocal() {
+          return fetch('/api/store/accounts').then(function (r) {
+            return r.ok ? r.json() : null;
+          }).then(function (data) {
+            if (data && Array.isArray(data.records) && data.records.length) return data.records;
+            return getAllRecordsLocal(ACCOUNTS_STORE);
+          }).catch(function () {
+            return getAllRecordsLocal(ACCOUNTS_STORE);
+          });
         }
+
+        document.querySelectorAll('[data-nav-target]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var target = button.getAttribute('data-nav-target');
+            var allowedTargets = {
+              'index.html': true,
+              'articles.html': true,
+              'notifications.html': true
+            };
+            if (!target || target === 'messages.html') return;
+            if (target === 'search') {
+              searchInput.focus();
+              return;
+            }
+            if (!allowedTargets[target]) return;
+            window.location.href = target;
+          });
+        });
 
         getUserSession().then(function (session) {
-          if (!session) { showAuthNotice(); return; }
-          // Load accounts from server or local
-          var url = '/api/store/accounts';
-          fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
-            var accounts = (data && Array.isArray(data.records)) ? data.records : [];
-            if (!accounts.length) {
-              return getAllRecordsLocal(ACCOUNTS_STORE).then(function (local) {
-                initPage(session, local);
-              });
+          return loadAccountsFromServerOrLocal().then(function (accounts) {
+            if (getWithUserId()) {
+              if (!session) {
+                window.location.href = 'index.html';
+                return;
+              }
+              initThreadMode(session, accounts);
+              return;
             }
-            initPage(session, accounts);
-          }).catch(function () {
-            getAllRecordsLocal(ACCOUNTS_STORE).then(function (local) {
-              initPage(session, local);
-            });
+            initInboxMode(session, accounts);
           });
         });
 
