@@ -332,6 +332,27 @@
         flex-direction: column;
         gap: 6px;
       }
+      .listing-card-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 0 12px 12px;
+      }
+      .listing-card-action {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .listing-card-action.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
       .listing-meta {
         font-size: 12px;
         color: var(--text-soft);
@@ -435,7 +456,6 @@
       .submit-panel,
       .settings-summary,
       .cohost-summary,
-      .logistics-trigger,
       .event-cover-card,
       .job-media-card {
         border: 1px solid var(--border);
@@ -597,7 +617,6 @@
       .submit-panel,
       .settings-summary,
       .cohost-summary,
-      .logistics-trigger,
       .event-cover-card {
         padding: 14px;
       }
@@ -1088,6 +1107,22 @@
         }
       }
 
+      function getListingFromStorageById(listingId) {
+        if (!listingId) return null;
+        try {
+          var raw = localStorage.getItem(LISTINGS_LS_KEY);
+          var list = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(list)) return null;
+          for (var index = 0; index < list.length; index += 1) {
+            var entry = list[index];
+            if (entry && entry.id === listingId) return entry;
+          }
+        } catch (error) {
+          return null;
+        }
+        return null;
+      }
+
       /* ── Job detail fullscreen overlay ─────────────────────── */
       .job-detail-overlay {
         display: none;
@@ -1548,8 +1583,8 @@
       .event-detail-date { margin: 0; font-size: 14px; color: var(--text-soft); }
       .event-detail-title { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.08; font-weight: 800; color: var(--text); }
       .event-detail-subtitle { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.5; }
-      .event-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-      .event-detail-action, .event-detail-page-btn, .event-detail-invite-btn {
+      .event-detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .event-detail-action, .event-detail-invite-btn {
         border-radius: 14px;
         border: 1px solid var(--border);
         background: #fff;
@@ -1561,7 +1596,6 @@
       }
       .event-detail-action.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
       .event-detail-grid,
-      .event-detail-venue,
       .event-detail-panel {
         border: 1px solid var(--border);
         border-radius: 18px;
@@ -1692,7 +1726,15 @@
         background: #dbe6f3;
       }
       .event-suggested-card strong, .event-regional-card strong { display: block; color: var(--text); margin-bottom: 4px; }
-      .event-detail-page-btn { width: 100%; }
+      .event-suggested-track .listing-card {
+        min-width: 240px;
+      }
+      .event-suggested-track .listing-card-body {
+        gap: 8px;
+      }
+      .event-suggested-track .listing-card-actions {
+        padding-top: 2px;
+      }
       @media (max-width: 720px) {
         .event-detail-actions { grid-template-columns: 1fr; }
         .event-detail-content { padding-inline: 14px; }
@@ -1988,32 +2030,11 @@
             </div>
           </div>
 
-          <div class="quick-actions">
-            <div class="quick-action-card">
-              <strong>Repeat event</strong>
-              <span>Choose an event cadence.</span>
-              <select id="event-repeat" class="form-select">
-                <option>Does not repeat</option>
-                <option>Daily</option>
-                <option>Weekly</option>
-                <option>Monthly</option>
-              </select>
+          <div class="field-group">
+            <div class="field">
+              <label for="event-location">Location</label>
+              <input id="event-location" class="form-control" type="text" placeholder="Add a location" />
             </div>
-            <div class="quick-action-card">
-              <strong>Time Zone</strong>
-              <span>Localized schedule display.</span>
-              <input id="event-timezone" class="form-control" type="text" readonly />
-            </div>
-          </div>
-
-          <div class="logistics-trigger">
-            <button id="event-logistics-open" class="row-action-btn" type="button">
-              <span class="row-action-copy">
-                <span class="inline-label">Is it in person or virtual?</span>
-                <span id="event-logistics-summary" class="row-summary">Choose event access details.</span>
-              </span>
-              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
           </div>
 
           <div class="field-group">
@@ -2117,39 +2138,6 @@
         <div class="modal-actions">
           <button class="modal-cancel-btn" type="button" data-close-modal="location-modal">Cancel</button>
           <button id="location-modal-save" class="modal-save-btn" type="button">Apply location</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="logistics-modal" class="sheet-modal" aria-hidden="true">
-      <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="logistics-modal-title">
-        <div class="sheet-handle" aria-hidden="true"></div>
-        <h2 id="logistics-modal-title" class="sheet-title">Is it in person or virtual?</h2>
-        <p class="sheet-copy">Choose how attendees will access the event.</p>
-        <div class="sheet-tabs" role="tablist" aria-label="Logistics mode">
-          <button id="logistics-tab-person" class="sheet-tab active" type="button">In Person</button>
-          <button id="logistics-tab-virtual" class="sheet-tab" type="button">Virtual</button>
-        </div>
-        <div id="logistics-person-panel" class="sheet-form-stack sheet-offset">
-          <div class="field">
-            <label for="event-in-person-location">Enter location</label>
-            <input id="event-in-person-location" class="form-control" type="text" placeholder="Enter location" />
-          </div>
-        </div>
-        <div id="logistics-virtual-panel" class="sheet-form-stack sheet-offset" hidden>
-          <div class="radio-list">
-            <div class="radio-row"><input id="virtual-neter-live" name="virtual-type" type="radio" value="Neter Live" checked /><label for="virtual-neter-live">Neter Live</label></div>
-            <div class="radio-row"><input id="virtual-external-link" name="virtual-type" type="radio" value="External link" /><label for="virtual-external-link">External link</label></div>
-            <div class="radio-row"><input id="virtual-other" name="virtual-type" type="radio" value="Other" /><label for="virtual-other">Other</label></div>
-          </div>
-          <div class="field">
-            <label for="event-virtual-detail">Virtual detail</label>
-            <input id="event-virtual-detail" class="form-control" type="text" placeholder="Add a link or note if needed" />
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="modal-cancel-btn" type="button" data-close-modal="logistics-modal">Cancel</button>
-          <button id="logistics-modal-save" class="modal-save-btn" type="button">Save logistics</button>
         </div>
       </div>
     </div>
@@ -2404,6 +2392,7 @@
         var NOTIFICATIONS_STORE = 'notifications';
         var ARTICLES_STORE = 'articles';
         var LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
+        var EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
         var listingDataMap = {};
         var viewIds = {
           feed: 'jobs-events-feed-view',
@@ -2417,13 +2406,6 @@
           nearOnly: false,
           browseLocation: 'Nearby',
           modalLocationTarget: 'browse',
-          logisticsMode: 'person',
-          logistics: {
-            mode: 'person',
-            inPersonLocation: '',
-            virtualType: 'Neter Live',
-            virtualDetail: ''
-          },
           selectedCohosts: [],
           settings: {
             hostsCanPost: false,
@@ -2431,7 +2413,8 @@
             spamModeration: true
           },
           allAccounts: [],
-          currentUser: null
+          currentUser: null,
+          activeEventDetailId: ''
         };
         function openDb() {
           return new Promise(function (resolve, reject) {
@@ -2532,6 +2515,117 @@
           }
         }
 
+        function upsertListingInStorage(data) {
+          if (!data || !data.id) return;
+          try {
+            var raw = localStorage.getItem(LISTINGS_LS_KEY);
+            var list = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(list)) list = [];
+            var updated = false;
+            list = list.map(function (item) {
+              if (!item || item.id !== data.id) return item;
+              updated = true;
+              return Object.assign({}, item, data);
+            });
+            if (!updated) list.push(data);
+            localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(list));
+          } catch (err) {
+            console.warn('[Zorexium] Could not update listing in localStorage:', err);
+          }
+        }
+
+        function getEventAttendanceStore() {
+          try {
+            var raw = localStorage.getItem(EVENT_ATTENDANCE_LS_KEY);
+            var parsed = raw ? JSON.parse(raw) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+          } catch (error) {
+            return {};
+          }
+        }
+
+        function getCurrentUserId() {
+          return viewState.currentUser && viewState.currentUser.id ? viewState.currentUser.id : '';
+        }
+
+        function getEventAttendanceStatus(eventId) {
+          var userId = getCurrentUserId();
+          if (!userId || !eventId) return '';
+          var attendanceStore = getEventAttendanceStore();
+          var userAttendance = attendanceStore[userId] || {};
+          var entry = userAttendance[eventId];
+          if (!entry) return '';
+          if (typeof entry === 'string') return entry;
+          return String(entry.status || '');
+        }
+
+        function setEventAttendanceStatus(eventData, nextStatus) {
+          var userId = getCurrentUserId();
+          if (!userId) {
+            openAuthModal('login');
+            return false;
+          }
+          if (!eventData || !eventData.id) return false;
+          var attendanceStore = getEventAttendanceStore();
+          if (!attendanceStore[userId] || typeof attendanceStore[userId] !== 'object') attendanceStore[userId] = {};
+          if (nextStatus) {
+            attendanceStore[userId][eventData.id] = {
+              status: nextStatus,
+              updatedAt: Date.now(),
+              listingId: eventData.id
+            };
+          } else {
+            delete attendanceStore[userId][eventData.id];
+          }
+          try {
+            localStorage.setItem(EVENT_ATTENDANCE_LS_KEY, JSON.stringify(attendanceStore));
+          } catch (error) {
+            return false;
+          }
+          upsertListingInStorage(eventData);
+          return true;
+        }
+
+        function syncEventActionButtons(eventId) {
+          if (!eventId) return;
+          var status = getEventAttendanceStatus(eventId);
+          Array.prototype.slice.call(document.querySelectorAll('[data-event-action][data-event-id="' + eventId + '"]')).forEach(function (button) {
+            var isActive = status === button.getAttribute('data-event-action');
+            button.classList.toggle('primary', isActive && button.classList.contains('event-detail-action'));
+            button.classList.toggle('active', isActive && button.classList.contains('listing-card-action'));
+            var baseLabel = button.getAttribute('data-event-action-label') || button.textContent.replace(/\s+✓$/, '');
+            button.textContent = isActive ? (baseLabel + ' ✓') : baseLabel;
+          });
+        }
+
+        function attachEventActionButtons(container, eventData) {
+          if (!container || !eventData || !eventData.id) return;
+          var interestedBtn = container.querySelector('[data-event-action="interested"]');
+          var goingBtn = container.querySelector('[data-event-action="going"]');
+          [interestedBtn, goingBtn].forEach(function (button) {
+            if (!button) return;
+            button.setAttribute('data-event-id', eventData.id);
+            button.setAttribute('data-event-action-label', button.getAttribute('data-event-action-label') || button.textContent.replace(/\s+✓$/, ''));
+            if (button.getAttribute('data-event-action-bound') === 'true') return;
+            button.setAttribute('data-event-action-bound', 'true');
+            button.addEventListener('click', function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              var targetStatus = button.getAttribute('data-event-action');
+              var eventId = button.getAttribute('data-event-id');
+              var listing = listingDataMap[eventId] || getListingFromStorageById(eventId);
+              var currentStatus = getEventAttendanceStatus(eventId);
+              var nextStatus = currentStatus === targetStatus ? '' : targetStatus;
+              if (!setEventAttendanceStatus(listing || { id: eventId, type: 'event', title: 'Event' }, nextStatus)) return;
+              syncEventActionButtons(eventId);
+            });
+            button.addEventListener('keydown', function (event) {
+              if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+            });
+          });
+          syncEventActionButtons(eventData.id);
+        }
+
         function loadListingsFromStorage() {
           try {
             var raw = localStorage.getItem(LISTINGS_LS_KEY);
@@ -2564,7 +2658,7 @@
           var keywords = [
             listingType,
             data.title,
-            data.jobType || data.logistics || '',
+            listingType === 'job' ? data.jobType : '',
             data.location,
             data.category || ''
           ].join(' ').toLowerCase();
@@ -2632,6 +2726,15 @@
 
           article.appendChild(visualDiv);
           article.appendChild(bodyDiv);
+          if (listingType === 'event') {
+            var actions = document.createElement('div');
+            actions.className = 'listing-card-actions';
+            actions.innerHTML =
+              '<button type="button" class="listing-card-action" data-event-action="interested">Interested</button>' +
+              '<button type="button" class="listing-card-action" data-event-action="going">Going</button>';
+            article.appendChild(actions);
+            attachEventActionButtons(actions, listingDataMap[listingId]);
+          }
           grid.insertBefore(article, grid.firstChild);
           document.getElementById('jobs-events-empty-state').hidden = true;
         }
@@ -2777,16 +2880,7 @@
           if (locationValue) {
             document.getElementById('job-location').value = locationValue;
             setBrowseLocation(locationValue);
-            document.getElementById('event-in-person-location').value = locationValue;
-          }
-        }
-
-        function formatTimezone() {
-          try {
-            var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local';
-            return zone.replace(/_/g, ' ');
-          } catch (error) {
-            return 'Local time';
+            document.getElementById('event-location').value = locationValue;
           }
         }
 
@@ -2880,15 +2974,6 @@
           if (viewState.settings.hostApproval) active.push('Host approval required');
           if (viewState.settings.spamModeration) active.push('Spam moderation on');
           document.getElementById('event-settings-summary').textContent = active.length ? active.join(' • ') : 'Configure host posting and spam moderation options.';
-        }
-
-        function updateLogisticsSummary() {
-          var summary = document.getElementById('event-logistics-summary');
-          if (viewState.logistics.mode === 'person') {
-            summary.textContent = viewState.logistics.inPersonLocation ? ('In person • ' + viewState.logistics.inPersonLocation) : 'In person • Add a location';
-            return;
-          }
-          summary.textContent = viewState.logistics.virtualType + (viewState.logistics.virtualDetail ? (' • ' + viewState.logistics.virtualDetail) : '');
         }
 
         function sanitizeImageUrl(value) {
@@ -3097,29 +3182,40 @@
         }
 
         function buildEventListingCardMarkup(data) {
-          var card = document.createElement('button');
-          card.className = 'event-suggested-card';
-          card.type = 'button';
-          if (data.coverDataUrl) {
-            var img = document.createElement('img');
-            img.src = data.coverDataUrl;
-            img.alt = '';
-            img.setAttribute('aria-hidden', 'true');
-            card.appendChild(img);
-          }
-          var title = document.createElement('strong');
-          title.textContent = data.title || 'Event';
-          var meta = document.createElement('p');
-          meta.className = 'event-post-meta';
-          meta.textContent = formatEventDateTime(data.eventStart, data.eventEnd) || 'Upcoming event';
-          var venue = document.createElement('p');
-          venue.className = 'event-post-meta';
-          venue.textContent = data.location || data.logistics || 'Venue to be announced';
-          card.appendChild(title);
-          card.appendChild(meta);
-          card.appendChild(venue);
-          card.addEventListener('click', function () {
-            openEventDetail(data);
+          var fallbackId = data.id || generateListingId('event');
+          var listingSnapshot = Object.assign({}, data, { id: data.id || fallbackId, type: data.type || 'event' });
+          listingDataMap[fallbackId] = listingSnapshot;
+          var card = document.createElement('article');
+          card.className = 'listing-card listing-card-clickable';
+          card.setAttribute('role', 'listitem');
+          card.setAttribute('data-type', 'event');
+          card.setAttribute('data-listing-id', fallbackId);
+          card.setAttribute('tabindex', '0');
+          card.style.cursor = 'pointer';
+          card.innerHTML =
+            '<div class="listing-visual">' +
+              (listingSnapshot.coverDataUrl ? '<img src="' + escapeHtml(listingSnapshot.coverDataUrl) + '" alt="" aria-hidden="true" style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;border-radius:inherit;" />' : '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>') +
+              '<span class="listing-badge">Event</span>' +
+            '</div>' +
+            '<div class="listing-card-body">' +
+              '<div class="listing-meta">' + escapeHtml(formatEventDateTime(listingSnapshot.eventStart, listingSnapshot.eventEnd) || 'Upcoming event') + '</div>' +
+              '<h3 class="listing-title">' + escapeHtml(listingSnapshot.title || 'Event') + '</h3>' +
+              (listingSnapshot.location ? '<div class="listing-location"><svg viewBox="0 0 24 24"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>' + escapeHtml(listingSnapshot.location) + '</div>' : '') +
+            '</div>' +
+            '<div class="listing-card-actions">' +
+              '<button type="button" class="listing-card-action" data-event-action="interested">Interested</button>' +
+              '<button type="button" class="listing-card-action" data-event-action="going">Going</button>' +
+            '</div>';
+          attachEventActionButtons(card.querySelector('.listing-card-actions'), listingSnapshot);
+          card.addEventListener('click', function (event) {
+            if (event.target.closest('.listing-card-actions')) return;
+            openEventDetail(listingSnapshot);
+          });
+          card.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            if (event.target.closest('.listing-card-actions')) return;
+            event.preventDefault();
+            openEventDetail(listingSnapshot);
           });
           return card;
         }
@@ -3141,6 +3237,7 @@
           closeJobDetail();
           var overlay = document.getElementById('event-detail-overlay');
           if (!overlay) return;
+          viewState.activeEventDetailId = data.id || '';
           var owner = getListingOwner(data);
           var creatorName = data.creatorName || (owner && (owner.name || owner.username)) || 'Event host';
           var creatorUsername = data.creatorUsername || (owner && owner.username) || '';
@@ -3165,20 +3262,13 @@
           document.getElementById('event-detail-title').textContent = data.title || 'Event';
           document.getElementById('event-detail-date').textContent = formatEventDateTime(data.eventStart, data.eventEnd) || 'Schedule coming soon';
           var cohostCount = Array.isArray(data.cohosts) ? data.cohosts.length : 0;
-          var placeholderGoingCount = cohostCount + 12;
-          var placeholderInterestedCount = cohostCount + 24;
           document.getElementById('event-detail-subtitle').textContent = toTitleCase(data.privacy || 'Public') + ' · Event by ' + creatorName + (cohostCount ? (' and ' + cohostCount + ' others') : '');
-          document.getElementById('event-detail-interested-btn').classList.add('primary');
-          document.getElementById('event-detail-interested-btn').textContent = 'Interested';
-          document.getElementById('event-detail-going-btn').classList.remove('primary');
-          document.getElementById('event-detail-going-btn').textContent = 'Going';
+          attachEventActionButtons(document.querySelector('.event-detail-actions'), data);
 
           var metaList = document.getElementById('event-detail-meta-list');
           metaList.innerHTML = '';
           [
-            { icon: '📍', title: 'Location', value: creatorLocation || data.logistics || 'Venue to be announced' },
-            { icon: '✅', title: 'Attendance', value: placeholderGoingCount + ' going · ' + placeholderInterestedCount + ' interested' },
-            { icon: '🎫', title: 'Tickets', value: data.creatorWebsite || 'Tickets available on request' },
+            { icon: '📍', title: 'Location', value: creatorLocation || 'Venue to be announced' },
             { icon: '🌐', title: 'Audience', value: toTitleCase(data.privacy || 'Public') }
           ].forEach(function (row) {
             var item = document.createElement('div');
@@ -3188,7 +3278,7 @@
           });
 
           var whatToExpect = document.getElementById('event-detail-what-to-expect');
-          var whatToExpectText = data.details || data.logistics || data.title || 'Event details coming soon.';
+          var whatToExpectText = data.details || data.title || 'Event details coming soon.';
           whatToExpect.textContent = whatToExpectText;
           whatToExpect.classList.remove('expanded');
           var seeMoreBtn = document.getElementById('event-detail-see-more');
@@ -3224,11 +3314,20 @@
               link.textContent = person.website.replace(/^mailto:/, '');
               actionRow.appendChild(link);
             }
-            var followBtn = document.createElement('button');
-            followBtn.className = 'event-follow-btn';
-            followBtn.type = 'button';
-            followBtn.textContent = '+ Follow';
-            actionRow.appendChild(followBtn);
+            var profileBtn = document.createElement('button');
+            profileBtn.className = 'event-follow-btn';
+            profileBtn.type = 'button';
+            profileBtn.textContent = 'View profile';
+            if (person.id) {
+              profileBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                window.location.href = buildProfileHref(person.id);
+              });
+            } else {
+              profileBtn.disabled = true;
+            }
+            actionRow.appendChild(profileBtn);
             hostCard.appendChild(actionRow);
             hostsContainer.appendChild(hostCard);
           });
@@ -3261,28 +3360,6 @@
             suggestedContainer.innerHTML = '<p class="event-post-meta">Suggested events will appear here as more event listings are published.</p>';
           }
 
-          var venueCopy = document.getElementById('event-detail-venue-copy');
-          venueCopy.innerHTML = '<p class="event-venue-copy"><strong>Get directions:</strong> ' + escapeHtml(creatorLocation || 'Venue details pending') + '</p>' +
-            '<p class="event-venue-copy"><strong>Phone:</strong> ' + escapeHtml((owner && owner.profileEmail) || 'Contact the host from their page') + '</p>' +
-            '<p class="event-venue-copy"><strong>About:</strong> ' + escapeHtml(data.creatorBio || (owner && owner.profileBio) || data.details || 'Venue information will be added by the host.') + '</p>';
-          document.getElementById('event-detail-page-btn').onclick = function () {
-            window.location.href = buildProfileHref(creatorUserId);
-          };
-
-          var regionalHeading = document.getElementById('event-detail-regional-heading');
-          var cityLabel = creatorLocation ? creatorLocation.split(',')[0] : 'your area';
-          regionalHeading.textContent = 'More events in ' + cityLabel;
-          var regionalContainer = document.getElementById('event-detail-regional-events');
-          regionalContainer.innerHTML = '';
-          Object.keys(listingDataMap).map(function (key) { return listingDataMap[key]; }).filter(function (item) {
-            return item && item.id !== data.id && String(item.type || '').toLowerCase() === 'event' && String(item.location || '').indexOf(cityLabel) !== -1;
-          }).slice(0, 6).forEach(function (eventItem) {
-            regionalContainer.appendChild(buildEventListingCardMarkup(eventItem));
-          });
-          if (!regionalContainer.childNodes.length) {
-            regionalContainer.innerHTML = '<p class="event-post-meta">More local events will appear here when nearby hosts publish them.</p>';
-          }
-
           var recentPostsContainer = document.getElementById('event-detail-recent-posts');
           recentPostsContainer.innerHTML = '';
           // Discussion posts are placeholder summaries derived from the current listing until a
@@ -3290,7 +3367,7 @@
           [
             { title: 'Event announcement', copy: data.details || 'The host just shared the event announcement and timing details.' },
             { title: 'Host update', copy: creatorName + ' is managing visibility set to ' + toTitleCase(data.privacy || 'Public') + '.' },
-            { title: 'Logistics update', copy: data.logistics || creatorLocation || 'Venue details will be shared closer to the event.' }
+            { title: 'Location update', copy: creatorLocation || 'Venue details will be shared closer to the event.' }
           ].forEach(function (entry) {
             var row = document.createElement('div');
             row.className = 'event-post-row';
@@ -3329,8 +3406,7 @@
               coverDataUrl: imageEl ? imageEl.src : '',
               details: '',
               description: '',
-              eventStart: '',
-              logistics: locationEl ? locationEl.textContent.trim() : ''
+              eventStart: null
             };
             listingDataMap[fallbackData.id] = fallbackData;
             card.classList.add('listing-card-clickable');
@@ -3338,6 +3414,18 @@
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-label', 'View details for ' + fallbackData.title);
             card.setAttribute('data-listing-id', fallbackData.id);
+            if (listingType === 'event') {
+              var existingActions = card.querySelector('.listing-card-actions');
+              if (!existingActions) {
+                existingActions = document.createElement('div');
+                existingActions.className = 'listing-card-actions';
+                existingActions.innerHTML =
+                  '<button type="button" class="listing-card-action" data-event-action="interested">Interested</button>' +
+                  '<button type="button" class="listing-card-action" data-event-action="going">Going</button>';
+                card.appendChild(existingActions);
+              }
+              attachEventActionButtons(existingActions, fallbackData);
+            }
           });
         }
 
@@ -3407,8 +3495,6 @@
           var now = new Date();
           var iso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
           document.getElementById('event-start').value = iso;
-          document.getElementById('event-timezone').value = formatTimezone();
-          updateLogisticsSummary();
           updateCohostSummary();
           updateSettingsSummary();
           bindBenefits();
@@ -3471,11 +3557,6 @@
             var value = String(document.getElementById('location-modal-input').value || '').trim();
             if (viewState.modalLocationTarget === 'job') {
               document.getElementById('job-location').value = value;
-            } else if (viewState.modalLocationTarget === 'event') {
-              document.getElementById('event-in-person-location').value = value;
-              viewState.logistics.mode = 'person';
-              viewState.logistics.inPersonLocation = value;
-              updateLogisticsSummary();
             } else {
               setBrowseLocation(value || 'Nearby');
             }
@@ -3524,37 +3605,6 @@
             var isHidden = endField.hidden;
             endField.hidden = !isHidden;
             document.getElementById('add-end-time-btn').textContent = isHidden ? 'Remove end time' : 'Add end time';
-          });
-
-          document.getElementById('event-logistics-open').addEventListener('click', function () {
-            showModal('logistics-modal');
-          });
-          document.getElementById('logistics-tab-person').addEventListener('click', function () {
-            viewState.logisticsMode = 'person';
-            document.getElementById('logistics-tab-person').classList.add('active');
-            document.getElementById('logistics-tab-virtual').classList.remove('active');
-            document.getElementById('logistics-person-panel').hidden = false;
-            document.getElementById('logistics-virtual-panel').hidden = true;
-          });
-          document.getElementById('logistics-tab-virtual').addEventListener('click', function () {
-            viewState.logisticsMode = 'virtual';
-            document.getElementById('logistics-tab-person').classList.remove('active');
-            document.getElementById('logistics-tab-virtual').classList.add('active');
-            document.getElementById('logistics-person-panel').hidden = true;
-            document.getElementById('logistics-virtual-panel').hidden = false;
-          });
-          document.getElementById('logistics-modal-save').addEventListener('click', function () {
-            if (viewState.logisticsMode === 'person') {
-              viewState.logistics.mode = 'person';
-              viewState.logistics.inPersonLocation = String(document.getElementById('event-in-person-location').value || '').trim();
-            } else {
-              var checked = document.querySelector('input[name="virtual-type"]:checked');
-              viewState.logistics.mode = 'virtual';
-              viewState.logistics.virtualType = checked ? checked.value : 'Neter Live';
-              viewState.logistics.virtualDetail = String(document.getElementById('event-virtual-detail').value || '').trim();
-            }
-            updateLogisticsSummary();
-            hideModal('logistics-modal');
           });
 
           document.getElementById('event-cohosts-open').addEventListener('click', function () {
@@ -3659,12 +3709,7 @@
               eventEnd: String(document.getElementById('event-end').value || '').trim(),
               details: String(document.getElementById('event-details').value || '').trim(),
               privacy: document.getElementById('event-privacy').value,
-              logistics: viewState.logistics.mode === 'person'
-                ? viewState.logistics.inPersonLocation || 'In person'
-                : (viewState.logistics.virtualType || 'Virtual'),
-              location: viewState.logistics.mode === 'person'
-                ? (viewState.logistics.inPersonLocation || '')
-                : 'Virtual',
+              location: String(document.getElementById('event-location').value || '').trim(),
               coverDataUrl: extractCoverDataUrl('event-cover-preview'),
               cohosts: viewState.selectedCohosts.slice(),
               settings: Object.assign({}, viewState.settings),
@@ -3811,20 +3856,6 @@
                 renderEventDetailTab(button.getAttribute('data-event-tab'));
               });
             });
-            [['event-detail-interested-btn', 'Interested'], ['event-detail-going-btn', 'Going']].forEach(function (entry) {
-              var actionButton = document.getElementById(entry[0]);
-              if (!actionButton) return;
-              actionButton.addEventListener('click', function () {
-                actionButton.classList.toggle('primary');
-                actionButton.textContent = actionButton.classList.contains('primary') ? (entry[1] + ' ✓') : entry[1];
-              });
-            });
-            var eventMoreBtn = document.getElementById('event-detail-more-btn');
-            if (eventMoreBtn) {
-              eventMoreBtn.addEventListener('click', function () {
-                alert('More event actions are coming soon.');
-              });
-            }
             var inviteAllBtn = document.getElementById('event-detail-invite-all-btn');
             if (inviteAllBtn) {
               inviteAllBtn.addEventListener('click', function () {
@@ -4042,9 +4073,8 @@
           <p class="event-detail-subtitle" id="event-detail-subtitle"></p>
 
           <div class="event-detail-actions">
-            <button class="event-detail-action primary" type="button" id="event-detail-interested-btn">Interested</button>
-            <button class="event-detail-action" type="button" id="event-detail-going-btn">Going</button>
-            <button class="event-detail-action" type="button" id="event-detail-more-btn">More</button>
+            <button class="event-detail-action primary" type="button" id="event-detail-interested-btn" data-event-action="interested">Interested</button>
+            <button class="event-detail-action" type="button" id="event-detail-going-btn" data-event-action="going">Going</button>
           </div>
 
           <section class="event-detail-grid">
@@ -4058,7 +4088,7 @@
 
           <div class="event-detail-tab-panel" id="event-detail-panel-about">
             <section class="event-detail-panel">
-              <h2 class="event-detail-heading">What to expect</h2>
+              <h2 class="event-detail-heading">Details</h2>
               <p class="event-detail-copy" id="event-detail-what-to-expect"></p>
               <button class="event-detail-see-more" id="event-detail-see-more" type="button" hidden>See more</button>
             </section>
@@ -4079,17 +4109,6 @@
             <section class="event-detail-panel">
               <h2 class="event-detail-heading">Suggested events</h2>
               <div class="event-suggested-track" id="event-detail-suggested-events"></div>
-            </section>
-
-            <section class="event-detail-panel">
-              <h2 class="event-detail-heading" id="event-detail-venue-heading">About the Venue</h2>
-              <div class="event-venue-copy" id="event-detail-venue-copy"></div>
-              <button class="event-detail-page-btn" type="button" id="event-detail-page-btn">Go to Page</button>
-            </section>
-
-            <section class="event-detail-panel">
-              <h2 class="event-detail-heading" id="event-detail-regional-heading">More events nearby</h2>
-              <div class="event-regional-track" id="event-detail-regional-events"></div>
             </section>
           </div>
 

@@ -12,6 +12,8 @@
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const NOTIFICATIONS_PAGE_PATH = 'notifications.html';
   const MARKETPLACE_PAGE_PATH = 'marketplace.html';
+  const MARKETPLACE_LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
+  const EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -1303,6 +1305,68 @@
     return MARKETPLACE_PAGE_PATH + (query ? ('?' + query) : '');
   }
 
+  function readMarketplaceListingsFromStorage() {
+    try {
+      const raw = window.localStorage.getItem(MARKETPLACE_LISTINGS_LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function readEventAttendanceFromStorage() {
+    try {
+      const raw = window.localStorage.getItem(EVENT_ATTENDANCE_LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function buildDashboardAttendancePosts(user) {
+    if (!user || !user.id) return [];
+    const attendanceStore = readEventAttendanceFromStorage();
+    const userAttendance = attendanceStore[user.id];
+    if (!userAttendance || typeof userAttendance !== 'object') return [];
+    const listings = readMarketplaceListingsFromStorage();
+    const listingById = new Map(listings.filter(function (listing) {
+      return listing && listing.id;
+    }).map(function (listing) {
+      return [listing.id, listing];
+    }));
+    return Object.keys(userAttendance).map(function (eventId) {
+      const entry = userAttendance[eventId];
+      const status = typeof entry === 'string' ? entry : String((entry && entry.status) || '');
+      if (status !== 'going') return null;
+      const listing = listingById.get(eventId) || {};
+      const eventStart = listing.eventStart ? new Date(listing.eventStart) : null;
+      return {
+        id: 'attendance-' + user.id + '-' + eventId,
+        userId: user.id,
+        text: '',
+        type: 'event',
+        listingId: eventId,
+        listingTitle: listing.title || 'Event',
+        listingSummary: listing.details || '',
+        listingDetails: listing.details || '',
+        listingMeta: 'going',
+        listingLocation: listing.location || '',
+        listingDateTime: eventStart && !Number.isNaN(eventStart.getTime()) ? eventStart.toLocaleString() : '',
+        listingCoverDataUrl: listing.coverDataUrl || '',
+        imageMediaIds: [],
+        videoMediaId: null,
+        gifUrl: '',
+        poll: null,
+        scheduledAt: null,
+        createdAt: Number((entry && entry.updatedAt) || Date.now())
+      };
+    }).filter(Boolean).sort(function (left, right) {
+      return (right.createdAt || 0) - (left.createdAt || 0);
+    });
+  }
+
   function getRequestedProfileUserId() {
     if (!dashboardRoot) return '';
     return new URLSearchParams(window.location.search).get('user') || '';
@@ -1549,13 +1613,38 @@
     }
   }
 
-  function buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections) {
+  function buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections, attendancePosts) {
     const savedIds = includePrivateCollections && user && user.savedPostIds ? user.savedPostIds : [];
     const allPostsList = Array.isArray(allPosts) ? allPosts : [];
     const commentList = Array.isArray(userComments) ? userComments : [];
     const postById = new Map(allPostsList.map(function (post) { return [post.id, post]; }));
     const savedPosts = allPostsList.filter(function (post) {
       return savedIds.indexOf(post.id) !== -1;
+    });
+    const attendanceItems = Array.isArray(attendancePosts) ? attendancePosts : [];
+    const getListingIdentifier = function (post) {
+      return post && (post.listingId || post.id) ? String(post.listingId || post.id) : '';
+    };
+    const marketplacePosts = userPosts.filter(function (post) {
+      return post.type === 'job' || post.type === 'event';
+    }).slice();
+    attendanceItems.forEach(function (attendancePost) {
+      const eventListingId = getListingIdentifier(attendancePost);
+      const existingEventIndex = marketplacePosts.findIndex(function (post) {
+        return post.type === 'event' && getListingIdentifier(post) === eventListingId;
+      });
+      if (existingEventIndex === -1) {
+        marketplacePosts.push(attendancePost);
+        return;
+      }
+      const existingPost = marketplacePosts[existingEventIndex];
+      const existingMeta = String(existingPost.listingMeta || '').trim();
+      if (/\bgoing\b/i.test(existingMeta)) return;
+      const mergedMeta = existingMeta ? (existingMeta + ' · going') : 'going';
+      marketplacePosts[existingEventIndex] = Object.assign({}, existingPost, { listingMeta: mergedMeta });
+    });
+    marketplacePosts.sort(function (left, right) {
+      return getPostPublishTimestamp(right) - getPostPublishTimestamp(left);
     });
     const commentReplies = commentList.map(function (comment) {
       const parentPost = postById.get(comment.postId);
@@ -1583,9 +1672,7 @@
       }),
       likes: [],
       saved: savedPosts,
-      marketplace: userPosts.filter(function (post) {
-        return post.type === 'job' || post.type === 'event';
-      })
+      marketplace: marketplacePosts
     };
   }
 
@@ -1775,8 +1862,8 @@
     return article;
   }
 
-  async function renderDashboardTabs(userPosts, allPosts, user, userComments, includePrivateCollections) {
-    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections);
+  async function renderDashboardTabs(userPosts, allPosts, user, userComments, includePrivateCollections, attendancePosts) {
+    dashboardTabCollections = buildDashboardTabCollections(userPosts, allPosts, user, userComments, includePrivateCollections, attendancePosts);
     for (let index = 0; index < profileTabPanels.length; index += 1) {
       const panel = profileTabPanels[index];
       const tabName = panel.getAttribute('data-panel') || 'posts';
@@ -3081,6 +3168,13 @@
         img.loading = 'lazy';
         card.appendChild(img);
       }
+    } else if (post.listingCoverDataUrl && isSafeMediaUrl(post.listingCoverDataUrl)) {
+      const img = document.createElement('img');
+      img.className = 'article-companion-cover';
+      img.src = post.listingCoverDataUrl;
+      img.alt = String(post.listingTitle || listingTypeLabel) + ' cover';
+      img.loading = 'lazy';
+      card.appendChild(img);
     }
 
     const body = document.createElement('div');
@@ -3557,7 +3651,8 @@
       event.preventDefault();
     };
 
-    await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile);
+    const attendancePosts = buildDashboardAttendancePosts(viewedUser);
+    await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile, attendancePosts);
   }
 
   async function renderNotificationsPage() {
