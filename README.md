@@ -14,7 +14,10 @@ The app is served by `server.js` on `0.0.0.0:${PORT:-10000}`.
 Core app records now use the `/api/store/:store/:key` server API.
 
 - Set `DATABASE_URL` to a Postgres connection string to enable Postgres-backed persistence.
-- In `NODE_ENV=production`, the server enables Postgres SSL automatically (Render-compatible default uses `rejectUnauthorized: false`).
+- In `NODE_ENV=production`, the server enables Postgres SSL automatically.
+  - On Render in production, the default is `rejectUnauthorized: false` for managed certificate compatibility.
+  - Outside Render, certificate verification remains enabled by default (`rejectUnauthorized: true`).
+  - Security note: `rejectUnauthorized: false` skips certificate verification. For stricter TLS validation, set `PG_SSL_NO_VERIFY=false` and provide trusted certs/CA as needed.
 - Local/non-production defaults to no SSL unless `PGSSLMODE` is set.
 - Optional overrides:
   - `PGSSLMODE=disable` to force SSL off.
