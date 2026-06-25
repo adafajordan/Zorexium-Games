@@ -1280,7 +1280,7 @@
         return /^blob:/i.test(url) || /^data:image\//i.test(url) || /^data:video\//i.test(url);
       }
 
-      var AVATAR_COLORS = ['#e53935','#8e24aa','#1e88e5','#00897b','#f4511e','#c62828','#6a1b9a','#0277bd'];
+      var AVATAR_COLORS = ['#b91c1c','#1d4ed8','#15803d','#6d28d9','#92400e','#0f766e','#be185d','#065f46'];
 
       function getAvatarColor(username) {
         var h = 0;
@@ -1292,8 +1292,8 @@
       function getInitials(name, handle) {
         var n = String(name || handle || '').trim();
         var parts = n.split(/\s+/).filter(Boolean);
-        if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-        return n.slice(0, 2).toUpperCase() || '??';
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return n.slice(0, 2).toUpperCase() || 'ZG';
       }
 
       function formatRelativeTime(ts) {
