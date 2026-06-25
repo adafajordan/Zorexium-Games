@@ -2787,10 +2787,15 @@
 
         function getPayUnitLabel(payType) {
           var normalized = String(payType || '').trim().toLowerCase();
-          if (normalized === 'salary') return 'year';
-          if (normalized === 'daily' || normalized === 'day') return 'day';
-          if (normalized === 'project') return 'project';
-          return 'hour';
+          var unit = normalized.replace(/^per\s+/, '').trim();
+          if (!unit || unit === 'hourly' || unit === 'hour' || unit === 'hr') return 'hour';
+          if (unit === 'salary' || unit === 'yearly' || unit === 'year' || unit === 'annual' || unit === 'annually') return 'year';
+          if (unit === 'daily' || unit === 'day') return 'day';
+          if (unit === 'project') return 'project';
+          if (unit === 'weekly' || unit === 'week') return 'week';
+          if (unit === 'monthly' || unit === 'month') return 'month';
+          var safeUnit = unit.replace(/[^a-z]/g, '');
+          return safeUnit || 'hour';
         }
 
         function formatJobPay(data) {

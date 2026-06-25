@@ -3183,7 +3183,18 @@
     const title = document.createElement('p');
     title.className = 'article-companion-title';
     title.textContent = post.listingTitle || summarizePost(post);
-    body.appendChild(title);
+    if (listingType === 'event') {
+      const eventRow = document.createElement('div');
+      eventRow.className = 'article-companion-event-row';
+      const eventLabel = document.createElement('span');
+      eventLabel.className = 'article-companion-type-label';
+      eventLabel.textContent = 'Event';
+      eventRow.appendChild(eventLabel);
+      eventRow.appendChild(title);
+      body.appendChild(eventRow);
+    } else {
+      body.appendChild(title);
+    }
 
     const summaryText = String(post.listingSummary || post.listingDetails || post.text || '').trim();
     if (summaryText && listingType !== 'event') {
@@ -3193,20 +3204,32 @@
       body.appendChild(excerpt);
     }
 
-    const metaParts = [];
     if (listingType === 'event') {
-      if (post.listingDateTime) metaParts.push(post.listingDateTime);
-      if (post.listingLocation) metaParts.push(post.listingLocation);
+      if (post.listingDateTime || post.listingLocation) {
+        const eventMeta = document.createElement('p');
+        eventMeta.className = 'article-companion-event-meta';
+        if (post.listingDateTime) {
+          const dateLine = document.createElement('span');
+          dateLine.textContent = post.listingDateTime;
+          eventMeta.appendChild(dateLine);
+        }
+        if (post.listingLocation) {
+          const locationLine = document.createElement('span');
+          locationLine.textContent = post.listingLocation;
+          eventMeta.appendChild(locationLine);
+        }
+        body.appendChild(eventMeta);
+      }
     } else {
+      const metaParts = [];
       if (post.listingMeta) metaParts.push(post.listingMeta);
       if (post.listingPay && metaParts.indexOf(post.listingPay) === -1) metaParts.push(post.listingPay);
       if (post.listingLocation && metaParts.indexOf(post.listingLocation) === -1) metaParts.push(post.listingLocation);
+      const footer = document.createElement('p');
+      footer.className = 'article-companion-footer';
+      footer.innerHTML = listingIcon + ' <span>' + listingTypeLabel + '</span>' + (metaParts.length ? ' <span class="article-companion-readtime">&middot; ' + escapeHtml(metaParts.join(' · ')) + '</span>' : '');
+      body.appendChild(footer);
     }
-
-    const footer = document.createElement('p');
-    footer.className = 'article-companion-footer';
-    footer.innerHTML = listingIcon + ' <span>' + listingTypeLabel + '</span>' + (metaParts.length ? ' <span class="article-companion-readtime">&middot; ' + escapeHtml(metaParts.join(' · ')) + '</span>' : '');
-    body.appendChild(footer);
 
     card.appendChild(body);
     return card;
