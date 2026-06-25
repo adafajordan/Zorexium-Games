@@ -69,6 +69,7 @@
   const EMAIL_ADDRESS_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i;
   const MENTION_PATTERN = /@([a-zA-Z0-9_]+)/g;
   const LEGACY_PROFILE_BIO_MESSAGE = 'Welcome back, user. Your posts, replies, articles, and media all update here automatically';
+  const MOBILE_ZOOM_GUARD_STYLE_ID = 'zorexium-mobile-zoom-guard';
   const NPC_CHAR_LIMIT = 280;
   // Regular post length is intentionally unrestricted now; keep the legacy counter threshold
   // only as a dormant constant so existing UI code paths remain stable.
@@ -153,6 +154,7 @@
     saved: [],
     marketplace: []
   };
+  let dashboardRenderRequestId = 0;
   function buildJobsEventsNavIcon() {
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
@@ -223,6 +225,118 @@
   function normalizeProfileBio(value) {
     const bio = String(value || '').trim();
     return bio === LEGACY_PROFILE_BIO_MESSAGE ? '' : bio;
+  }
+
+  function normalizeIdList(value) {
+    return Array.isArray(value) ? Array.from(new Set(value.map(function (entry) {
+      return String(entry || '').trim();
+    }).filter(Boolean))) : [];
+  }
+
+  function resolveFollowStateForUser(user, allAccounts) {
+    if (!user || !user.id) {
+      return { followerIds: [], followingIds: [] };
+    }
+    const accounts = Array.isArray(allAccounts) ? allAccounts : [];
+    const explicitFollowerIds = normalizeIdList(user.followerIds);
+    const explicitFollowingIds = normalizeIdList(user.followingIds);
+    const inferredFollowerIds = accounts.filter(function (account) {
+      const following = normalizeIdList(account && account.followingIds);
+      return following.indexOf(user.id) !== -1;
+    }).map(function (account) {
+      return account.id;
+    });
+    const inferredFollowingIds = accounts.filter(function (account) {
+      const followers = normalizeIdList(account && account.followerIds);
+      return followers.indexOf(user.id) !== -1;
+    }).map(function (account) {
+      return account.id;
+    });
+    return {
+      followerIds: Array.from(new Set(explicitFollowerIds.concat(inferredFollowerIds))),
+      followingIds: Array.from(new Set(explicitFollowingIds.concat(inferredFollowingIds)))
+    };
+  }
+
+  async function getProfileFollowSnapshot(requestedUserId) {
+    const targetUserId = String(requestedUserId || '').trim();
+    const allAccounts = await readAccounts();
+    if (!allAccounts.length) {
+      return {
+        viewedUser: targetUserId ? null : currentUser,
+        followerIds: [],
+        followingIds: []
+      };
+    }
+    let viewedUser = targetUserId ? allAccounts.find(function (account) { return account.id === targetUserId; }) : null;
+    if (!viewedUser && !targetUserId && currentUser) {
+      viewedUser = allAccounts.find(function (account) { return account.id === currentUser.id; }) || currentUser;
+    }
+    if (!viewedUser && targetUserId) {
+      viewedUser = await getUserById(targetUserId);
+    }
+    const resolved = resolveFollowStateForUser(viewedUser, allAccounts);
+    return {
+      viewedUser: viewedUser,
+      followerIds: resolved.followerIds,
+      followingIds: resolved.followingIds
+    };
+  }
+
+  function getUserInteractionIds(fieldName) {
+    if (!currentUser) return [];
+    return normalizeIdList(currentUser[fieldName]);
+  }
+
+  async function persistUserInteractionIds(fieldName, nextIds) {
+    if (!currentUser) return;
+    const updatedUser = Object.assign({}, currentUser, {
+      [fieldName]: normalizeIdList(nextIds)
+    });
+    await putRecord(ACCOUNTS_STORE, updatedUser);
+    currentUser = updatedUser;
+  }
+
+  async function toggleCommentAction(commentId, action) {
+    if (!currentUser || !commentId || !action) return { active: false, count: 0 };
+    const actionMap = {
+      like: { idsField: 'likedCommentIds', countField: 'likeCount' },
+      repost: { idsField: 'repostedCommentIds', countField: 'repostCount' },
+      save: { idsField: 'savedCommentIds', countField: 'saveCount' }
+    };
+    const config = actionMap[action];
+    if (!config) return { active: false, count: 0 };
+    const ids = getUserInteractionIds(config.idsField);
+    const isActive = ids.indexOf(commentId) !== -1;
+    const nextIds = isActive
+      ? ids.filter(function (id) { return id !== commentId; })
+      : ids.concat(commentId);
+    await persistUserInteractionIds(config.idsField, nextIds);
+    const nextCount = await atomicIncrementRecord(COMMENTS_STORE, commentId, config.countField, isActive ? -1 : 1);
+    return {
+      active: !isActive,
+      count: Number.isFinite(Number(nextCount)) ? Math.max(0, Math.round(Number(nextCount))) : 0
+    };
+  }
+
+  function applyMobileZoomGuard() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById(MOBILE_ZOOM_GUARD_STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = MOBILE_ZOOM_GUARD_STYLE_ID;
+    style.textContent = [
+      'button,',
+      'a,',
+      '[role="button"],',
+      '.post-action,',
+      '.post-comment-action,',
+      '.profile-stat-btn,',
+      '.profile-edit-btn,',
+      '.profile-follow-btn,',
+      '.follow-list-item { touch-action: manipulation; }',
+      '@media (pointer: coarse) { input, textarea, select { font-size: 16px !important; } }'
+    ].join('\n');
+    document.head.appendChild(style);
   }
 
   function transactionDone(transaction) {
@@ -699,6 +813,10 @@
       postId: postId,
       userId: currentUser.id,
       text: commentText,
+      likeCount: 0,
+      replyCount: 0,
+      repostCount: 0,
+      saveCount: 0,
       createdAt: Date.now()
     });
     const postRecord = await getRecord(POSTS_STORE, postId);
@@ -782,35 +900,39 @@
 
   async function toggleFollow(targetUserId) {
     if (!currentUser || !targetUserId || targetUserId === currentUser.id) return false;
-    const followingIds = currentUser.followingIds ? currentUser.followingIds.slice() : [];
+    const allAccounts = await readAccounts();
+    const currentAccount = allAccounts.find(function (account) { return account.id === currentUser.id; }) || currentUser;
+    const targetUser = allAccounts.find(function (account) { return account.id === targetUserId; }) || await getUserById(targetUserId);
+    if (!targetUser) return false;
+
+    const currentFollowState = resolveFollowStateForUser(currentAccount, allAccounts);
+    const targetFollowState = resolveFollowStateForUser(targetUser, allAccounts);
+    const followingIds = currentFollowState.followingIds.slice();
     const isFollowing = followingIds.indexOf(targetUserId) !== -1;
     if (isFollowing) {
       followingIds.splice(followingIds.indexOf(targetUserId), 1);
     } else {
       followingIds.push(targetUserId);
     }
-    const updatedCurrentUser = Object.assign({}, currentUser, {
+    const followerIds = targetFollowState.followerIds.slice();
+    const followerIndex = followerIds.indexOf(currentUser.id);
+    if (isFollowing) {
+      if (followerIndex !== -1) followerIds.splice(followerIndex, 1);
+    } else if (followerIndex === -1) {
+      followerIds.push(currentUser.id);
+    }
+
+    const updatedCurrentUser = Object.assign({}, currentAccount, {
       followingIds: followingIds,
       profileFollowing: followingIds.length
     });
+    const updatedTargetUser = Object.assign({}, targetUser, {
+      followerIds: followerIds,
+      profileFollowers: followerIds.length
+    });
     await putRecord(ACCOUNTS_STORE, updatedCurrentUser);
+    await putRecord(ACCOUNTS_STORE, updatedTargetUser);
     currentUser = updatedCurrentUser;
-    const targetUser = await getUserById(targetUserId);
-    if (targetUser) {
-      const followerIds = targetUser.followerIds ? targetUser.followerIds.slice() : [];
-      if (isFollowing) {
-        const idx = followerIds.indexOf(currentUser.id);
-        if (idx !== -1) followerIds.splice(idx, 1);
-      } else {
-        if (followerIds.indexOf(currentUser.id) === -1) {
-          followerIds.push(currentUser.id);
-        }
-      }
-      await putRecord(ACCOUNTS_STORE, Object.assign({}, targetUser, {
-        followerIds: followerIds,
-        profileFollowers: followerIds.length
-      }));
-    }
     return !isFollowing;
   }
 
@@ -940,14 +1062,19 @@
       likeCountSpan.textContent = '0';
       likeBtn.innerHTML = likeSvg;
       likeBtn.appendChild(likeCountSpan);
-      likeBtn.addEventListener('click', function () {
-        var liked = likeBtn.getAttribute('data-liked') === 'true';
-        var cur = parseInt(likeBtn.getAttribute('data-count') || '0', 10);
-        var next = liked ? Math.max(0, cur - 1) : cur + 1;
-        likeBtn.setAttribute('data-liked', String(!liked));
-        likeBtn.setAttribute('data-count', String(next));
-        likeBtn.style.color = liked ? '' : 'var(--accent)';
-        likeCountSpan.textContent = String(next);
+      likeBtn.addEventListener('click', async function () {
+        if (!currentUser) { openAuthModal('login'); return; }
+        likeBtn.disabled = true;
+        try {
+          var likeResult = await toggleCommentAction(comment.id, 'like');
+          likeBtn.setAttribute('data-liked', String(Boolean(likeResult.active)));
+          likeBtn.setAttribute('data-count', String(likeResult.count));
+          likeBtn.style.color = likeResult.active ? 'var(--accent)' : '';
+          likeCountSpan.textContent = String(likeResult.count);
+        } catch (error) {
+          console.warn('Unable to update reply like.', error);
+        }
+        likeBtn.disabled = false;
       });
       commentActions.appendChild(likeBtn);
 
@@ -955,7 +1082,11 @@
       var replyBtn = document.createElement('button');
       replyBtn.className = 'post-comment-action';
       replyBtn.type = 'button';
-      replyBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Reply';
+      replyBtn.setAttribute('data-count', '0');
+      replyBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+      var replyCountSpan = document.createElement('span');
+      replyCountSpan.textContent = '0';
+      replyBtn.appendChild(replyCountSpan);
       replyBtn.addEventListener('click', function () {
         if (!currentUser) { openAuthModal('login'); return; }
         var existing = item.querySelector('.post-comment-reply-box');
@@ -975,6 +1106,10 @@
           if (!text) return;
           replyInput.value = '';
           await addComment(postId, text);
+          var nextReplyCount = await atomicIncrementRecord(COMMENTS_STORE, comment.id, 'replyCount', 1);
+          var normalizedReplyCount = Number.isFinite(Number(nextReplyCount)) ? Math.max(0, Math.round(Number(nextReplyCount))) : (parseInt(replyBtn.getAttribute('data-count') || '0', 10) + 1);
+          replyBtn.setAttribute('data-count', String(normalizedReplyCount));
+          replyCountSpan.textContent = String(normalizedReplyCount);
           replyBox.remove();
           loadComments();
           var parentArticle = box.closest('[data-post-id]');
@@ -1007,15 +1142,19 @@
       repostCountSpan.textContent = '0';
       repostBtn.innerHTML = repostSvg;
       repostBtn.appendChild(repostCountSpan);
-      repostBtn.addEventListener('click', function () {
+      repostBtn.addEventListener('click', async function () {
         if (!currentUser) { openAuthModal('login'); return; }
-        var rep = repostBtn.getAttribute('data-reposted') === 'true';
-        var cur = parseInt(repostBtn.getAttribute('data-count') || '0', 10);
-        var next = rep ? Math.max(0, cur - 1) : cur + 1;
-        repostBtn.setAttribute('data-reposted', String(!rep));
-        repostBtn.setAttribute('data-count', String(next));
-        repostBtn.style.color = rep ? '' : 'var(--accent)';
-        repostCountSpan.textContent = String(next);
+        repostBtn.disabled = true;
+        try {
+          var repostResult = await toggleCommentAction(comment.id, 'repost');
+          repostBtn.setAttribute('data-reposted', String(Boolean(repostResult.active)));
+          repostBtn.setAttribute('data-count', String(repostResult.count));
+          repostBtn.style.color = repostResult.active ? 'var(--accent)' : '';
+          repostCountSpan.textContent = String(repostResult.count);
+        } catch (error) {
+          console.warn('Unable to update reply repost.', error);
+        }
+        repostBtn.disabled = false;
       });
       commentActions.appendChild(repostBtn);
 
@@ -1024,14 +1163,51 @@
       saveBtn.className = 'post-comment-action';
       saveBtn.type = 'button';
       saveBtn.setAttribute('data-saved', 'false');
+      saveBtn.setAttribute('data-count', '0');
       saveBtn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-      saveBtn.addEventListener('click', function () {
+      var saveCountSpan = document.createElement('span');
+      saveCountSpan.textContent = '0';
+      saveBtn.appendChild(saveCountSpan);
+      saveBtn.addEventListener('click', async function () {
         if (!currentUser) { openAuthModal('login'); return; }
-        var saved = saveBtn.getAttribute('data-saved') === 'true';
-        saveBtn.setAttribute('data-saved', String(!saved));
-        saveBtn.style.color = saved ? '' : 'var(--accent)';
+        saveBtn.disabled = true;
+        try {
+          var saveResult = await toggleCommentAction(comment.id, 'save');
+          saveBtn.setAttribute('data-saved', String(Boolean(saveResult.active)));
+          saveBtn.setAttribute('data-count', String(saveResult.count));
+          saveBtn.style.color = saveResult.active ? 'var(--accent)' : '';
+          saveCountSpan.textContent = String(saveResult.count);
+        } catch (error) {
+          console.warn('Unable to update reply save.', error);
+        }
+        saveBtn.disabled = false;
       });
       commentActions.appendChild(saveBtn);
+
+      var likedCommentIds = getUserInteractionIds('likedCommentIds');
+      var repostedCommentIds = getUserInteractionIds('repostedCommentIds');
+      var savedCommentIds = getUserInteractionIds('savedCommentIds');
+      var likeCount = Math.max(0, Math.round(Number(comment.likeCount) || 0));
+      var replyCount = Math.max(0, Math.round(Number(comment.replyCount) || 0));
+      var repostCount = Math.max(0, Math.round(Number(comment.repostCount) || 0));
+      var saveCount = Math.max(0, Math.round(Number(comment.saveCount) || 0));
+      var liked = likedCommentIds.indexOf(comment.id) !== -1;
+      var reposted = repostedCommentIds.indexOf(comment.id) !== -1;
+      var saved = savedCommentIds.indexOf(comment.id) !== -1;
+      likeBtn.setAttribute('data-liked', String(liked));
+      likeBtn.setAttribute('data-count', String(likeCount));
+      likeBtn.style.color = liked ? 'var(--accent)' : '';
+      likeCountSpan.textContent = String(likeCount);
+      replyBtn.setAttribute('data-count', String(replyCount));
+      replyCountSpan.textContent = String(replyCount);
+      repostBtn.setAttribute('data-reposted', String(reposted));
+      repostBtn.setAttribute('data-count', String(repostCount));
+      repostBtn.style.color = reposted ? 'var(--accent)' : '';
+      repostCountSpan.textContent = String(repostCount);
+      saveBtn.setAttribute('data-saved', String(saved));
+      saveBtn.setAttribute('data-count', String(saveCount));
+      saveBtn.style.color = saved ? 'var(--accent)' : '';
+      saveCountSpan.textContent = String(saveCount);
 
       return commentActions;
     }
@@ -1052,11 +1228,17 @@
           avatar.className = 'post-comment-avatar';
           avatar.style.background = user ? getAvatarColor(user.username) : '#888';
           avatar.textContent = user ? getInitials(user.name, user.username) : '?';
+          avatar.setAttribute('data-profile-user-id', user && user.id ? user.id : '');
+          avatar.setAttribute('role', 'button');
+          avatar.setAttribute('tabindex', '0');
           var content = document.createElement('div');
           content.className = 'post-comment-content';
           var author = document.createElement('span');
           author.className = 'post-comment-author';
           author.textContent = user ? user.name : 'Unknown';
+          author.setAttribute('data-profile-user-id', user && user.id ? user.id : '');
+          author.setAttribute('role', 'button');
+          author.setAttribute('tabindex', '0');
           var text = document.createElement('p');
           text.className = 'post-comment-text';
           text.textContent = comment.text;
@@ -3956,16 +4138,24 @@
 
   async function renderAccountDashboard() {
     if (!dashboardRoot) return;
-    dashboardRoot.innerHTML = '';
     if (!profileAvatar || !profileName || !profileHandle || !profileBio || !profileContactLink || !profileBirthday || !profileBirthdayItem || !profilePostTotal || !profileFollowersTotal || !profileFollowingTotal) {
       return;
     }
-
+    const renderRequestId = ++dashboardRenderRequestId;
     clearGeneratedMediaUrls();
     const requestedProfileUserId = getRequestedProfileUserId();
-    const viewedUser = requestedProfileUserId ? await getUserById(requestedProfileUserId) : currentUser;
+    const followSnapshot = await getProfileFollowSnapshot(requestedProfileUserId);
+    if (renderRequestId !== dashboardRenderRequestId) return;
+    const viewedUser = followSnapshot.viewedUser;
+    if (requestedProfileUserId && !viewedUser) {
+      return;
+    }
+    if (!requestedProfileUserId && currentUser && viewedUser && viewedUser.id !== currentUser.id) {
+      currentUser = viewedUser;
+    }
     const isOwnProfile = Boolean(viewedUser && currentUser && viewedUser.id === currentUser.id) || (!requestedProfileUserId && Boolean(currentUser));
     const [posts, comments] = await Promise.all([readPosts(), readAllComments()]);
+    if (renderRequestId !== dashboardRenderRequestId) return;
     const userPosts = viewedUser ? posts.filter(function (post) {
       return post.userId === viewedUser.id;
     }).sort(function (left, right) {
@@ -3981,12 +4171,8 @@
     const bioValue = viewedUser ? normalizeProfileBio(viewedUser.profileBio) : '';
     const birthdayValue = viewedUser ? String(viewedUser.profileBirthday || '').trim() : '';
     const profileEmailValue = viewedUser ? String(viewedUser.profileEmail || '').trim().toLowerCase() : '';
-    const followerCount = viewedUser
-      ? normalizeProfileMetric(viewedUser.followerIds ? viewedUser.followerIds.length : viewedUser.profileFollowers)
-      : 0;
-    const followingCount = viewedUser
-      ? normalizeProfileMetric(viewedUser.followingIds ? viewedUser.followingIds.length : viewedUser.profileFollowing)
-      : 0;
+    const followerCount = viewedUser ? normalizeProfileMetric(followSnapshot.followerIds.length) : 0;
+    const followingCount = viewedUser ? normalizeProfileMetric(followSnapshot.followingIds.length) : 0;
     const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
 
     if (profileBanner) {
@@ -4024,13 +4210,9 @@
             const nowFollowing = await toggleFollow(viewedUser.id);
             profileEditButton.textContent = nowFollowing ? 'Following' : 'Follow';
             profileEditButton.className = nowFollowing ? 'profile-follow-btn following' : 'profile-follow-btn';
-            const refreshedUser = await getUserById(viewedUser.id);
-            if (refreshedUser) {
-              const newFollowerCount = refreshedUser.followerIds ? refreshedUser.followerIds.length : refreshedUser.profileFollowers;
-              profileFollowersTotal.textContent = String(normalizeProfileMetric(newFollowerCount));
-            }
-            const newFollowingCount = currentUser.followingIds ? currentUser.followingIds.length : currentUser.profileFollowing;
-            profileFollowingTotal.textContent = String(normalizeProfileMetric(newFollowingCount));
+            const refreshedSnapshot = await getProfileFollowSnapshot(viewedUser.id);
+            profileFollowersTotal.textContent = String(normalizeProfileMetric(refreshedSnapshot.followerIds.length));
+            profileFollowingTotal.textContent = String(normalizeProfileMetric(refreshedSnapshot.followingIds.length));
           } catch (err) {
             console.warn('Follow toggle failed', err);
           }
@@ -4071,12 +4253,12 @@
     const followingStatBtn = document.getElementById('profile-following-stat');
     if (followersStatBtn) {
       followersStatBtn.onclick = function () {
-        openFollowListOverlay(viewedUser, 'followers');
+        openFollowListOverlay(viewedUser && viewedUser.id ? viewedUser.id : '', 'followers');
       };
     }
     if (followingStatBtn) {
       followingStatBtn.onclick = function () {
-        openFollowListOverlay(viewedUser, 'following');
+        openFollowListOverlay(viewedUser && viewedUser.id ? viewedUser.id : '', 'following');
       };
     }
 
@@ -4088,7 +4270,7 @@
     await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile, attendancePosts);
   }
 
-  async function openFollowListOverlay(user, listType) {
+  async function openFollowListOverlay(userId, listType) {
     const overlay = document.getElementById('follow-list-overlay');
     const title = document.getElementById('follow-list-title');
     const body = document.getElementById('follow-list-body');
@@ -4104,7 +4286,8 @@
         overlay.setAttribute('aria-hidden', 'true');
       };
     }
-    const ids = (listType === 'followers' ? (user && user.followerIds) : (user && user.followingIds)) || [];
+    const snapshot = await getProfileFollowSnapshot(userId);
+    const ids = listType === 'followers' ? snapshot.followerIds : snapshot.followingIds;
     if (!ids.length) {
       const empty = document.createElement('p');
       empty.className = 'follow-list-empty';
@@ -4438,20 +4621,24 @@
 
   function attachDashboardTriggerHandlers() {
     document.addEventListener('click', function (event) {
-      const trigger = event.target.closest('.post-avatar, .post-username');
+      const trigger = event.target.closest('.post-avatar, .post-username, .post-comment-avatar, .post-comment-author');
       if (!trigger) return;
+      const profileUserId = String(trigger.getAttribute('data-profile-user-id') || '').trim();
+      if (!profileUserId || profileUserId === '_static') return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      navigateToDashboard(trigger.getAttribute('data-profile-user-id') || '');
+      navigateToDashboard(profileUserId);
     }, true);
 
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      const trigger = event.target && event.target.closest ? event.target.closest('.post-avatar, .post-username') : null;
+      const trigger = event.target && event.target.closest ? event.target.closest('.post-avatar, .post-username, .post-comment-avatar, .post-comment-author') : null;
       if (!trigger) return;
+      const profileUserId = String(trigger.getAttribute('data-profile-user-id') || '').trim();
+      if (!profileUserId || profileUserId === '_static') return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      navigateToDashboard(trigger.getAttribute('data-profile-user-id') || '');
+      navigateToDashboard(profileUserId);
     }, true);
   }
 
@@ -5546,6 +5733,7 @@
   }
 
   async function initSharedHandlers() {
+    applyMobileZoomGuard();
     injectNameField();
     initAuthTabs();
     attachDashboardProfileHandlers();
