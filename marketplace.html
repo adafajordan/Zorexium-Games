@@ -2443,6 +2443,8 @@
         var EVENT_EXPIRY_GRACE_MS = 2 * 60 * 60 * 1000;
         var listingDataMap = {};
         var serverPersistenceUnavailable = false;
+        var serverPersistenceFailures = 0;
+        var SERVER_PERSISTENCE_FAILURE_LIMIT = 3;
         var viewIds = {
           feed: 'jobs-events-feed-view',
           'create-job': 'create-job-view',
@@ -2556,9 +2558,13 @@
               }
               return fetch(endpoint, options).then(function (response) {
                 if (!response.ok) throw new Error('Server persistence request failed (' + response.status + ').');
+                serverPersistenceFailures = 0;
                 return response.json();
               }).catch(function (error) {
-                serverPersistenceUnavailable = true;
+                serverPersistenceFailures += 1;
+                if (serverPersistenceFailures >= SERVER_PERSISTENCE_FAILURE_LIMIT) {
+                  serverPersistenceUnavailable = true;
+                }
                 throw error;
               });
             }

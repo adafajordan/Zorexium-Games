@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
@@ -7,6 +8,8 @@ const PORT = Number(process.env.PORT || 10000);
 const HOST = process.env.HOST || '0.0.0.0';
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const MAX_RECORD_PAYLOAD_BYTES = 12 * 1024 * 1024;
+const PUBLIC_ALLOWED_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.webmanifest', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.txt']);
+const PUBLIC_BLOCKLIST = new Set(['server.js', 'package.json', 'package-lock.json', 'STORAGE_AUDIT.md']);
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '16mb' }));
@@ -17,9 +20,22 @@ let pool = null;
 if (DATABASE_URL) {
   pool = new Pool({
     connectionString: DATABASE_URL,
-    ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false }
+    ssl: process.env.PGSSLMODE === 'disable'
+      ? false
+      : {
+          rejectUnauthorized: process.env.PG_SSL_NO_VERIFY === 'true' ? false : true
+        }
   });
 }
+
+const publicFiles = new Set(
+  fs.readdirSync(__dirname).filter((fileName) => {
+    if (PUBLIC_BLOCKLIST.has(fileName)) return false;
+    if (!/^[a-zA-Z0-9._-]+$/.test(fileName)) return false;
+    const extension = path.extname(fileName).toLowerCase();
+    return PUBLIC_ALLOWED_EXTENSIONS.has(extension);
+  })
+);
 
 function isSafeStoreName(value) {
   return /^[a-zA-Z0-9_-]{1,64}$/.test(String(value || ''));
@@ -133,6 +149,7 @@ app.get('/api/store/:storeName', async (req, res) => {
     const records = await readAllRecords(storeName);
     return res.json({ records });
   } catch (error) {
+    console.error('[api] failed to read records', { storeName, error });
     return res.status(500).json({ error: 'Failed to read records.' });
   }
 });
@@ -147,6 +164,7 @@ app.get('/api/store/:storeName/:recordKey', async (req, res) => {
     const record = await readRecord(storeName, key);
     return res.json({ record: record || null });
   } catch (error) {
+    console.error('[api] failed to read record', { storeName, key, error });
     return res.status(500).json({ error: 'Failed to read record.' });
   }
 });
@@ -170,6 +188,7 @@ app.put('/api/store/:storeName/:recordKey', async (req, res) => {
     await writeRecord(storeName, key, payload);
     return res.json({ ok: true });
   } catch (error) {
+    console.error('[api] failed to write record', { storeName, key, error });
     return res.status(500).json({ error: 'Failed to write record.' });
   }
 });
@@ -184,14 +203,21 @@ app.delete('/api/store/:storeName/:recordKey', async (req, res) => {
     await removeRecord(storeName, key);
     return res.json({ ok: true });
   } catch (error) {
+    console.error('[api] failed to delete record', { storeName, key, error });
     return res.status(500).json({ error: 'Failed to delete record.' });
   }
 });
 
-app.use(express.static(__dirname));
-
-app.get('*', (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/:fileName', (req, res) => {
+  const fileName = String(req.params.fileName || '').trim();
+  if (!publicFiles.has(fileName)) {
+    return res.status(404).send('Not found');
+  }
+  return res.sendFile(path.join(__dirname, fileName));
 });
 
 async function start() {
