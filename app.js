@@ -50,6 +50,7 @@
   const MEDIA_VIEWER_SWIPE_THRESHOLD = 70;
   const MEDIA_VIEWER_DISMISS_THRESHOLD = 110;
   const DEFAULT_POST_VIDEO_VOLUME = 0.5;
+  const STATIC_MIRROR_USER_ID = '_static';
   const VIDEO_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
   const VIDEO_ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
   const VIDEO_ICON_MUTED = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
@@ -772,7 +773,7 @@
   async function addPostOwnerNotification(postId, notificationType, message) {
     if (!postId || !currentUser || !message) return;
     const post = await getRecord(POSTS_STORE, postId);
-    if (!post || !post.userId || post.userId === currentUser.id || post.userId === '_static') return;
+    if (!post || !post.userId || post.userId === currentUser.id || post.userId === STATIC_MIRROR_USER_ID) return;
     await addNotification({
       userId: post.userId,
       actorId: currentUser.id,
@@ -836,7 +837,7 @@
       if (staticInfo && !(await getRecord(POSTS_STORE, postId))) {
         await putRecord(POSTS_STORE, {
           id: postId,
-          userId: '_static',
+          userId: STATIC_MIRROR_USER_ID,
           text: staticInfo.text || '',
           imageMediaIds: [],
           videoMediaId: null,
@@ -871,7 +872,7 @@
       if (staticInfo && !(await getRecord(POSTS_STORE, postId))) {
         await putRecord(POSTS_STORE, {
           id: postId,
-          userId: '_static',
+          userId: STATIC_MIRROR_USER_ID,
           text: staticInfo.text || '',
           imageMediaIds: [],
           videoMediaId: null,
@@ -2395,7 +2396,7 @@
         const post = items[itemIndex];
         let postUser = user;
         if (post.isStaticMirror) {
-          postUser = { id: '_static', name: post.staticAuthorName || 'Unknown', username: post.staticAuthorHandle || 'user' };
+          postUser = { id: STATIC_MIRROR_USER_ID, name: post.staticAuthorName || 'Unknown', username: post.staticAuthorHandle || 'user' };
         } else if (post.isRepost) {
           postUser = user;
         }
@@ -4624,7 +4625,7 @@
       const trigger = event.target.closest('.post-avatar, .post-username, .post-comment-avatar, .post-comment-author');
       if (!trigger) return;
       const profileUserId = String(trigger.getAttribute('data-profile-user-id') || '').trim();
-      if (!profileUserId || profileUserId === '_static') return;
+      if (!profileUserId || profileUserId === STATIC_MIRROR_USER_ID) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       navigateToDashboard(profileUserId);
@@ -4635,7 +4636,7 @@
       const trigger = event.target && event.target.closest ? event.target.closest('.post-avatar, .post-username, .post-comment-avatar, .post-comment-author') : null;
       if (!trigger) return;
       const profileUserId = String(trigger.getAttribute('data-profile-user-id') || '').trim();
-      if (!profileUserId || profileUserId === '_static') return;
+      if (!profileUserId || profileUserId === STATIC_MIRROR_USER_ID) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       navigateToDashboard(profileUserId);
