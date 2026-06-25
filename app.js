@@ -11,6 +11,7 @@
   const WINDOW_SESSION_PREFIX = 'zorexium-session:';
   const ACCOUNT_DASHBOARD_PATH = 'account-dashboard.html';
   const NOTIFICATIONS_PAGE_PATH = 'notifications.html';
+  const MESSAGES_PAGE_PATH = 'messages.html';
   const MARKETPLACE_PAGE_PATH = 'marketplace.html';
   const MARKETPLACE_LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
   const EVENT_ATTENDANCE_LS_KEY = 'zorexium-event-attendance';
@@ -92,6 +93,7 @@
   const newPostStatus = document.getElementById('new-post-status');
   const headerProfileButton = document.getElementById('header-profile-btn');
   const headerNotificationsButton = document.getElementById('header-notifications-btn');
+  const headerMessagesButton = document.getElementById('header-messages-btn');
   const stickyFooterProfileButton = document.getElementById('sticky-footer-profile');
   const stickyFooterNotificationsButton = document.getElementById('sticky-footer-notifications');
   const stickyFooterMarketplaceButton = document.getElementById('sticky-footer-marketplace');
@@ -4542,6 +4544,16 @@
       openAuthModal('login');
       return;
     }
+
+    function navigateToMessages() {
+      if (!currentUser) {
+        openAuthModal('login');
+        return;
+      }
+      if (getCurrentPageName() !== MESSAGES_PAGE_PATH) {
+        window.location.href = MESSAGES_PAGE_PATH;
+      }
+    }
     if (getCurrentPageName() !== NOTIFICATIONS_PAGE_PATH) {
       window.location.href = NOTIFICATIONS_PAGE_PATH;
       return;
@@ -4759,12 +4771,14 @@
       return logout();
     });
 
-    [headerProfileButton, headerNotificationsButton, stickyFooterProfileButton, stickyFooterNotificationsButton].forEach(function (button) {
+    [headerProfileButton, headerNotificationsButton, headerMessagesButton, stickyFooterProfileButton, stickyFooterNotificationsButton].forEach(function (button) {
       attachAuthenticatedClickGuard(button, function () {
         if (button === headerProfileButton || button === stickyFooterProfileButton) {
           navigateToDashboard();
         } else if (button === headerNotificationsButton || button === stickyFooterNotificationsButton) {
           navigateToNotifications();
+        } else if (button === headerMessagesButton) {
+          navigateToMessages();
         }
       });
     });
