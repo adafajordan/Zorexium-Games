@@ -1087,6 +1087,414 @@
           max-width: calc(100% - 70px);
         }
       }
+
+      /* ── Job detail fullscreen overlay ─────────────────────── */
+      .job-detail-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 600;
+        background: #fff;
+        overflow-y: auto;
+        flex-direction: column;
+      }
+      .job-detail-overlay.open {
+        display: flex;
+      }
+      .jd-top-bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .jd-back-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text);
+        padding: 6px 8px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .jd-back-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+      .jd-top-bar-title {
+        font-size: 17px;
+        font-weight: 700;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .jd-body {
+        flex: 1;
+        min-height: 0;
+      }
+      .jd-hero {
+        width: 100%;
+        aspect-ratio: 16 / 7;
+        background: linear-gradient(135deg, var(--surface-soft) 0%, #e8e8e8 100%);
+        overflow: hidden;
+        position: relative;
+        flex-shrink: 0;
+      }
+      .jd-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .jd-hero-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-placeholder);
+      }
+      .jd-hero-placeholder svg { width: 56px; height: 56px; fill: none; stroke: currentColor; stroke-width: 1.4; opacity: .4; }
+      .jd-content {
+        padding: 20px 16px 40px;
+        max-width: 680px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .jd-identity {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .jd-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.25;
+        color: var(--text);
+      }
+      .jd-creator-node {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .jd-creator-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        text-transform: uppercase;
+      }
+      .jd-creator-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .jd-creator-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .jd-creator-location {
+        font-size: 13px;
+        color: var(--text-soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .jd-terms-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .jd-terms-list li {
+        font-size: 14px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .jd-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0;
+      }
+      .jd-messenger {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .jd-disclaimer {
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.4;
+      }
+      .jd-disclaimer a { color: var(--accent); text-decoration: none; }
+      .jd-msg-input {
+        width: 100%;
+        border: 1.5px solid var(--border-strong);
+        border-radius: 999px;
+        padding: 12px 20px;
+        font: inherit;
+        font-size: 14px;
+        color: var(--text);
+        background: #fff;
+        outline: none;
+        transition: border-color .15s;
+        resize: none;
+        overflow: hidden;
+        line-height: 1.4;
+      }
+      .jd-msg-input:focus {
+        border-color: var(--accent);
+      }
+      .jd-quick-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .jd-action-btn {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 0;
+        border: 1.5px solid var(--border-strong);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .12s, border-color .12s;
+      }
+      .jd-action-btn:hover { background: var(--surface); border-color: var(--border); }
+      .jd-action-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .jd-section-head {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 10px;
+        color: var(--text);
+      }
+      .jd-description {
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.65;
+        white-space: pre-wrap;
+        overflow: hidden;
+      }
+      .jd-description.collapsed {
+        display: -webkit-box;
+        -webkit-line-clamp: 5;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .jd-see-more-btn {
+        background: none;
+        border: none;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 4px 0 0;
+        display: none;
+      }
+      .jd-benefits-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .jd-benefit-pill {
+        padding: 5px 14px;
+        border-radius: 999px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+      .jd-creator-card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        overflow: hidden;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .jd-creator-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .jd-creator-card-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+      }
+      .jd-creator-card-copy {
+        flex: 1;
+        min-width: 0;
+      }
+      .jd-creator-card-name {
+        font-size: 15px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .jd-creator-card-followers {
+        font-size: 13px;
+        color: var(--text-soft);
+      }
+      .jd-creator-card-bio {
+        font-size: 13px;
+        color: var(--text-soft);
+        line-height: 1.5;
+        margin-top: 2px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .jd-view-page-btn {
+        flex-shrink: 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent);
+        background: none;
+        border: 1.5px solid var(--accent);
+        border-radius: 20px;
+        padding: 5px 14px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .jd-map-thumbnail {
+        width: 100%;
+        aspect-ratio: 3 / 1;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #dde8f0 0%, #c8dae8 100%);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        font-size: 13px;
+        color: var(--text-soft);
+        gap: 6px;
+      }
+      .jd-map-thumbnail svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+      .jd-address-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+      .jd-address-row svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; color: var(--accent); }
+      .jd-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+      .jd-meta-label {
+        font-weight: 600;
+        color: var(--text-soft);
+        flex-shrink: 0;
+      }
+      .jd-ratings-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+      .jd-ratings-row svg { width: 15px; height: 15px; fill: #f59e0b; stroke: none; }
+      .jd-more-sheet {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 700;
+        background: rgba(0,0,0,.45);
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .jd-more-sheet.open { display: flex; }
+      .jd-more-panel {
+        width: min(560px, 100%);
+        background: #fff;
+        border-radius: 22px 22px 0 0;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .jd-more-panel-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-soft);
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .jd-more-action {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 12px;
+        border-radius: 12px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text);
+        width: 100%;
+        text-align: left;
+      }
+      .jd-more-action:hover { background: var(--surface); }
+      .jd-more-action svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+      .jd-more-cancel {
+        margin-top: 4px;
+        display: block;
+        width: 100%;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1.5px solid var(--border);
+        background: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text-muted);
+      }
     </style>
   </head>
   <body>
@@ -1793,6 +2201,8 @@
         var COMMENTS_STORE = 'comments';
         var NOTIFICATIONS_STORE = 'notifications';
         var ARTICLES_STORE = 'articles';
+        var LISTINGS_LS_KEY = 'zorexium-marketplace-listings';
+        var listingDataMap = {};
         var viewIds = {
           feed: 'jobs-events-feed-view',
           'create-job': 'create-job-view',
@@ -1904,6 +2314,36 @@
           return (prefix || 'listing') + '-' + rand;
         }
 
+        function saveListingToStorage(data) {
+          if (!data || !data.id) return;
+          try {
+            var raw = localStorage.getItem(LISTINGS_LS_KEY);
+            var list = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(list)) list = [];
+            var exists = list.some(function (item) { return item.id === data.id; });
+            if (!exists) {
+              list.push(data);
+              localStorage.setItem(LISTINGS_LS_KEY, JSON.stringify(list));
+            }
+          } catch (err) {
+            console.warn('[Zorexium] Could not save listing to localStorage:', err);
+          }
+        }
+
+        function loadListingsFromStorage() {
+          try {
+            var raw = localStorage.getItem(LISTINGS_LS_KEY);
+            if (!raw) return;
+            var list = JSON.parse(raw);
+            if (!Array.isArray(list)) return;
+            list.forEach(function (data) {
+              if (data && data.title) addListingCardToFeed(data);
+            });
+          } catch (err) {
+            console.warn('[Zorexium] Could not load listings from localStorage:', err);
+          }
+        }
+
         function extractCoverDataUrl(elementId) {
           var el = document.getElementById(elementId);
           if (!el) return '';
@@ -1947,12 +2387,22 @@
             ? '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>'
             : '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>';
 
+          var listingId = data.id || generateListingId(listingType);
+          // Store an immutable snapshot in the map; do not mutate the caller's object.
+          listingDataMap[listingId] = Object.assign({}, data, { id: listingId });
+
           var article = document.createElement('article');
-          article.className = 'listing-card';
+          article.className = listingType === 'job' ? 'listing-card listing-card-clickable' : 'listing-card';
           article.setAttribute('role', 'listitem');
           article.setAttribute('data-type', listingType);
           article.setAttribute('data-location', data.location || '');
           article.setAttribute('data-keywords', keywords);
+          article.setAttribute('data-listing-id', listingId);
+          if (listingType === 'job') {
+            article.style.cursor = 'pointer';
+            article.setAttribute('tabindex', '0');
+            article.setAttribute('aria-label', 'View details for ' + (data.title || 'job'));
+          }
 
           var visualDiv = document.createElement('div');
           visualDiv.className = 'listing-visual';
@@ -2092,21 +2542,15 @@
         }
 
         function getSuggestedPeople(accounts) {
-          var candidates = (accounts || []).filter(function (account) {
+          return (accounts || []).filter(function (account) {
             return !viewState.currentUser || account.id !== viewState.currentUser.id;
-          }).slice(0, 6).map(function (account) {
+          }).map(function (account) {
             return {
               id: account.id,
               name: account.name || account.username,
               username: account.username || 'user'
             };
           });
-          if (candidates.length) return candidates;
-          return [
-            { id: 'suggested-1', name: 'Jordan Rivera', username: 'jordy' },
-            { id: 'suggested-2', name: 'Ava Moore', username: 'avam' },
-            { id: 'suggested-3', name: 'Chris Lin', username: 'chrisl' }
-          ];
         }
 
         function renderCohosts() {
@@ -2120,7 +2564,9 @@
           if (!people.length) {
             var empty = document.createElement('div');
             empty.className = 'empty-state';
-            empty.textContent = 'No matching people found.';
+            empty.textContent = searchValue
+              ? 'No matching people found.'
+              : 'No other registered accounts found. Co-hosts must have a Zorexium account.';
             container.appendChild(empty);
             return;
           }
@@ -2261,6 +2707,127 @@
           });
           window.location.hash = viewState.activeView === 'feed' ? '' : viewState.activeView;
           window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        function openJobDetail(data) {
+          if (!data) return;
+          var overlay = document.getElementById('job-detail-overlay');
+          if (!overlay) return;
+
+          // Top bar
+          document.getElementById('jd-top-bar-title').textContent = data.title || 'Job Details';
+          document.getElementById('jd-title').textContent = data.title || '';
+
+          // Hero image
+          var hero = document.getElementById('jd-hero');
+          var heroPlaceholder = document.getElementById('jd-hero-placeholder');
+          var existingHeroImg = hero.querySelector('img');
+          if (existingHeroImg) hero.removeChild(existingHeroImg);
+          if (data.coverDataUrl) {
+            var heroImg = document.createElement('img');
+            heroImg.src = data.coverDataUrl;
+            heroImg.alt = '';
+            heroImg.setAttribute('aria-hidden', 'true');
+            hero.insertBefore(heroImg, heroPlaceholder);
+            heroPlaceholder.style.display = 'none';
+          } else {
+            heroPlaceholder.style.display = '';
+          }
+
+          // Creator node
+          var creatorName = (viewState.currentUser && (viewState.currentUser.name || viewState.currentUser.username)) || 'Your Company';
+          var creatorLocation = data.location || (viewState.currentUser && getProfileLocation(viewState.currentUser)) || '';
+          var avatarEl = document.getElementById('jd-creator-avatar');
+          avatarEl.textContent = getInitials(creatorName, null);
+          avatarEl.style.background = 'linear-gradient(135deg,' + getAvatarColor(creatorName) + ',#111111)';
+          document.getElementById('jd-creator-name').textContent = creatorName;
+          document.getElementById('jd-creator-location').textContent = creatorLocation;
+
+          // Terms list
+          var termsList = document.getElementById('jd-terms-list');
+          termsList.innerHTML = '';
+          var terms = [];
+          if (data.minPay || data.maxPay) {
+            var pay = '';
+            if (data.minPay && data.maxPay) pay = '$' + data.minPay + '–$' + data.maxPay + ' / ' + (data.payType || 'hr');
+            else pay = '$' + (data.minPay || data.maxPay) + ' / ' + (data.payType || 'hr');
+            terms.push({ icon: '💵', text: pay });
+          }
+          if (data.jobType) terms.push({ icon: '⏱️', text: data.jobType });
+          if (data.category) terms.push({ icon: '📁', text: data.category });
+          terms.forEach(function (term) {
+            var li = document.createElement('li');
+            li.textContent = term.icon + ' ' + term.text;
+            termsList.appendChild(li);
+          });
+
+          // Description
+          var descEl = document.getElementById('jd-description');
+          var seeMoreBtn = document.getElementById('jd-see-more-btn');
+          descEl.textContent = data.description || '';
+          descEl.classList.add('collapsed');
+          seeMoreBtn.style.display = 'none';
+          document.getElementById('jd-details-section').hidden = !data.description;
+          if (data.description) {
+            // show see more only when text overflows
+            requestAnimationFrame(function () {
+              // 4px tolerance to avoid false positives from sub-pixel rounding
+              if (descEl.scrollHeight > descEl.clientHeight + 4) {
+                seeMoreBtn.style.display = 'block';
+              }
+            });
+          }
+
+          // Benefits
+          var benefitsGrid = document.getElementById('jd-benefits-grid');
+          benefitsGrid.innerHTML = '';
+          var benefitCheckboxes = Array.prototype.slice.call(document.querySelectorAll('#benefits-pill-group input[type="checkbox"]:checked'));
+          var benefitLabels = benefitCheckboxes.map(function (cb) {
+            var label = document.querySelector('label[for="' + cb.id + '"]');
+            return label ? label.textContent.trim() : cb.value;
+          }).filter(function (t) { return t && t !== 'None'; });
+          document.getElementById('jd-benefits-section').hidden = !benefitLabels.length;
+          benefitLabels.forEach(function (label) {
+            var pill = document.createElement('span');
+            pill.className = 'jd-benefit-pill';
+            pill.textContent = label;
+            benefitsGrid.appendChild(pill);
+          });
+
+          // About creator card
+          var cardAvatarEl = document.getElementById('jd-card-avatar');
+          cardAvatarEl.textContent = getInitials(creatorName, null);
+          cardAvatarEl.style.background = 'linear-gradient(135deg,' + getAvatarColor(creatorName) + ',#111111)';
+          document.getElementById('jd-card-name').textContent = creatorName;
+          var followers = viewState.currentUser ? (viewState.currentUser.profileFollowers || 0) : 0;
+          document.getElementById('jd-card-followers').textContent = followers ? followers + ' followers' : 'New on Zorexium';
+          var bio = (viewState.currentUser && viewState.currentUser.profileBio) || '';
+          document.getElementById('jd-card-bio').textContent = bio;
+          var mapLabel = document.getElementById('jd-map-label');
+          mapLabel.textContent = creatorLocation || 'Location not specified';
+          var addressText = document.getElementById('jd-address-text');
+          addressText.textContent = creatorLocation || '';
+          document.getElementById('jd-address-row').hidden = !creatorLocation;
+          document.getElementById('jd-industry-text').textContent = data.category || '';
+          document.getElementById('jd-industry-row').hidden = !data.category;
+          document.getElementById('jd-ratings-text').textContent = 'No reviews yet';
+
+          // Reset message input
+          var msgInput = document.getElementById('jd-msg-input');
+          if (msgInput) msgInput.value = '';
+
+          overlay.classList.add('open');
+          overlay.setAttribute('aria-hidden', 'false');
+          overlay.scrollTop = 0;
+          document.body.style.overflow = 'hidden';
+        }
+
+        function closeJobDetail() {
+          var overlay = document.getElementById('job-detail-overlay');
+          if (!overlay) return;
+          overlay.classList.remove('open');
+          overlay.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
         }
 
         function openCreateFlow(type) {
@@ -2498,6 +3065,7 @@
               return;
             }
             var jobData = {
+              id: generateListingId('job'),
               type: 'job',
               title: title,
               description: String(document.getElementById('job-description').value || '').trim(),
@@ -2519,12 +3087,14 @@
               var userId = viewState.currentUser ? viewState.currentUser.id : null;
               return publishToMainFeed(database, postText, jobData.coverDataUrl, userId).then(function () {
                 addListingCardToFeed(jobData);
+                saveListingToStorage(jobData);
                 statusEl.textContent = 'Job published to your listings and main feed.';
                 statusEl.className = 'submit-status success';
                 setTimeout(function () { showView('feed'); }, 1200);
               });
             }).catch(function () {
               addListingCardToFeed(jobData);
+              saveListingToStorage(jobData);
               statusEl.textContent = 'Job published to your listings.';
               statusEl.className = 'submit-status success';
               setTimeout(function () { showView('feed'); }, 1200);
@@ -2540,6 +3110,7 @@
               return;
             }
             var eventData = {
+              id: generateListingId('event'),
               type: 'event',
               title: title,
               eventStart: document.getElementById('event-start').value,
@@ -2563,12 +3134,14 @@
               var userId = viewState.currentUser ? viewState.currentUser.id : null;
               return publishToMainFeed(database, postText, eventData.coverDataUrl, userId).then(function () {
                 addListingCardToFeed(eventData);
+                saveListingToStorage(eventData);
                 statusEl.textContent = 'Event published to your listings and main feed.';
                 statusEl.className = 'submit-status success';
                 setTimeout(function () { showView('feed'); }, 1200);
               });
             }).catch(function () {
               addListingCardToFeed(eventData);
+              saveListingToStorage(eventData);
               statusEl.textContent = 'Event published to your listings.';
               statusEl.className = 'submit-status success';
               setTimeout(function () { showView('feed'); }, 1200);
@@ -2605,6 +3178,110 @@
 
         initializeStaticModalBindings();
         initializeForms();
+        loadListingsFromStorage();
+
+        // Job detail overlay bindings
+        (function () {
+          var grid = document.getElementById('jobs-events-listing-grid');
+          if (grid) {
+            grid.addEventListener('click', function (event) {
+              var card = event.target.closest('[data-listing-id]');
+              if (!card) return;
+              if (card.getAttribute('data-type') !== 'job') return;
+              var id = card.getAttribute('data-listing-id');
+              var data = listingDataMap[id];
+              if (data) openJobDetail(data);
+            });
+            grid.addEventListener('keydown', function (event) {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              var card = event.target.closest('[data-listing-id]');
+              if (!card || card.getAttribute('data-type') !== 'job') return;
+              event.preventDefault();
+              var id = card.getAttribute('data-listing-id');
+              var data = listingDataMap[id];
+              if (data) openJobDetail(data);
+            });
+          }
+          var backBtn = document.getElementById('jd-back-btn');
+          if (backBtn) backBtn.addEventListener('click', closeJobDetail);
+          var overlay = document.getElementById('job-detail-overlay');
+          if (overlay) {
+            document.addEventListener('keydown', function (event) {
+              if (event.key === 'Escape' && overlay.classList.contains('open')) closeJobDetail();
+            });
+          }
+
+          var seeMoreBtn = document.getElementById('jd-see-more-btn');
+          if (seeMoreBtn) {
+            seeMoreBtn.addEventListener('click', function () {
+              var descEl = document.getElementById('jd-description');
+              descEl.classList.remove('collapsed');
+              seeMoreBtn.style.display = 'none';
+            });
+          }
+
+          var shareBtn = document.getElementById('jd-share-btn');
+          if (shareBtn) {
+            shareBtn.addEventListener('click', function () {
+              if (navigator.share) {
+                // User cancellation (AbortError) is intentional; log other errors.
+                navigator.share({ title: document.getElementById('jd-title').textContent, url: window.location.href }).catch(function (err) {
+                  if (err && err.name !== 'AbortError') console.warn('[Zorexium] Share failed:', err);
+                });
+              } else {
+                navigator.clipboard.writeText(window.location.href).then(function () {
+                  var originalHtml = shareBtn.innerHTML;
+                  shareBtn.textContent = 'Copied!';
+                  setTimeout(function () { shareBtn.innerHTML = originalHtml; }, 1500);
+                }).catch(function (err) {
+                  console.warn('[Zorexium] Clipboard write failed:', err);
+                  shareBtn.textContent = 'Copy failed';
+                  setTimeout(function () { shareBtn.textContent = 'Share'; }, 1500);
+                });
+              }
+            });
+          }
+
+          var saveBtn = document.getElementById('jd-save-btn');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+              var saved = saveBtn.getAttribute('data-saved') === 'true';
+              saveBtn.setAttribute('data-saved', saved ? 'false' : 'true');
+              saveBtn.style.color = saved ? '' : 'var(--accent)';
+            });
+          }
+
+          var moreBtn = document.getElementById('jd-more-btn');
+          var moreSheet = document.getElementById('jd-more-sheet');
+          var moreCancelBtn = document.getElementById('jd-more-cancel-btn');
+          if (moreBtn && moreSheet) {
+            moreBtn.addEventListener('click', function () {
+              moreSheet.classList.add('open');
+              moreSheet.setAttribute('aria-hidden', 'false');
+            });
+            moreSheet.addEventListener('click', function (event) {
+              if (event.target === moreSheet) {
+                moreSheet.classList.remove('open');
+                moreSheet.setAttribute('aria-hidden', 'true');
+              }
+            });
+            if (moreCancelBtn) {
+              moreCancelBtn.addEventListener('click', function () {
+                moreSheet.classList.remove('open');
+                moreSheet.setAttribute('aria-hidden', 'true');
+              });
+            }
+            ['jd-report-job-btn', 'jd-report-creator-btn', 'jd-get-help-btn'].forEach(function (btnId) {
+              var btn = document.getElementById(btnId);
+              if (btn) btn.addEventListener('click', function () {
+                moreSheet.classList.remove('open');
+                moreSheet.setAttribute('aria-hidden', 'true');
+                alert(btn.textContent.trim() + ' — this feature is coming soon.');
+              });
+            });
+          }
+        }());
+
         openDb().then(function (database) {
           return Promise.all([
             getRecord(database, SESSION_STORE, 'current'),
@@ -2625,6 +3302,126 @@
         });
       }());
     </script>
+    <!-- Job detail fullscreen overlay -->
+    <div id="job-detail-overlay" class="job-detail-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="jd-title">
+      <div class="jd-top-bar">
+        <button class="jd-back-btn" id="jd-back-btn" type="button" aria-label="Go back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="jd-top-bar-title" id="jd-top-bar-title">Job Details</span>
+      </div>
+      <div class="jd-body">
+        <div class="jd-hero" id="jd-hero">
+          <div class="jd-hero-placeholder" id="jd-hero-placeholder">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M3 12h18"/></svg>
+          </div>
+        </div>
+        <div class="jd-content">
+          <!-- Identity header -->
+          <div class="jd-identity">
+            <h1 class="jd-title" id="jd-title">Job Title</h1>
+            <div class="jd-creator-node">
+              <div class="jd-creator-avatar" id="jd-creator-avatar">ZG</div>
+              <div class="jd-creator-meta">
+                <span class="jd-creator-name" id="jd-creator-name">Company Name</span>
+                <span class="jd-creator-location" id="jd-creator-location"></span>
+              </div>
+            </div>
+            <ul class="jd-terms-list" id="jd-terms-list"></ul>
+          </div>
+
+          <div class="jd-divider"></div>
+
+          <!-- Messenger / quick actions -->
+          <div class="jd-messenger">
+            <p class="jd-disclaimer">By sending a message, you accept the <a href="terms-of-use.html">Job Seeker Terms</a>.</p>
+            <textarea class="jd-msg-input" id="jd-msg-input" rows="1" placeholder="Write something..." aria-label="Send a message"></textarea>
+            <div class="jd-quick-actions">
+              <button class="jd-action-btn" id="jd-share-btn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Share
+              </button>
+              <button class="jd-action-btn" id="jd-save-btn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                Save
+              </button>
+              <button class="jd-action-btn" id="jd-more-btn" type="button" aria-label="More options">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                More
+              </button>
+            </div>
+          </div>
+
+          <div class="jd-divider"></div>
+
+          <!-- Deep-dive metadata -->
+          <div id="jd-details-section">
+            <h2 class="jd-section-head">Job Details</h2>
+            <div class="jd-description collapsed" id="jd-description"></div>
+            <button class="jd-see-more-btn" id="jd-see-more-btn" type="button">See more</button>
+          </div>
+
+          <div id="jd-benefits-section">
+            <h2 class="jd-section-head">Benefits &amp; Extras</h2>
+            <div class="jd-benefits-grid" id="jd-benefits-grid"></div>
+          </div>
+
+          <div class="jd-divider"></div>
+
+          <!-- About creator card -->
+          <div class="jd-creator-card" id="jd-creator-card">
+            <div class="jd-creator-card-top">
+              <div class="jd-creator-card-info">
+                <div class="jd-creator-avatar" id="jd-card-avatar">ZG</div>
+                <div class="jd-creator-card-copy">
+                  <div class="jd-creator-card-name" id="jd-card-name">Company</div>
+                  <div class="jd-creator-card-followers" id="jd-card-followers"></div>
+                  <div class="jd-creator-card-bio" id="jd-card-bio"></div>
+                </div>
+              </div>
+              <button class="jd-view-page-btn" type="button" id="jd-view-page-btn">View page</button>
+            </div>
+            <div class="jd-map-thumbnail" id="jd-map-thumbnail">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+              <span id="jd-map-label">Location map</span>
+            </div>
+            <div class="jd-address-row" id="jd-address-row">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+              <span id="jd-address-text"></span>
+            </div>
+            <div class="jd-meta-row" id="jd-industry-row">
+              <span class="jd-meta-label">Industry:</span>
+              <span id="jd-industry-text"></span>
+            </div>
+            <div class="jd-ratings-row" id="jd-ratings-row">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span id="jd-ratings-text">No reviews yet</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Job detail "More" bottom sheet -->
+    <div id="jd-more-sheet" class="jd-more-sheet" aria-hidden="true">
+      <div class="jd-more-panel">
+        <div class="jd-more-panel-title">Options</div>
+        <button class="jd-more-action" type="button" id="jd-report-job-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Report job
+        </button>
+        <button class="jd-more-action" type="button" id="jd-report-creator-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Report job creator
+        </button>
+        <button class="jd-more-action" type="button" id="jd-get-help-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Get help
+        </button>
+        <button class="jd-more-cancel" type="button" id="jd-more-cancel-btn">Cancel</button>
+      </div>
+    </div>
+
     <script src="app.js"></script>
   </body>
 </html>
