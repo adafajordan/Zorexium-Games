@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Messages</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f5f5f5;
+        --surface-soft: #eeeeee;
+        --text: #111111;
+        --text-muted: #333333;
+        --text-soft: #666666;
+        --text-placeholder: #999999;
+        --border: #e0e0e0;
+        --border-strong: #cccccc;
+        --focus: #e02020;
+        --accent: #cc2222;
+        --sticky-footer-height: 62px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+      }
+      /* Header */
+      .dm-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.97);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(6px);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        flex-shrink: 0;
+      }
+      .dm-back-btn {
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        cursor: pointer;
+        border-radius: 6px;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0;
+      }
+      .dm-back-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+      .dm-back-btn:hover { background: var(--surface-soft); border-color: transparent; color: var(--accent); }
+      .dm-header-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+      }
+      .dm-header-info { min-width: 0; flex: 1; }
+      .dm-header-name { font-weight: 700; font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .dm-header-handle { font-size: 12px; color: var(--text-soft); }
+      /* Message list */
+      .dm-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 640px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .dm-bubble {
+        max-width: 75%;
+        padding: 10px 14px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+      .dm-bubble-out {
+        align-self: flex-end;
+        background: var(--accent);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+      .dm-bubble-in {
+        align-self: flex-start;
+        background: var(--surface);
+        color: var(--text);
+        border-bottom-left-radius: 4px;
+      }
+      .dm-bubble-meta {
+        font-size: 11px;
+        color: var(--text-soft);
+        margin-top: 2px;
+        text-align: right;
+      }
+      .dm-bubble-in .dm-bubble-meta { text-align: left; }
+      .dm-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 8px;
+        color: var(--text-soft);
+        font-size: 14px;
+        text-align: center;
+        padding: 24px;
+      }
+      .dm-empty-icon svg { width: 48px; height: 48px; stroke: var(--border-strong); fill: none; stroke-width: 1.5; }
+      /* Composer */
+      .dm-composer {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 10px 16px;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+        flex-shrink: 0;
+        max-width: 640px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .dm-input {
+        flex: 1;
+        border: 1px solid var(--border-strong);
+        border-radius: 20px;
+        padding: 10px 14px;
+        font-family: inherit;
+        font-size: 14px;
+        resize: none;
+        background: var(--surface);
+        color: var(--text);
+        min-height: 42px;
+        max-height: 120px;
+        overflow-y: auto;
+        line-height: 1.4;
+      }
+      .dm-input:focus { outline: 2px solid var(--focus); border-color: var(--focus); background: #fff; }
+      .dm-send-btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0;
+      }
+      .dm-send-btn:hover { background: #b01c1c; border-color: transparent; color: #fff; }
+      .dm-send-btn:disabled { opacity: 0.5; cursor: default; }
+      .dm-send-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      /* Auth notice */
+      .dm-auth-notice {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        color: var(--text-soft);
+        font-size: 14px;
+        text-align: center;
+        padding: 24px;
+      }
+      .dm-auth-btn {
+        padding: 10px 24px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .dm-auth-btn:hover { background: #b01c1c; border-color: transparent; color: #fff; }
+      button { font-family: inherit; }
+    </style>
+  </head>
+  <body>
+    <div class="dm-header" id="dm-header">
+      <button class="dm-back-btn" id="dm-back" aria-label="Go back" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="dm-header-avatar" id="dm-header-avatar">?</div>
+      <div class="dm-header-info">
+        <div class="dm-header-name" id="dm-header-name">Direct Message</div>
+        <div class="dm-header-handle" id="dm-header-handle"></div>
+      </div>
+    </div>
+
+    <div class="dm-messages" id="dm-messages">
+      <div class="dm-empty" id="dm-empty" hidden>
+        <div class="dm-empty-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p>No messages yet. Say hello!</p>
+      </div>
+    </div>
+
+    <div class="dm-composer" id="dm-composer">
+      <textarea class="dm-input" id="dm-input" placeholder="Type a message…" rows="1" aria-label="Message text"></textarea>
+      <button class="dm-send-btn" id="dm-send" type="button" aria-label="Send" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      (function () {
+        var DB_NAME = 'zorexium-app-db';
+        var DB_VERSION = 4;
+        var ACCOUNTS_STORE = 'accounts';
+        var SESSION_STORE = 'session';
+        var MESSAGES_SERVER_STORE = 'messages';
+        var WINDOW_SESSION_PREFIX = 'zorexium-session:';
+        var API_STORE_NAME_MAP = { messages: 'messages', accounts: 'accounts' };
+
+        var currentUser = null;
+        var otherUser = null;
+        var conversationId = '';
+        var pollIntervalId = null;
+
+        var messagesEl = document.getElementById('dm-messages');
+        var emptyEl = document.getElementById('dm-empty');
+        var inputEl = document.getElementById('dm-input');
+        var sendBtn = document.getElementById('dm-send');
+        var headerName = document.getElementById('dm-header-name');
+        var headerHandle = document.getElementById('dm-header-handle');
+        var headerAvatar = document.getElementById('dm-header-avatar');
+        var backBtn = document.getElementById('dm-back');
+
+        backBtn.addEventListener('click', function () { history.back(); });
+
+        // -- Helpers ---------------------------------------------------------
+
+        function getWithUserId() {
+          var params = new URLSearchParams(window.location.search);
+          return params.get('with') || '';
+        }
+
+        function buildConversationId(idA, idB) {
+          var sorted = [idA, idB].sort();
+          return sorted[0] + ':' + sorted[1];
+        }
+
+        function formatTime(ts) {
+          try {
+            return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } catch (e) { return ''; }
+        }
+
+        function getInitials(name, username) {
+          var n = String(name || username || '').trim();
+          var parts = n.split(/\s+/);
+          if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+          return n.slice(0, 2).toUpperCase() || '?';
+        }
+
+        function getAvatarColor(seed) {
+          var colors = ['#e02020','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#d81b60','#546e7a'];
+          var hash = 0;
+          var s = String(seed || '');
+          for (var i = 0; i < s.length; i++) { hash = (hash * 31 + s.charCodeAt(i)) & 0xffffffff; }
+          return colors[Math.abs(hash) % colors.length];
+        }
+
+        // -- IndexedDB helpers -----------------------------------------------
+
+        var appDbPromise = null;
+        function openAppDb() {
+          if (appDbPromise) return appDbPromise;
+          appDbPromise = new Promise(function (resolve, reject) {
+            var req = window.indexedDB.open(DB_NAME, DB_VERSION);
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { reject(req.error); };
+          });
+          return appDbPromise;
+        }
+
+        function getRecordLocal(store, key) {
+          return openAppDb().then(function (db) {
+            return new Promise(function (resolve) {
+              var tx = db.transaction(store, 'readonly');
+              var req = tx.objectStore(store).get(key);
+              req.onsuccess = function () { resolve(req.result || null); };
+              req.onerror = function () { resolve(null); };
+            });
+          });
+        }
+
+        function getAllRecordsLocal(store) {
+          return openAppDb().then(function (db) {
+            return new Promise(function (resolve) {
+              var tx = db.transaction(store, 'readonly');
+              var req = tx.objectStore(store).getAll();
+              req.onsuccess = function () { resolve(req.result || []); };
+              req.onerror = function () { resolve([]); };
+            });
+          });
+        }
+
+        // -- Server API helpers ----------------------------------------------
+
+        var serverUnavailable = false;
+
+        function serverFetch(method, storeKey, body) {
+          if (serverUnavailable) return Promise.reject(new Error('server unavailable'));
+          var url = '/api/store/' + encodeURIComponent(MESSAGES_SERVER_STORE) + '/' + encodeURIComponent(storeKey);
+          var opts = { method: method };
+          if (body !== undefined) {
+            opts.headers = { 'Content-Type': 'application/json' };
+            opts.body = JSON.stringify({ record: body });
+          }
+          return fetch(url, opts).then(function (r) {
+            if (!r.ok) throw new Error('Server error ' + r.status);
+            return r.json();
+          }).catch(function (err) {
+            serverUnavailable = true;
+            throw err;
+          });
+        }
+
+        function loadConversation() {
+          return serverFetch('GET', conversationId).then(function (data) {
+            return data && data.record ? data.record : null;
+          }).catch(function () { return null; });
+        }
+
+        function saveConversation(record) {
+          return serverFetch('PUT', conversationId, record).catch(function (err) {
+            console.warn('Failed to save message', err);
+          });
+        }
+
+        // -- Session / auth --------------------------------------------------
+
+        function getWindowSession() {
+          if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
+          try {
+            var p = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+            return p && p.userId ? p : null;
+          } catch (e) { return null; }
+        }
+
+        function getUserSession() {
+          var ws = getWindowSession();
+          if (ws) return Promise.resolve(ws);
+          return getRecordLocal(SESSION_STORE, 'current').then(function (s) {
+            return s && s.userId ? s : null;
+          });
+        }
+
+        function lookupUserById(userId, accounts) {
+          for (var i = 0; i < accounts.length; i++) {
+            if (accounts[i].id === userId) return accounts[i];
+          }
+          return null;
+        }
+
+        // -- Render messages -------------------------------------------------
+
+        function renderMessages(record) {
+          var messages = (record && Array.isArray(record.messages)) ? record.messages : [];
+          // Remove old bubbles
+          var existing = messagesEl.querySelectorAll('.dm-bubble-wrap');
+          existing.forEach(function (el) { el.remove(); });
+
+          if (!messages.length) {
+            emptyEl.hidden = false;
+            return;
+          }
+          emptyEl.hidden = true;
+          messages.forEach(function (msg) {
+            appendBubble(msg);
+          });
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function appendBubble(msg) {
+          var isOwn = currentUser && msg.senderId === currentUser.id;
+          var wrap = document.createElement('div');
+          wrap.className = 'dm-bubble-wrap';
+          wrap.style.display = 'flex';
+          wrap.style.flexDirection = 'column';
+          wrap.style.alignItems = isOwn ? 'flex-end' : 'flex-start';
+
+          var bubble = document.createElement('div');
+          bubble.className = isOwn ? 'dm-bubble dm-bubble-out' : 'dm-bubble dm-bubble-in';
+          bubble.textContent = msg.text || '';
+
+          var meta = document.createElement('div');
+          meta.className = 'dm-bubble-meta';
+          meta.textContent = formatTime(msg.createdAt);
+
+          wrap.appendChild(bubble);
+          wrap.appendChild(meta);
+          messagesEl.insertBefore(wrap, emptyEl);
+        }
+
+        // -- Increment a numeric field on the server --------------------------
+
+        function serverIncrement(apiStore, recordKey, field, by) {
+          var url = '/api/store/' + encodeURIComponent(apiStore) + '/' + encodeURIComponent(recordKey) + '/increment';
+          return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: field, by: by })
+          }).catch(function () {});
+        }
+
+        // -- Reset this user's unread DM count --------------------------------
+
+        function resetUnreadDmCount() {
+          if (!currentUser || serverUnavailable) return;
+          var url = '/api/store/accounts/' + encodeURIComponent(currentUser.id);
+          fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+            if (!data || !data.record) return;
+            var updated = Object.assign({}, data.record, { unreadDmCount: 0 });
+            return fetch(url, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ record: updated })
+            });
+          }).catch(function () {});
+        }
+
+        // -- Send message ----------------------------------------------------
+
+        function sendMessage() {
+          var text = (inputEl.value || '').trim();
+          if (!text || !currentUser || !conversationId) return;
+          inputEl.value = '';
+          sendBtn.disabled = true;
+          updateSendBtn();
+
+          var msg = {
+            id: Date.now() + '-' + Math.random().toString(36).slice(2),
+            senderId: currentUser.id,
+            text: text,
+            createdAt: Date.now()
+          };
+
+          // Optimistic UI
+          emptyEl.hidden = true;
+          appendBubble(msg);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+
+          loadConversation().then(function (record) {
+            var existing = (record && Array.isArray(record.messages)) ? record.messages : [];
+            existing.push(msg);
+            var updated = {
+              id: conversationId,
+              participants: [currentUser.id, otherUser ? otherUser.id : ''],
+              messages: existing,
+              updatedAt: Date.now()
+            };
+            return saveConversation(updated);
+          }).then(function () {
+            // Increment recipient's unread count
+            if (otherUser && otherUser.id) {
+              serverIncrement('accounts', otherUser.id, 'unreadDmCount', 1);
+            }
+          }).catch(function (err) {
+            console.warn('Message send failed', err);
+          }).finally(function () {
+            sendBtn.disabled = false;
+          });
+        }
+
+        // -- Poll for new messages (fallback when WebSocket is unavailable) ---
+
+        var DM_FALLBACK_POLL_MS = 10000;
+
+        var lastMessageCount = 0;
+        function pollMessages() {
+          loadConversation().then(function (record) {
+            var messages = (record && Array.isArray(record.messages)) ? record.messages : [];
+            if (messages.length !== lastMessageCount) {
+              lastMessageCount = messages.length;
+              renderMessages(record);
+            }
+          }).catch(function () {});
+        }
+
+        // -- WebSocket for real-time delivery ---------------------------------
+
+        var dmWs = null;
+        function connectDmWebSocket() {
+          if (!conversationId) return;
+          try {
+            var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var wsUrl = protocol + '//' + location.host + '/ws?conv=' + encodeURIComponent(conversationId);
+            dmWs = new WebSocket(wsUrl);
+
+            dmWs.onmessage = function (event) {
+              try {
+                var data = JSON.parse(event.data);
+                if (data && data.type === 'dm-update' && data.conversationId === conversationId) {
+                  pollMessages();
+                }
+              } catch (e) {}
+            };
+
+            dmWs.onclose = function () {
+              dmWs = null;
+              // Fall back to polling at a reduced rate
+              if (!pollIntervalId) {
+                pollIntervalId = setInterval(pollMessages, DM_FALLBACK_POLL_MS);
+              }
+            };
+
+            dmWs.onerror = function () {
+              // onclose will fire next and install the fallback
+            };
+          } catch (e) {
+            // WebSocket unavailable — use polling immediately
+            if (!pollIntervalId) {
+              pollIntervalId = setInterval(pollMessages, DM_FALLBACK_POLL_MS);
+            }
+          }
+        }
+
+        // -- Update send button state ----------------------------------------
+
+        function updateSendBtn() {
+          sendBtn.disabled = !(inputEl.value || '').trim();
+        }
+
+        // -- Init ------------------------------------------------------------
+
+        function initPage(session, accounts) {
+          var sessionUser = lookupUserById(session.userId, accounts);
+          if (!sessionUser) {
+            showAuthNotice();
+            return;
+          }
+          currentUser = sessionUser;
+
+          var withId = getWithUserId();
+          if (!withId) {
+            headerName.textContent = 'Messages';
+            return;
+          }
+
+          otherUser = lookupUserById(withId, accounts);
+          conversationId = buildConversationId(session.userId, withId);
+
+          if (otherUser) {
+            var color = getAvatarColor(otherUser.username || otherUser.id);
+            headerAvatar.style.background = color;
+            headerAvatar.textContent = getInitials(otherUser.name, otherUser.username);
+            headerName.textContent = otherUser.name || otherUser.username || 'User';
+            headerHandle.textContent = '@' + (otherUser.username || '');
+          } else {
+            headerName.textContent = 'User';
+            headerHandle.textContent = '';
+          }
+
+          document.title = 'Messages — ' + (otherUser ? (otherUser.name || otherUser.username) : 'Chat');
+
+          // Show composer
+          document.getElementById('dm-composer').style.display = '';
+
+          // Load initial messages and mark as read
+          loadConversation().then(function (record) {
+            lastMessageCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;
+            renderMessages(record);
+            resetUnreadDmCount();
+          });
+
+          // Use WebSocket for real-time updates; polling is the fallback
+          connectDmWebSocket();
+
+          // Composer events
+          inputEl.addEventListener('input', function () {
+            updateSendBtn();
+            // Auto-grow
+            inputEl.style.height = 'auto';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+          });
+          inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (!sendBtn.disabled) sendMessage();
+            }
+          });
+          sendBtn.addEventListener('click', sendMessage);
+        }
+
+        function showAuthNotice() {
+          var notice = document.createElement('div');
+          notice.className = 'dm-auth-notice';
+          var p = document.createElement('p');
+          p.textContent = 'Sign in to use Direct Messages.';
+          var btn = document.createElement('button');
+          btn.className = 'dm-auth-btn';
+          btn.textContent = 'Go to home';
+          btn.addEventListener('click', function () { window.location.href = 'index.html'; });
+          notice.appendChild(p);
+          notice.appendChild(btn);
+          messagesEl.innerHTML = '';
+          messagesEl.appendChild(notice);
+          document.getElementById('dm-composer').style.display = 'none';
+        }
+
+        getUserSession().then(function (session) {
+          if (!session) { showAuthNotice(); return; }
+          // Load accounts from server or local
+          var url = '/api/store/accounts';
+          fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+            var accounts = (data && Array.isArray(data.records)) ? data.records : [];
+            if (!accounts.length) {
+              return getAllRecordsLocal(ACCOUNTS_STORE).then(function (local) {
+                initPage(session, local);
+              });
+            }
+            initPage(session, accounts);
+          }).catch(function () {
+            getAllRecordsLocal(ACCOUNTS_STORE).then(function (local) {
+              initPage(session, local);
+            });
+          });
+        });
+
+        window.addEventListener('beforeunload', function () {
+          if (pollIntervalId) clearInterval(pollIntervalId);
+          if (dmWs) { dmWs.onclose = null; dmWs.close(); }
+        });
+      }());
+    </script>
+  </body>
+</html>

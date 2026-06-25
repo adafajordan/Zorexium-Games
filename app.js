@@ -22,7 +22,8 @@
     comments: 'comments',
     notifications: 'notifications',
     articles: 'articles',
-    media: 'media'
+    media: 'media',
+    messages: 'messages'
   });
   const LOCAL_ONLY_STORES = Object.freeze({
     session: true
@@ -554,6 +555,33 @@
     await putRecordLocal(storeName, record);
   }
 
+  async function atomicIncrementRecord(storeName, key, field, delta) {
+    const serverStoreName = API_STORE_NAME_MAP[storeName];
+    if (serverStoreName && shouldUseServerStore(storeName) && !serverStoreUnavailable) {
+      const url = '/api/store/' + encodeURIComponent(serverStoreName) + '/' + encodeURIComponent(String(key)) + '/increment';
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field: field, by: delta })
+        });
+        if (!response.ok) throw new Error('increment ' + response.status);
+        return (await response.json()).value;
+      } catch (err) {
+        console.warn('[Zorexium] Atomic increment failed, falling back to read-modify-write.', err);
+      }
+    }
+    // Fallback: read-modify-write (local IndexedDB)
+    const record = await getRecordLocal(storeName, key);
+    if (record) {
+      const current = Number(record[field]) || 0;
+      const next = delta < 0 ? Math.max(0, current + delta) : current + delta;
+      await putRecordLocal(storeName, Object.assign({}, record, { [field]: next }));
+      return next;
+    }
+    return null;
+  }
+
   async function deleteRecord(storeName, key) {
     if (shouldUseServerStore(storeName)) {
       try {
@@ -673,6 +701,10 @@
       text: commentText,
       createdAt: Date.now()
     });
+    const postRecord = await getRecord(POSTS_STORE, postId);
+    if (postRecord) {
+      await atomicIncrementRecord(POSTS_STORE, postId, 'commentCount', 1);
+    }
     await addPostOwnerNotification(postId, 'comment', (currentUser.name || currentUser.username) + ' commented on your post.');
   }
 
@@ -709,6 +741,77 @@
       await renderAccountDashboard();
     }
     return !isSaved;
+  }
+
+  async function toggleLikePost(postId, staticInfo) {
+    if (!currentUser) { openAuthModal('login'); return false; }
+    const liked = currentUser.likedPostIds ? currentUser.likedPostIds.slice() : [];
+    const isLiked = liked.indexOf(postId) !== -1;
+    if (isLiked) {
+      liked.splice(liked.indexOf(postId), 1);
+    } else {
+      if (staticInfo && !(await getRecord(POSTS_STORE, postId))) {
+        await putRecord(POSTS_STORE, {
+          id: postId,
+          userId: '_static',
+          text: staticInfo.text || '',
+          imageMediaIds: [],
+          videoMediaId: null,
+          isStaticMirror: true,
+          staticAuthorName: staticInfo.authorName || '',
+          staticAuthorHandle: staticInfo.authorHandle || '',
+          staticAvatarBg: staticInfo.avatarBg || '#888',
+          likeCount: 0,
+          createdAt: Date.now()
+        });
+      }
+      liked.push(postId);
+    }
+    const postRecord = await getRecord(POSTS_STORE, postId);
+    if (postRecord) {
+      await atomicIncrementRecord(POSTS_STORE, postId, 'likeCount', isLiked ? -1 : 1);
+    }
+    const updated = Object.assign({}, currentUser, { likedPostIds: liked });
+    await putRecord(ACCOUNTS_STORE, updated);
+    currentUser = updated;
+    if (!isLiked) {
+      addPostOwnerNotification(postId, 'like', (currentUser.name || currentUser.username) + ' liked your post.').catch(function () {});
+    }
+    return !isLiked;
+  }
+
+  async function toggleFollow(targetUserId) {
+    if (!currentUser || !targetUserId || targetUserId === currentUser.id) return false;
+    const followingIds = currentUser.followingIds ? currentUser.followingIds.slice() : [];
+    const isFollowing = followingIds.indexOf(targetUserId) !== -1;
+    if (isFollowing) {
+      followingIds.splice(followingIds.indexOf(targetUserId), 1);
+    } else {
+      followingIds.push(targetUserId);
+    }
+    const updatedCurrentUser = Object.assign({}, currentUser, {
+      followingIds: followingIds,
+      profileFollowing: followingIds.length
+    });
+    await putRecord(ACCOUNTS_STORE, updatedCurrentUser);
+    currentUser = updatedCurrentUser;
+    const targetUser = await getUserById(targetUserId);
+    if (targetUser) {
+      const followerIds = targetUser.followerIds ? targetUser.followerIds.slice() : [];
+      if (isFollowing) {
+        const idx = followerIds.indexOf(currentUser.id);
+        if (idx !== -1) followerIds.splice(idx, 1);
+      } else {
+        if (followerIds.indexOf(currentUser.id) === -1) {
+          followerIds.push(currentUser.id);
+        }
+      }
+      await putRecord(ACCOUNTS_STORE, Object.assign({}, targetUser, {
+        followerIds: followerIds,
+        profileFollowers: followerIds.length
+      }));
+    }
+    return !isFollowing;
   }
 
   async function toggleRepostPost(postId, originalPost) {
@@ -771,6 +874,7 @@
     if (!currentUser) return;
     const savedIds = currentUser.savedPostIds || [];
     const repostedIds = currentUser.repostedPostIds || [];
+    const likedIds = currentUser.likedPostIds || [];
     document.querySelectorAll('[data-post-id]').forEach(function (article) {
       const postId = article.dataset.postId;
       if (!postId) return;
@@ -785,6 +889,12 @@
         const isReposted = repostedIds.indexOf(postId) !== -1;
         repostBtn.style.color = isReposted ? 'var(--accent)' : '';
         repostBtn.setAttribute('data-reposted', String(isReposted));
+      }
+      const likeBtn = article.querySelector('.post-action[data-action="like"]');
+      if (likeBtn) {
+        const isLiked = likedIds.indexOf(postId) !== -1;
+        likeBtn.style.color = isLiked ? 'var(--accent)' : '';
+        likeBtn.setAttribute('data-liked', String(isLiked));
       }
     });
   }
@@ -2070,8 +2180,8 @@
 
     const actions = document.createElement('div');
     actions.className = 'post-actions';
-    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true, 'like'));
-    actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
+    actions.appendChild(createActionButton(Number(post.likeCount || 0), '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true, 'like'));
+    actions.appendChild(createActionButton(Number(post.commentCount || 0), '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
     actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false, 'repost'));
     actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false, 'save'));
     if (currentUser && user && currentUser.id === post.userId && !post.isRepost && !post.isStaticMirror) {
@@ -2115,6 +2225,18 @@
     syncPostActionStates();
   }
 
+  function updateDmBadge(count) {
+    const badges = document.querySelectorAll('[data-dm-badge]');
+    badges.forEach(function (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.hidden = false;
+      } else {
+        badge.hidden = true;
+      }
+    });
+  }
+
   async function refreshUserFacingViews() {
     updateAuthControls();
     initializeActionButtonCounts(document);
@@ -2126,6 +2248,11 @@
     });
     syncDashboardTriggers();
     syncPostActionStates();
+    if (currentUser) {
+      updateDmBadge(Number(currentUser.unreadDmCount || 0));
+    } else {
+      updateDmBadge(0);
+    }
     if (postFeed && !isDashboardPage()) {
       await renderSavedPosts();
     }
@@ -2339,7 +2466,8 @@
   function addLikeBehavior(button) {
     if (!button || button.getAttribute('data-like-handler') === 'true') return;
     button.setAttribute('data-like-handler', 'true');
-    button.addEventListener('click', function () {
+    button.addEventListener('click', async function () {
+      if (!currentUser) { openAuthModal('login'); return; }
       const isLiked = button.getAttribute('data-liked') === 'true';
       const currentCount = parseCountValue(button.getAttribute('data-count'));
       const nextCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
@@ -2350,10 +2478,9 @@
       setActionCount(button, nextCount);
       if (postId) {
         syncActionCountAcrossPost(postId, 'like', nextCount);
-      }
-      if (!isLiked) {
-        addPostOwnerNotification(postId, 'like', (currentUser ? (currentUser.name || currentUser.username) : 'Someone') + ' liked your post.').catch(function (error) {
-          console.warn('Unable to add like notification.', error);
+        const staticInfo = article ? extractPostInfoFromArticle(article) : null;
+        toggleLikePost(postId, staticInfo).catch(function (error) {
+          console.warn('Unable to persist like.', error);
         });
       }
     });
@@ -3682,8 +3809,8 @@
 
       const actions = document.createElement('div');
       actions.className = 'post-actions';
-      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true, 'like'));
-      actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
+      actions.appendChild(createActionButton(Number(post.likeCount || 0), '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', true, 'like'));
+      actions.appendChild(createActionButton(Number(post.commentCount || 0), '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', false, 'comment'));
       actions.appendChild(createActionButton(0, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', false, 'repost'));
       actions.appendChild(createActionButton(null, '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', false, 'save'));
       if (currentUser && user && currentUser.id === post.userId && !post.isRepost && !post.isStaticMirror) {
@@ -3854,8 +3981,12 @@
     const bioValue = viewedUser ? normalizeProfileBio(viewedUser.profileBio) : '';
     const birthdayValue = viewedUser ? String(viewedUser.profileBirthday || '').trim() : '';
     const profileEmailValue = viewedUser ? String(viewedUser.profileEmail || '').trim().toLowerCase() : '';
-    const followerCount = normalizeProfileMetric(viewedUser ? viewedUser.profileFollowers : 0);
-    const followingCount = normalizeProfileMetric(viewedUser ? viewedUser.profileFollowing : 0);
+    const followerCount = viewedUser
+      ? normalizeProfileMetric(viewedUser.followerIds ? viewedUser.followerIds.length : viewedUser.profileFollowers)
+      : 0;
+    const followingCount = viewedUser
+      ? normalizeProfileMetric(viewedUser.followingIds ? viewedUser.followingIds.length : viewedUser.profileFollowing)
+      : 0;
     const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
 
     if (profileBanner) {
@@ -3883,20 +4014,69 @@
 
     if (profileEditButton) {
       if (viewedUser && !isOwnProfile && currentUser) {
-        profileEditButton.textContent = 'Back to your profile';
+        const isFollowing = Boolean(currentUser.followingIds && currentUser.followingIds.indexOf(viewedUser.id) !== -1);
+        profileEditButton.textContent = isFollowing ? 'Following' : 'Follow';
+        profileEditButton.className = isFollowing ? 'profile-follow-btn following' : 'profile-follow-btn';
+        profileEditButton.onclick = async function () {
+          if (!currentUser) { openAuthModal('login'); return; }
+          profileEditButton.disabled = true;
+          try {
+            const nowFollowing = await toggleFollow(viewedUser.id);
+            profileEditButton.textContent = nowFollowing ? 'Following' : 'Follow';
+            profileEditButton.className = nowFollowing ? 'profile-follow-btn following' : 'profile-follow-btn';
+            const refreshedUser = await getUserById(viewedUser.id);
+            if (refreshedUser) {
+              const newFollowerCount = refreshedUser.followerIds ? refreshedUser.followerIds.length : refreshedUser.profileFollowers;
+              profileFollowersTotal.textContent = String(normalizeProfileMetric(newFollowerCount));
+            }
+            const newFollowingCount = currentUser.followingIds ? currentUser.followingIds.length : currentUser.profileFollowing;
+            profileFollowingTotal.textContent = String(normalizeProfileMetric(newFollowingCount));
+          } catch (err) {
+            console.warn('Follow toggle failed', err);
+          }
+          profileEditButton.disabled = false;
+        };
       } else {
         profileEditButton.textContent = currentUser ? 'Edit profile' : 'Log in';
+        profileEditButton.className = 'profile-edit-btn';
+        profileEditButton.onclick = async function () {
+          if (!currentUser) {
+            openAuthModal('login');
+            return;
+          }
+          openProfileEditModal();
+        };
       }
-      profileEditButton.onclick = async function () {
-        if (viewedUser && !isOwnProfile && currentUser) {
-          navigateToDashboard(currentUser.id);
-          return;
-        }
-        if (!currentUser) {
-          openAuthModal('login');
-          return;
-        }
-        openProfileEditModal();
+    }
+
+    const profileVerifyBox = document.getElementById('profile-verify-box');
+    if (profileVerifyBox) {
+      profileVerifyBox.hidden = !isOwnProfile;
+    }
+
+    const profileDmBtn = document.getElementById('profile-dm-btn');
+    if (profileDmBtn) {
+      if (viewedUser && !isOwnProfile && currentUser) {
+        profileDmBtn.hidden = false;
+        profileDmBtn.onclick = function () {
+          window.location.href = 'messages.html?with=' + encodeURIComponent(viewedUser.id);
+        };
+      } else {
+        profileDmBtn.hidden = true;
+        profileDmBtn.onclick = null;
+      }
+    }
+
+    const followersStatBtn = document.getElementById('profile-followers-stat');
+    const followingStatBtn = document.getElementById('profile-following-stat');
+    if (followersStatBtn) {
+      followersStatBtn.onclick = function () {
+        openFollowListOverlay(viewedUser, 'followers');
+      };
+    }
+    if (followingStatBtn) {
+      followingStatBtn.onclick = function () {
+        openFollowListOverlay(viewedUser, 'following');
       };
     }
 
@@ -3906,6 +4086,64 @@
 
     const attendancePosts = await buildDashboardAttendancePosts(viewedUser);
     await renderDashboardTabs(userPosts, posts, viewedUser, userComments, isOwnProfile, attendancePosts);
+  }
+
+  async function openFollowListOverlay(user, listType) {
+    const overlay = document.getElementById('follow-list-overlay');
+    const title = document.getElementById('follow-list-title');
+    const body = document.getElementById('follow-list-body');
+    const closeBtn = document.getElementById('follow-list-close');
+    if (!overlay || !title || !body) return;
+    title.textContent = listType === 'followers' ? 'Followers' : 'Following';
+    body.innerHTML = '';
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    if (closeBtn) {
+      closeBtn.onclick = function () {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+      };
+    }
+    const ids = (listType === 'followers' ? (user && user.followerIds) : (user && user.followingIds)) || [];
+    if (!ids.length) {
+      const empty = document.createElement('p');
+      empty.className = 'follow-list-empty';
+      empty.textContent = listType === 'followers' ? 'No followers yet.' : 'Not following anyone yet.';
+      body.appendChild(empty);
+      return;
+    }
+    const allAccounts = await readAccounts();
+    const accountMap = new Map(allAccounts.map(function (a) { return [a.id, a]; }));
+    ids.forEach(function (userId) {
+      const account = accountMap.get(userId);
+      if (!account) return;
+      const item = document.createElement('div');
+      item.className = 'follow-list-item';
+      item.style.cursor = 'pointer';
+      const avatarColor = getAvatarColor(getAvatarSeed(account.name, account.username, account.id));
+      const avatar = document.createElement('div');
+      avatar.className = 'follow-list-avatar';
+      avatar.style.background = avatarColor;
+      avatar.textContent = getInitials(account.name, account.username);
+      const info = document.createElement('div');
+      info.className = 'follow-list-info';
+      const name = document.createElement('div');
+      name.className = 'follow-list-name';
+      name.textContent = account.name || account.username;
+      const handle = document.createElement('div');
+      handle.className = 'follow-list-handle';
+      handle.textContent = formatHandle(account.username);
+      info.appendChild(name);
+      info.appendChild(handle);
+      item.appendChild(avatar);
+      item.appendChild(info);
+      item.addEventListener('click', function () {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+        navigateToDashboard(account.id);
+      });
+      body.appendChild(item);
+    });
   }
 
   async function renderNotificationsPage() {

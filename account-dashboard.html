@@ -110,6 +110,21 @@
         text-align: center;
         flex-shrink: 0;
       }
+      .nav-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        border-radius: 8px;
+        margin-left: auto;
+        line-height: 1;
+      }
       .sidebar-section-label {
         padding: 10px 20px 4px;
         font-size: 10px;
@@ -368,6 +383,11 @@
         color: #fff;
         flex-shrink: 0;
       }
+      .profile-action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
       .profile-edit-btn {
         padding: 8px 18px;
         border-radius: 999px;
@@ -383,6 +403,52 @@
         border-color: var(--border-strong);
         color: var(--text);
       }
+      .profile-follow-btn {
+        padding: 8px 18px;
+        border-radius: 999px;
+        border: none;
+        background: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        color: #fff;
+      }
+      .profile-follow-btn:hover { background: #333; border-color: transparent; color: #fff; }
+      .profile-follow-btn.following {
+        background: #fff;
+        border: 1px solid var(--border-strong);
+        color: var(--text);
+      }
+      .profile-follow-btn.following:hover { background: #fdecea; border-color: var(--accent); color: var(--accent); }
+      .profile-dm-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid var(--border-strong);
+        background: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text);
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .profile-dm-btn:hover { background: var(--surface-soft); border-color: var(--border-strong); color: var(--accent); }
+      .profile-dm-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .profile-stat-btn {
+        background: none;
+        border: none;
+        padding: 2px 4px;
+        margin: 0 -4px;
+        font-size: inherit;
+        font-family: inherit;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .profile-stat-btn:hover { background: var(--surface-soft); border-color: transparent; color: var(--text-muted); }
+      .profile-stat-btn strong { color: var(--text); font-weight: 700; }
       .profile-name {
         font-size: 20px;
         font-weight: 800;
@@ -488,6 +554,71 @@
         color: #fff;
         border-color: transparent;
       }
+
+      /* ── Follow list overlay ────────────────── */
+      .follow-list-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 400;
+        background: var(--bg);
+        flex-direction: column;
+      }
+      .follow-list-overlay.open { display: flex; }
+      .follow-list-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255,255,255,0.97);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(6px);
+      }
+      .follow-list-back {
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        cursor: pointer;
+        border-radius: 6px;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .follow-list-back svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+      .follow-list-back:hover { background: var(--surface-soft); border-color: transparent; color: var(--accent); }
+      .follow-list-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text); }
+      .follow-list-body { flex: 1; overflow-y: auto; max-width: 620px; width: 100%; margin: 0 auto; }
+      .follow-list-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        text-decoration: none;
+        color: var(--text);
+      }
+      .follow-list-item:hover { background: var(--surface); }
+      .follow-list-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .follow-list-info { min-width: 0; flex: 1; }
+      .follow-list-name { font-weight: 600; font-size: 14px; color: var(--text); }
+      .follow-list-handle { font-size: 12px; color: var(--text-soft); margin-top: 1px; }
+      .follow-list-empty { padding: 40px 16px; text-align: center; color: var(--text-soft); font-size: 14px; }
 
       /* ── Profile tabs ───────────────────────── */
       .profile-tabs {
@@ -1775,6 +1906,7 @@
       <ul class="sidebar-nav">
         <li><a href="index.html"><span class="nav-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Home</a></li>
         <li><a href="notifications.html"><span class="nav-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>Notifications</a></li>
+        <li><a href="messages.html"><span class="nav-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Messages<span class="nav-badge" data-dm-badge hidden></span></a></li>
         <li><a href="#"><span class="nav-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>Saved Posts</a></li>
         <li><a href="account-dashboard.html"><span class="nav-icon"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Profile</a></li>
       </ul>
@@ -1876,9 +2008,14 @@
 
       <!-- Identity -->
       <div class="profile-identity">
-        <div class="profile-avatar-wrap">
+      <div class="profile-avatar-wrap">
           <div class="profile-avatar" id="profile-avatar" aria-label="Your account avatar">YA</div>
-          <button class="profile-edit-btn" type="button" id="profile-edit-btn">Edit profile</button>
+          <div class="profile-action-buttons">
+            <button class="profile-edit-btn" type="button" id="profile-edit-btn">Edit profile</button>
+            <button class="profile-dm-btn" type="button" id="profile-dm-btn" hidden aria-label="Send direct message">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>
         </div>
 
         <h1 class="profile-name" id="profile-name">Your account</h1>
@@ -1898,12 +2035,12 @@
 
         <div class="profile-stats">
           <span><strong id="profile-post-total">0</strong> Posts</span>
-          <span><strong id="profile-followers-total">0</strong> Followers</span>
-          <span><strong id="profile-following-total">0</strong> Following</span>
+          <button class="profile-stat-btn" type="button" id="profile-followers-stat"><strong id="profile-followers-total">0</strong> Followers</button>
+          <button class="profile-stat-btn" type="button" id="profile-following-stat"><strong id="profile-following-total">0</strong> Following</button>
         </div>
 
         <!-- Not verified upsell -->
-        <div class="profile-verify-box">
+        <div class="profile-verify-box" id="profile-verify-box">
           <span class="profile-verify-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 7"/></svg></span>
           <div class="profile-verify-copy">
             <p class="profile-verify-title">Verification is still available for your account</p>
@@ -1956,6 +2093,17 @@
         <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
     </footer>
+
+    <!-- Follow list overlay -->
+    <div id="follow-list-overlay" class="follow-list-overlay" aria-hidden="true">
+      <div class="follow-list-header">
+        <button class="follow-list-back" type="button" id="follow-list-close" aria-label="Go back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2 class="follow-list-title" id="follow-list-title">Followers</h2>
+      </div>
+      <div class="follow-list-body" id="follow-list-body"></div>
+    </div>
 
     <!-- Post detail modal -->
     <div id="post-detail-modal" class="post-detail-modal" aria-hidden="true">
