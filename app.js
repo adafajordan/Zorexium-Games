@@ -183,6 +183,66 @@
     return svg;
   }
 
+  function buildProfileNavIcon() {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('viewBox', '0 0 24 24');
+
+    const bodyPath = document.createElementNS(svgNS, 'path');
+    bodyPath.setAttribute('d', 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2');
+    svg.appendChild(bodyPath);
+
+    const headCircle = document.createElementNS(svgNS, 'circle');
+    headCircle.setAttribute('cx', '12');
+    headCircle.setAttribute('cy', '7');
+    headCircle.setAttribute('r', '4');
+    svg.appendChild(headCircle);
+
+    return svg;
+  }
+
+  async function resolveUserAvatarUrl(user) {
+    if (!user) return '';
+    const legacyUrl = String(user.profilePictureDataUrl || '').trim();
+    if (isSafeMediaUrl(legacyUrl)) {
+      return legacyUrl;
+    }
+    const profileImageMediaId = String(user.profileImageMediaId || '').trim();
+    if (!profileImageMediaId) {
+      return '';
+    }
+    try {
+      const record = await getRecord(MEDIA_STORE, profileImageMediaId);
+      const mediaSource = record ? await getRenderableMediaSource(record, { preferDataUrl: true }) : null;
+      const resolvedUrl = mediaSource && mediaSource.url ? String(mediaSource.url).trim() : '';
+      return isSafeMediaUrl(resolvedUrl) ? resolvedUrl : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  async function syncStickyFooterProfileAvatar() {
+    if (!stickyFooterProfileButton) return;
+    const avatarUrl = currentUser ? await resolveUserAvatarUrl(currentUser) : '';
+    if (avatarUrl) {
+      const avatar = document.createElement('img');
+      avatar.src = avatarUrl;
+      avatar.alt = '';
+      avatar.width = 24;
+      avatar.height = 24;
+      avatar.style.width = '24px';
+      avatar.style.height = '24px';
+      avatar.style.borderRadius = '50%';
+      avatar.style.objectFit = 'cover';
+      avatar.style.display = 'block';
+      stickyFooterProfileButton.replaceChildren(avatar);
+      return;
+    }
+    stickyFooterProfileButton.replaceChildren(buildProfileNavIcon());
+  }
+
   if (stickyFooterMarketplaceButton) {
     stickyFooterMarketplaceButton.setAttribute('aria-label', JOBS_EVENTS_NAV_LABEL);
     stickyFooterMarketplaceButton.setAttribute('title', JOBS_EVENTS_NAV_LABEL);
@@ -2501,6 +2561,7 @@
 
   async function refreshUserFacingViews() {
     updateAuthControls();
+    await syncStickyFooterProfileAvatar();
     initializeActionButtonCounts(document);
     document.querySelectorAll('.post-action[data-action="like"]').forEach(function (likeButton) {
       addLikeBehavior(likeButton);
@@ -4251,15 +4312,21 @@
     const followerCount = viewedUser ? normalizeProfileMetric(followSnapshot.followerIds.length) : 0;
     const followingCount = viewedUser ? normalizeProfileMetric(followSnapshot.followingIds.length) : 0;
     const hasProfileEmail = EMAIL_ADDRESS_PATTERN.test(profileEmailValue);
+    let avatarFullscreenSrc = '';
+    let bannerFullscreenSrc = '';
 
     if (profileBanner) {
       profileBanner.style.backgroundImage = '';
       profileBanner.style.background = profileThemeColor;
+      profileBanner.style.cursor = 'default';
+      profileBanner.onclick = null;
     }
     profileAvatar.style.backgroundImage = '';
     profileAvatar.style.background = profileThemeColor;
     profileAvatar.textContent = viewedUser ? getInitials(viewedUser.name, viewedUser.username) : 'YA';
     profileAvatar.setAttribute('aria-label', viewedUser ? (viewedUser.name + ' avatar') : 'Your account avatar');
+    profileAvatar.style.cursor = 'default';
+    profileAvatar.onclick = null;
 
     // Load profile image and banner if available
     const profileImageMediaId = viewedUser ? (viewedUser.profileImageMediaId || null) : null;
@@ -4274,6 +4341,7 @@
           profileAvatar.style.backgroundSize = 'cover';
           profileAvatar.style.backgroundPosition = 'center';
           profileAvatar.textContent = '';
+          avatarFullscreenSrc = imgSrc.url;
         }
       }
     }
@@ -4287,8 +4355,21 @@
           profileBanner.style.backgroundImage = 'url(' + bannerSrc.url + ')';
           profileBanner.style.backgroundSize = 'cover';
           profileBanner.style.backgroundPosition = 'center';
+          bannerFullscreenSrc = bannerSrc.url;
         }
       }
+    }
+    if (avatarFullscreenSrc) {
+      profileAvatar.style.cursor = 'zoom-in';
+      profileAvatar.onclick = function () {
+        openMediaViewer('image', avatarFullscreenSrc, (viewedUser ? viewedUser.name : 'Profile') + ' profile picture');
+      };
+    }
+    if (profileBanner && bannerFullscreenSrc) {
+      profileBanner.style.cursor = 'zoom-in';
+      profileBanner.onclick = function () {
+        openMediaViewer('image', bannerFullscreenSrc, (viewedUser ? viewedUser.name : 'Profile') + ' banner');
+      };
     }
     profileName.textContent = viewedUser ? viewedUser.name : 'Your account';
     profileHandle.textContent = viewedUser ? formatHandle(viewedUser.username) : '@yourprofile';

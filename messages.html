@@ -238,6 +238,7 @@
         height: 100dvh;
         overflow: hidden;
         background: var(--bg);
+        padding-bottom: calc(var(--sticky-footer-height) + env(safe-area-inset-bottom, 0px));
       }
       .dm-messages {
         flex: 1;
@@ -286,7 +287,7 @@
       .dm-composer {
         border-top: 1px solid var(--border);
         background: var(--bg);
-        padding: 8px 12px;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
         display: flex;
         align-items: flex-end;
         gap: 8px;
@@ -647,6 +648,7 @@
         var DB_NAME = 'zorexium-app-db';
         var DB_VERSION = 4;
         var ACCOUNTS_STORE = 'accounts';
+        var MEDIA_STORE    = 'media';
         var SESSION_STORE  = 'session';
         var MESSAGES_STORE = 'messages';
         var WINDOW_SESSION_PREFIX = 'zorexium-session:';
@@ -771,6 +773,49 @@
         function formatTime(ts) {
           try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
         }
+        function blobToDataUrl(blob) {
+          return new Promise(function (resolve) {
+            if (!(blob instanceof Blob)) { resolve(''); return; }
+            var reader = new FileReader();
+            reader.onload = function () { resolve(typeof reader.result === 'string' ? reader.result : ''); };
+            reader.onerror = function () { resolve(''); };
+            reader.readAsDataURL(blob);
+          });
+        }
+        function mediaRecordToBlob(record) {
+          if (!record || typeof record !== 'object') return null;
+          if (record.data instanceof ArrayBuffer) return new Blob([record.data], { type: record.type || 'application/octet-stream' });
+          if (record.data instanceof Blob) return record.data;
+          if (record.blob instanceof Blob) return record.blob;
+          if (record.file instanceof Blob) return record.file;
+          return null;
+        }
+        function resolveUserAvatarUrl(user) {
+          if (!user) return Promise.resolve('');
+          var cached = String(user.__avatarUrl || '').trim();
+          if (cached) return Promise.resolve(cached);
+          var legacy = String(user.profilePictureDataUrl || '').trim();
+          if (legacy) {
+            user.__avatarUrl = legacy;
+            return Promise.resolve(legacy);
+          }
+          var mediaId = String(user.profileImageMediaId || '').trim();
+          if (!mediaId) return Promise.resolve('');
+          return getLocal(MEDIA_STORE, mediaId).then(function (record) {
+            var blob = mediaRecordToBlob(record);
+            if (!blob) return '';
+            return blobToDataUrl(blob);
+          }).then(function (url) {
+            user.__avatarUrl = url || '';
+            return user.__avatarUrl;
+          }).catch(function () {
+            return '';
+          });
+        }
+        function hydrateAccountsAvatarUrls(accounts) {
+          var list = Array.isArray(accounts) ? accounts : [];
+          return Promise.all(list.map(function (user) { return resolveUserAvatarUrl(user); })).then(function () { return list; });
+        }
         function lookupById(id, accounts) {
           for (var i = 0; i < accounts.length; i++) { if (accounts[i].id === id) return accounts[i]; }
           return null;
@@ -830,14 +875,21 @@
         function setAvatar(el, user) {
           if (!user) { el.textContent = '?'; el.style.background = '#93a2b7'; return; }
           el.style.background = getAvatarColor(user.username || user.id);
+          var avatarSrc = String(user.__avatarUrl || user.profilePictureDataUrl || '').trim();
           var img = el.querySelector('img');
           var span = el.querySelector('span');
-          if (img && user.profilePictureDataUrl) {
-            img.src = user.profilePictureDataUrl;
+          if (!img && avatarSrc) {
+            img = document.createElement('img');
+            img.alt = '';
+            el.textContent = '';
+            el.appendChild(img);
+          }
+          if (img && avatarSrc) {
+            img.src = avatarSrc;
             img.hidden = false;
             if (span) span.hidden = true;
           } else if (img) {
-            img.hidden = true;
+            img.remove();
             if (span) span.hidden = false;
           }
           if (!img) {
@@ -898,20 +950,7 @@
 
             var avatarEl = document.createElement('div');
             avatarEl.className = 'conv-avatar';
-            if (other) {
-              avatarEl.style.background = getAvatarColor(other.username || other.id);
-              if (other.profilePictureDataUrl) {
-                var img = document.createElement('img');
-                img.src = other.profilePictureDataUrl;
-                img.alt = '';
-                avatarEl.appendChild(img);
-              } else {
-                avatarEl.textContent = getInitials(other.name, other.username);
-              }
-            } else {
-              avatarEl.textContent = '?';
-              avatarEl.style.background = '#93a2b7';
-            }
+            setAvatar(avatarEl, other);
 
             var infoEl = document.createElement('div');
             infoEl.className = 'conv-info';
@@ -979,16 +1018,7 @@
 
           // set inbox header avatar
           if (currentUser) {
-            inboxInitials.textContent = getInitials(currentUser.name, currentUser.username);
-            inboxAvatarBtn.style.background = getAvatarColor(currentUser.username || currentUser.id);
-            if (currentUser.profilePictureDataUrl) {
-              inboxAvatarImg.src = currentUser.profilePictureDataUrl;
-              inboxAvatarImg.hidden = false;
-              inboxInitials.hidden = true;
-            } else {
-              inboxAvatarImg.hidden = true;
-              inboxInitials.hidden = false;
-            }
+            setAvatar(inboxAvatarBtn, currentUser);
           }
 
           inboxAvatarBtn.addEventListener('click', function () {
@@ -1145,8 +1175,7 @@
           threadHeaderName.textContent = otherUser ? (otherUser.name || otherUser.username || 'User') : 'User';
           threadHeaderHandle.textContent = otherUser && otherUser.username ? '@' + otherUser.username : '';
           if (otherUser) {
-            threadHeaderAvatar.style.background = getAvatarColor(otherUser.username || otherUser.id);
-            threadHeaderAvatar.textContent = getInitials(otherUser.name, otherUser.username);
+            setAvatar(threadHeaderAvatar, otherUser);
           }
 
           threadBackBtn.addEventListener('click', function () {
@@ -1208,15 +1237,7 @@
 
             var avatarEl = document.createElement('div');
             avatarEl.className = 'compose-user-avatar';
-            avatarEl.style.background = getAvatarColor(user.username || user.id);
-            if (user.profilePictureDataUrl) {
-              var img = document.createElement('img');
-              img.src = user.profilePictureDataUrl;
-              img.alt = '';
-              avatarEl.appendChild(img);
-            } else {
-              avatarEl.textContent = getInitials(user.name, user.username);
-            }
+            setAvatar(avatarEl, user);
 
             var infoEl = document.createElement('div');
             infoEl.className = 'compose-user-info';
@@ -1273,6 +1294,8 @@
         /* ── Boot ───────────────────────────────────────────────────── */
         getUserSession().then(function (session) {
           return loadAccountsFromServer().then(function (accounts) {
+            return hydrateAccountsAvatarUrls(accounts);
+          }).then(function (accounts) {
             if (getParam('with')) {
               initThread(session, accounts);
             } else {
