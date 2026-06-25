@@ -1,0 +1,1511 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Clips — Zorexium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --accent: #cc2222;
+        --header-h: 56px;
+        --footer-h: 62px;
+        --engage-w: 68px;
+        color-scheme: dark;
+      }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #fff;
+      }
+
+      /* ── Top header ────────────────────────────── */
+      .clips-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        height: var(--header-h);
+        display: grid;
+        grid-template-columns: var(--header-h) 1fr var(--header-h);
+        align-items: center;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
+        pointer-events: none;
+      }
+      .clips-header > * { pointer-events: auto; }
+      .clips-header-btn {
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        margin: 0 auto;
+        transition: background 0.15s;
+      }
+      .clips-header-btn:hover { background: rgba(255,255,255,0.15); }
+      .clips-header-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+      .clips-header-title {
+        text-align: center;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      }
+
+      /* ── Clips scroll container ────────────────── */
+      .clips-container {
+        position: fixed;
+        inset: 0;
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .clips-container::-webkit-scrollbar { display: none; }
+
+      /* ── Individual clip ───────────────────────── */
+      .clip {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        overflow: hidden;
+        background: #111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ── Media layer ───────────────────────────── */
+      .clip-media {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+        overflow: hidden;
+      }
+      .clip-media video,
+      .clip-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .clip-media-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        color: rgba(255,255,255,0.5);
+        padding: 24px;
+        text-align: center;
+        line-height: 1.5;
+      }
+
+      /* Tap-to-pause overlay */
+      .clip-tap-zone {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        cursor: pointer;
+      }
+      .clip-paused-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 64px;
+        height: 64px;
+        background: rgba(0,0,0,0.45);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 6;
+      }
+      .clip-paused-icon.visible { opacity: 1; }
+      .clip-paused-icon svg { width: 28px; height: 28px; stroke: #fff; fill: #fff; }
+
+      /* ── Right engagement stack ────────────────── */
+      .clip-engage {
+        position: absolute;
+        right: 10px;
+        bottom: calc(var(--footer-h) + 100px);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+      }
+      .clip-action {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 0;
+        filter: drop-shadow(0 1px 4px rgba(0,0,0,0.6));
+        transition: transform 0.12s;
+      }
+      .clip-action:active { transform: scale(0.88); }
+      .clip-action svg {
+        width: 28px;
+        height: 28px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        display: block;
+      }
+      .clip-action.liked svg { stroke: var(--accent); fill: var(--accent); }
+      .clip-action.saved svg { stroke: #f0c040; fill: #f0c040; }
+      .clip-action-count {
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+        min-width: 28px;
+        text-align: center;
+      }
+
+      /* Soundtrack disc */
+      .clip-soundtrack {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid rgba(255,255,255,0.7);
+        background: #222;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        animation: spin-disc 8s linear infinite paused;
+        filter: drop-shadow(0 1px 4px rgba(0,0,0,0.6));
+      }
+      .clip.playing .clip-soundtrack { animation-play-state: running; }
+      @keyframes spin-disc { to { transform: rotate(360deg); } }
+      .clip-soundtrack img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+      .clip-soundtrack svg { width: 20px; height: 20px; stroke: rgba(255,255,255,0.7); fill: none; stroke-width: 2; }
+
+      /* ── Bottom metadata overlay ───────────────── */
+      .clip-meta {
+        position: absolute;
+        left: 0;
+        right: calc(var(--engage-w) + 14px);
+        bottom: calc(var(--footer-h) + 64px);
+        z-index: 10;
+        padding: 0 14px;
+        pointer-events: none;
+      }
+      .clip-meta > * { pointer-events: auto; }
+
+      .clip-identity {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 8px;
+      }
+      .clip-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #444;
+        border: 2px solid rgba(255,255,255,0.8);
+        object-fit: cover;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: none;
+        cursor: pointer;
+      }
+      .clip-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+      .clip-handle {
+        font-size: 14px;
+        font-weight: 700;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+      }
+      .clip-follow-btn {
+        background: none;
+        border: 1.5px solid rgba(255,255,255,0.9);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background 0.15s, color 0.15s;
+      }
+      .clip-follow-btn.following {
+        background: rgba(255,255,255,0.2);
+        border-color: transparent;
+      }
+      .clip-follow-btn:hover { background: rgba(255,255,255,0.2); }
+
+      .clip-caption {
+        font-size: 13px;
+        line-height: 1.45;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        cursor: pointer;
+      }
+      .clip-caption.expanded {
+        display: block;
+        -webkit-line-clamp: unset;
+      }
+
+      /* ── Progress bar ──────────────────────────── */
+      .clip-progress-wrap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--footer-h) + 52px);
+        z-index: 10;
+        height: 2px;
+        background: rgba(255,255,255,0.25);
+        overflow: hidden;
+      }
+      .clip-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: #fff;
+        transition: width 0.2s linear;
+      }
+
+      /* ── Comment dock ──────────────────────────── */
+      .clip-comment-dock {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: var(--footer-h);
+        z-index: 10;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 8px;
+        background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%);
+      }
+      .clip-comment-input {
+        flex: 1;
+        height: 36px;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 20px;
+        color: #fff;
+        font-size: 13px;
+        padding: 0 14px;
+        font-family: inherit;
+        outline: none;
+        backdrop-filter: blur(4px);
+      }
+      .clip-comment-input::placeholder { color: rgba(255,255,255,0.6); }
+      .clip-comment-input:focus { border-color: rgba(255,255,255,0.5); }
+      .clip-comment-send {
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+      }
+      .clip-comment-send:hover { opacity: 1; }
+      .clip-comment-send svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* ── Comment sheet (bottom drawer) ─────────── */
+      .comment-sheet-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0,0,0,0.6);
+        align-items: flex-end;
+      }
+      .comment-sheet-overlay.open { display: flex; }
+      .comment-sheet {
+        width: 100%;
+        max-height: 75vh;
+        background: #1a1a1a;
+        border-radius: 18px 18px 0 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .comment-sheet-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+      }
+      .comment-sheet-title { font-size: 15px; font-weight: 700; }
+      .comment-sheet-close {
+        background: none;
+        border: none;
+        color: rgba(255,255,255,0.7);
+        font-size: 20px;
+        cursor: pointer;
+        line-height: 1;
+        padding: 4px 8px;
+      }
+      .comment-sheet-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .comment-sheet-empty {
+        text-align: center;
+        color: rgba(255,255,255,0.4);
+        font-size: 14px;
+        padding: 32px 0;
+      }
+      .cs-comment {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .cs-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #444;
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .cs-avatar img { width: 100%; height: 100%; object-fit: cover; }
+      .cs-body { flex: 1; min-width: 0; }
+      .cs-author { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+      .cs-text { font-size: 13px; line-height: 1.45; color: rgba(255,255,255,0.9); word-break: break-word; }
+      .comment-sheet-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 14px 14px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+      }
+      .cs-input {
+        flex: 1;
+        height: 38px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 20px;
+        color: #fff;
+        font-size: 13px;
+        padding: 0 14px;
+        font-family: inherit;
+        outline: none;
+      }
+      .cs-input::placeholder { color: rgba(255,255,255,0.4); }
+      .cs-submit {
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 0 16px;
+        height: 38px;
+        border-radius: 20px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      /* ── Share sheet ───────────────────────────── */
+      .share-sheet-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0,0,0,0.6);
+        align-items: flex-end;
+      }
+      .share-sheet-overlay.open { display: flex; }
+      .share-sheet {
+        width: 100%;
+        background: #1a1a1a;
+        border-radius: 18px 18px 0 0;
+        padding: 20px 18px 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .share-sheet-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+      .share-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .share-opt {
+        background: rgba(255,255,255,0.1);
+        border: none;
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        flex: 1;
+        min-width: 100px;
+      }
+      .share-opt:hover { background: rgba(255,255,255,0.18); }
+      .share-cancel {
+        background: rgba(255,255,255,0.07);
+        border: none;
+        color: rgba(255,255,255,0.7);
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        text-align: center;
+        width: 100%;
+      }
+
+      /* ── More options sheet ────────────────────── */
+      .more-sheet-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0,0,0,0.6);
+        align-items: flex-end;
+      }
+      .more-sheet-overlay.open { display: flex; }
+      .more-sheet {
+        width: 100%;
+        background: #1a1a1a;
+        border-radius: 18px 18px 0 0;
+        overflow: hidden;
+      }
+      .more-sheet-option {
+        display: block;
+        width: 100%;
+        background: none;
+        border: none;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        color: #fff;
+        font-size: 15px;
+        font-family: inherit;
+        text-align: left;
+        padding: 16px 20px;
+        cursor: pointer;
+      }
+      .more-sheet-option:hover { background: rgba(255,255,255,0.06); }
+      .more-sheet-option.danger { color: #e04040; }
+      .more-sheet-cancel {
+        display: block;
+        width: 100%;
+        background: rgba(255,255,255,0.07);
+        border: none;
+        color: rgba(255,255,255,0.8);
+        font-size: 15px;
+        font-weight: 600;
+        font-family: inherit;
+        text-align: center;
+        padding: 16px;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+
+      /* ── Auth prompt ───────────────────────────── */
+      .auth-prompt-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 400;
+        background: rgba(0,0,0,0.7);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .auth-prompt-overlay.open { display: flex; }
+      .auth-prompt {
+        background: #1a1a1a;
+        border-radius: 14px;
+        padding: 28px 24px;
+        max-width: 340px;
+        width: 100%;
+        text-align: center;
+      }
+      .auth-prompt h2 { font-size: 18px; margin-bottom: 8px; }
+      .auth-prompt p { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 20px; }
+      .auth-prompt-btns { display: flex; gap: 10px; }
+      .auth-prompt-btn {
+        flex: 1;
+        padding: 11px;
+        border-radius: 8px;
+        border: none;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .auth-prompt-btn.primary { background: var(--accent); color: #fff; }
+      .auth-prompt-btn.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+
+      /* ── Empty state ───────────────────────────── */
+      .clips-empty {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 40px;
+        text-align: center;
+        color: rgba(255,255,255,0.5);
+      }
+      .clips-empty svg { width: 56px; height: 56px; stroke: rgba(255,255,255,0.25); fill: none; stroke-width: 1.5; }
+      .clips-empty h2 { font-size: 20px; color: rgba(255,255,255,0.75); }
+      .clips-empty p { font-size: 14px; max-width: 260px; line-height: 1.6; }
+
+      /* ── Sticky footer ─────────────────────────── */
+      .sticky-footer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100;
+        height: var(--footer-h);
+        background: rgba(0,0,0,0.75);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 6px;
+        backdrop-filter: blur(8px);
+      }
+      .sticky-footer-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255,255,255,0.55);
+        width: 44px;
+        height: 44px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: none;
+        transition: color 0.15s;
+      }
+      .sticky-footer-item:hover,
+      .sticky-footer-item.active {
+        color: #fff;
+      }
+      .sticky-footer-item.active {
+        color: var(--accent);
+      }
+      .sticky-footer-item svg {
+        width: 24px;
+        height: 24px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .sticky-footer-item.active svg {
+        fill: currentColor;
+      }
+
+      /* ── Loading state ─────────────────────────── */
+      .clips-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+      }
+      .clips-loading-spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid rgba(255,255,255,0.15);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+
+    <!-- Loading overlay -->
+    <div class="clips-loading" id="clips-loading">
+      <div class="clips-loading-spinner"></div>
+    </div>
+
+    <!-- Fixed top header -->
+    <header class="clips-header" aria-label="Clips header">
+      <button class="clips-header-btn" id="clips-back-btn" type="button" aria-label="Go back">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="clips-header-title">Clips</span>
+      <button class="clips-header-btn" id="clips-camera-btn" type="button" aria-label="Create clip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </button>
+    </header>
+
+    <!-- Clips scroll container -->
+    <div class="clips-container" id="clips-container" role="main" aria-label="Clips feed"></div>
+
+    <!-- Comment sheet -->
+    <div class="comment-sheet-overlay" id="comment-sheet-overlay" role="dialog" aria-modal="true" aria-labelledby="comment-sheet-title">
+      <div class="comment-sheet">
+        <div class="comment-sheet-header">
+          <span class="comment-sheet-title" id="comment-sheet-title">Comments</span>
+          <button class="comment-sheet-close" id="comment-sheet-close" type="button" aria-label="Close comments">&#10005;</button>
+        </div>
+        <div class="comment-sheet-list" id="comment-sheet-list"></div>
+        <div class="comment-sheet-input-row">
+          <input class="cs-input" id="cs-input" type="text" placeholder="Add a comment..." autocomplete="off" maxlength="500" />
+          <button class="cs-submit" id="cs-submit" type="button">Post</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Share sheet -->
+    <div class="share-sheet-overlay" id="share-sheet-overlay" role="dialog" aria-modal="true" aria-label="Share options">
+      <div class="share-sheet">
+        <div class="share-sheet-title">Share Clip</div>
+        <div class="share-row">
+          <button class="share-opt" id="share-copy-btn" type="button">Copy Link</button>
+          <button class="share-opt" id="share-dm-btn" type="button">Send via DM</button>
+        </div>
+        <button class="share-cancel" id="share-cancel-btn" type="button">Cancel</button>
+      </div>
+    </div>
+
+    <!-- More options sheet -->
+    <div class="more-sheet-overlay" id="more-sheet-overlay" role="dialog" aria-modal="true" aria-label="More options">
+      <div class="more-sheet">
+        <button class="more-sheet-option" id="more-not-interested" type="button">Not Interested</button>
+        <button class="more-sheet-option" id="more-report" type="button">Report</button>
+        <button class="more-sheet-option danger" id="more-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Auth prompt -->
+    <div class="auth-prompt-overlay" id="auth-prompt-overlay" role="dialog" aria-modal="true">
+      <div class="auth-prompt">
+        <h2>Sign in to interact</h2>
+        <p>Like, comment, share, and save clips when you&rsquo;re logged in.</p>
+        <div class="auth-prompt-btns">
+          <button class="auth-prompt-btn secondary" id="auth-prompt-cancel" type="button">Not now</button>
+          <button class="auth-prompt-btn primary" id="auth-prompt-login" type="button">Sign in</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Site sticky footer -->
+    <footer class="sticky-footer" aria-label="Quick navigation">
+      <a class="sticky-footer-item" href="index.html" aria-label="Home">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </a>
+      <a class="sticky-footer-item" href="articles.html" aria-label="Articles">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><rect x="10" y="6" width="8" height="4"/></svg>
+      </a>
+      <a class="sticky-footer-item active" href="clips.html" aria-label="Clips" aria-current="page">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </a>
+      <button id="sticky-footer-marketplace" class="sticky-footer-item" type="button" aria-label="Jobs and Events" title="Jobs and Events">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h3M13 14h3M8 18h5"/></svg>
+      </button>
+      <button id="sticky-footer-profile" class="sticky-footer-item" type="button" aria-label="Profile">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </footer>
+
+    <script>
+    (function () {
+      /* ── IndexedDB helpers (mirrors app.js schema) ──────────── */
+      var DB_NAME = 'zorexium-app-db';
+      var DB_VERSION = 4;
+      var ACCOUNTS_STORE = 'accounts';
+      var POSTS_STORE = 'posts';
+      var SESSION_STORE = 'session';
+      var MEDIA_STORE = 'media';
+      var COMMENTS_STORE = 'comments';
+
+      var db = null;
+      var currentUser = null;
+      var activePostId = null; // for comment sheet
+      var clips = []; // rendered clip elements
+
+      function openDB() {
+        return new Promise(function (resolve, reject) {
+          var req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onerror = function () { reject(req.error); };
+          req.onsuccess = function () { db = req.result; resolve(db); };
+          req.onupgradeneeded = function (e) {
+            var d = e.target.result;
+            if (!d.objectStoreNames.contains(ACCOUNTS_STORE))
+              d.createObjectStore(ACCOUNTS_STORE, { keyPath: 'id' });
+            if (!d.objectStoreNames.contains(POSTS_STORE))
+              d.createObjectStore(POSTS_STORE, { keyPath: 'id' });
+            if (!d.objectStoreNames.contains(SESSION_STORE))
+              d.createObjectStore(SESSION_STORE, { keyPath: 'id' });
+            if (!d.objectStoreNames.contains(MEDIA_STORE))
+              d.createObjectStore(MEDIA_STORE, { keyPath: 'id' });
+            if (!d.objectStoreNames.contains(COMMENTS_STORE))
+              d.createObjectStore(COMMENTS_STORE, { keyPath: 'id' });
+          };
+        });
+      }
+
+      function getAllRecords(storeName) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, 'readonly');
+          var store = tx.objectStore(storeName);
+          var req = store.getAll();
+          req.onsuccess = function () { resolve(req.result || []); };
+          req.onerror = function () { reject(req.error); };
+        });
+      }
+
+      function getRecord(storeName, id) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, 'readonly');
+          var req = tx.objectStore(storeName).get(id);
+          req.onsuccess = function () { resolve(req.result || null); };
+          req.onerror = function () { reject(req.error); };
+        });
+      }
+
+      function putRecord(storeName, record) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, 'readwrite');
+          var req = tx.objectStore(storeName).put(record);
+          req.onsuccess = function () { resolve(); };
+          req.onerror = function () { reject(req.error); };
+        });
+      }
+
+      function generateId(prefix) {
+        return (prefix || 'id') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      }
+
+      function formatCount(n) {
+        n = parseInt(n, 10) || 0;
+        if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        return String(n);
+      }
+
+      /* ── Session / auth ─────────────────────────────────────── */
+      async function loadCurrentUser() {
+        try {
+          var sessions = await getAllRecords(SESSION_STORE);
+          var session = sessions.find(function (s) { return s.active; }) || sessions[0];
+          if (!session) return null;
+          var user = await getRecord(ACCOUNTS_STORE, session.userId || session.id);
+          return user || null;
+        } catch (e) { return null; }
+      }
+
+      /* ── Like / Save / Comment ──────────────────────────────── */
+      async function toggleLike(postId, btn, countEl) {
+        if (!currentUser) { showAuthPrompt(); return; }
+        var liked = (currentUser.likedPostIds || []).slice();
+        var idx = liked.indexOf(postId);
+        var isLiked = idx !== -1;
+        var post = await getRecord(POSTS_STORE, postId);
+        if (isLiked) {
+          liked.splice(idx, 1);
+          if (post) { post.likeCount = Math.max(0, (post.likeCount || 0) - 1); }
+        } else {
+          liked.push(postId);
+          if (post) { post.likeCount = (post.likeCount || 0) + 1; }
+        }
+        if (post) await putRecord(POSTS_STORE, post);
+        currentUser = Object.assign({}, currentUser, { likedPostIds: liked });
+        await putRecord(ACCOUNTS_STORE, currentUser);
+        var nowLiked = !isLiked;
+        btn.classList.toggle('liked', nowLiked);
+        if (countEl) countEl.textContent = formatCount(post ? post.likeCount : 0);
+      }
+
+      async function toggleSave(postId, btn, countEl) {
+        if (!currentUser) { showAuthPrompt(); return; }
+        var saved = (currentUser.savedPostIds || []).slice();
+        var idx = saved.indexOf(postId);
+        var isSaved = idx !== -1;
+        var post = await getRecord(POSTS_STORE, postId);
+        if (isSaved) {
+          saved.splice(idx, 1);
+          if (post) { post.saveCount = Math.max(0, (post.saveCount || 0) - 1); }
+        } else {
+          saved.push(postId);
+          if (post) { post.saveCount = (post.saveCount || 0) + 1; }
+        }
+        if (post) await putRecord(POSTS_STORE, post);
+        currentUser = Object.assign({}, currentUser, { savedPostIds: saved });
+        await putRecord(ACCOUNTS_STORE, currentUser);
+        btn.classList.toggle('saved', !isSaved);
+        if (countEl) countEl.textContent = formatCount(post ? post.saveCount : 0);
+      }
+
+      async function postComment(postId, text) {
+        if (!currentUser) { showAuthPrompt(); return; }
+        text = String(text).trim();
+        if (!text) return;
+        var comment = {
+          id: generateId('comment'),
+          postId: postId,
+          userId: currentUser.id,
+          authorName: currentUser.name || currentUser.username || 'You',
+          text: text,
+          createdAt: Date.now()
+        };
+        await putRecord(COMMENTS_STORE, comment);
+        var post = await getRecord(POSTS_STORE, postId);
+        if (post) {
+          post.commentCount = (post.commentCount || 0) + 1;
+          await putRecord(POSTS_STORE, post);
+        }
+        return comment;
+      }
+
+      /* ── Media blob loading ─────────────────────────────────── */
+      function loadMediaBlob(mediaId) {
+        return new Promise(function (resolve) {
+          if (!mediaId) { resolve(null); return; }
+          getRecord(MEDIA_STORE, mediaId).then(function (record) {
+            if (!record || !record.data) { resolve(null); return; }
+            try {
+              var blob = record.data instanceof Blob ? record.data : new Blob([record.data], { type: record.type || 'image/*' });
+              var url = URL.createObjectURL(blob);
+              resolve({ url: url, type: record.type || '' });
+            } catch (e) { resolve(null); }
+          }).catch(function () { resolve(null); });
+        });
+      }
+
+      /* ── Gradient palette for placeholder cards ─────────────── */
+      var GRADIENTS = [
+        'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+        'linear-gradient(135deg, #2d1b69 0%, #11998e 100%)',
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+      ];
+
+      /* ── Build a single clip element ────────────────────────── */
+      function buildClip(post, mediaInfo, author) {
+        var clip = document.createElement('div');
+        clip.className = 'clip';
+        clip.setAttribute('data-post-id', post.id);
+
+        /* Media layer */
+        var mediaDiv = document.createElement('div');
+        mediaDiv.className = 'clip-media';
+
+        if (mediaInfo) {
+          var isVideo = mediaInfo.type && mediaInfo.type.startsWith('video');
+          if (isVideo) {
+            var video = document.createElement('video');
+            video.src = mediaInfo.url;
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+            video.preload = 'metadata';
+            clip.dataset.video = 'true';
+            clip.video = video;
+            mediaDiv.appendChild(video);
+          } else {
+            var img = document.createElement('img');
+            img.src = mediaInfo.url;
+            img.alt = post.text ? post.text.slice(0, 80) : 'Clip';
+            img.loading = 'lazy';
+            mediaDiv.appendChild(img);
+          }
+        } else {
+          /* Placeholder gradient with post text */
+          var gi = Math.abs(hashStr(post.id)) % GRADIENTS.length;
+          mediaDiv.style.background = GRADIENTS[gi];
+          var ph = document.createElement('div');
+          ph.className = 'clip-media-placeholder';
+          ph.textContent = post.text || '';
+          mediaDiv.appendChild(ph);
+        }
+        clip.appendChild(mediaDiv);
+
+        /* Tap-to-pause zone */
+        var tapZone = document.createElement('div');
+        tapZone.className = 'clip-tap-zone';
+        var pauseIcon = document.createElement('div');
+        pauseIcon.className = 'clip-paused-icon';
+        pauseIcon.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+        tapZone.appendChild(pauseIcon);
+        clip.appendChild(tapZone);
+
+        if (clip.dataset.video) {
+          tapZone.addEventListener('click', function () {
+            var v = clip.video;
+            if (v.paused) {
+              v.play().catch(function () {});
+              pauseIcon.classList.remove('visible');
+              clip.classList.add('playing');
+            } else {
+              v.pause();
+              pauseIcon.classList.add('visible');
+              clip.classList.remove('playing');
+            }
+          });
+        }
+
+        /* Right engagement stack */
+        var likedIds = currentUser ? (currentUser.likedPostIds || []) : [];
+        var savedIds = currentUser ? (currentUser.savedPostIds || []) : [];
+        var isLiked = likedIds.indexOf(post.id) !== -1;
+        var isSaved = savedIds.indexOf(post.id) !== -1;
+
+        var engage = document.createElement('div');
+        engage.className = 'clip-engage';
+
+        /* Like */
+        var likeBtn = makeEngageBtn(
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+          formatCount(post.likeCount || 0),
+          'Like'
+        );
+        if (isLiked) likeBtn.classList.add('liked');
+        var likeCountEl = likeBtn.querySelector('.clip-action-count');
+        likeBtn.addEventListener('click', function () { toggleLike(post.id, likeBtn, likeCountEl); });
+        engage.appendChild(likeBtn);
+
+        /* Comment */
+        var commentBtn = makeEngageBtn(
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+          formatCount(post.commentCount || 0),
+          'Comments'
+        );
+        commentBtn.addEventListener('click', function () { openCommentSheet(post.id); });
+        engage.appendChild(commentBtn);
+
+        /* Share */
+        var shareBtn = makeEngageBtn(
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+          formatCount(post.shareCount || 0),
+          'Share'
+        );
+        shareBtn.addEventListener('click', function () { openShareSheet(post.id); });
+        engage.appendChild(shareBtn);
+
+        /* Bookmark */
+        var bookmarkBtn = makeEngageBtn(
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+          formatCount(post.saveCount || 0),
+          'Save'
+        );
+        if (isSaved) bookmarkBtn.classList.add('saved');
+        var saveCountEl = bookmarkBtn.querySelector('.clip-action-count');
+        bookmarkBtn.addEventListener('click', function () { toggleSave(post.id, bookmarkBtn, saveCountEl); });
+        engage.appendChild(bookmarkBtn);
+
+        /* More */
+        var moreBtn = makeEngageBtn(
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>',
+          null,
+          'More options'
+        );
+        moreBtn.querySelector('.clip-action-count').remove();
+        moreBtn.addEventListener('click', function () { openMoreSheet(post.id); });
+        engage.appendChild(moreBtn);
+
+        /* Soundtrack disc */
+        var discWrap = document.createElement('div');
+        discWrap.style.display = 'flex';
+        discWrap.style.flexDirection = 'column';
+        discWrap.style.alignItems = 'center';
+        var disc = document.createElement('div');
+        disc.className = 'clip-soundtrack';
+        if (author && author.avatarUrl) {
+          var discImg = document.createElement('img');
+          discImg.src = author.avatarUrl;
+          discImg.alt = '';
+          disc.appendChild(discImg);
+        } else {
+          disc.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+        }
+        discWrap.appendChild(disc);
+        engage.appendChild(discWrap);
+
+        clip.appendChild(engage);
+
+        /* Bottom metadata overlay */
+        var meta = document.createElement('div');
+        meta.className = 'clip-meta';
+
+        var identity = document.createElement('div');
+        identity.className = 'clip-identity';
+
+        var avatar = document.createElement('div');
+        avatar.className = 'clip-avatar';
+        if (author && author.avatarUrl) {
+          var avImg = document.createElement('img');
+          avImg.src = author.avatarUrl;
+          avImg.alt = '';
+          avatar.appendChild(avImg);
+        } else {
+          var authorName = (author && (author.name || author.username)) || '?';
+          avatar.textContent = authorName.charAt(0).toUpperCase();
+        }
+        identity.appendChild(avatar);
+
+        var handle = document.createElement('span');
+        handle.className = 'clip-handle';
+        handle.textContent = '@' + ((author && (author.username || author.name)) || 'unknown');
+        identity.appendChild(handle);
+
+        var followBtn = document.createElement('button');
+        followBtn.className = 'clip-follow-btn';
+        followBtn.type = 'button';
+        var isFollowing = author && currentUser && Array.isArray(currentUser.followingIds) &&
+          currentUser.followingIds.indexOf(author.id) !== -1;
+        var isSelf = author && currentUser && author.id === currentUser.id;
+        if (!isSelf) {
+          followBtn.textContent = isFollowing ? 'Following' : 'Follow';
+          if (isFollowing) followBtn.classList.add('following');
+          followBtn.addEventListener('click', function () {
+            if (!currentUser) { showAuthPrompt(); return; }
+            var following = (currentUser.followingIds || []).slice();
+            var fi = following.indexOf(author.id);
+            if (fi !== -1) {
+              following.splice(fi, 1);
+              followBtn.textContent = 'Follow';
+              followBtn.classList.remove('following');
+            } else {
+              following.push(author.id);
+              followBtn.textContent = 'Following';
+              followBtn.classList.add('following');
+            }
+            currentUser = Object.assign({}, currentUser, { followingIds: following });
+            putRecord(ACCOUNTS_STORE, currentUser).catch(function () {});
+          });
+          identity.appendChild(followBtn);
+        }
+        meta.appendChild(identity);
+
+        if (post.text) {
+          var caption = document.createElement('div');
+          caption.className = 'clip-caption';
+          caption.textContent = post.text;
+          caption.addEventListener('click', function () {
+            caption.classList.toggle('expanded');
+          });
+          meta.appendChild(caption);
+        }
+
+        clip.appendChild(meta);
+
+        /* Progress bar */
+        var progressWrap = document.createElement('div');
+        progressWrap.className = 'clip-progress-wrap';
+        var progressBar = document.createElement('div');
+        progressBar.className = 'clip-progress-bar';
+        progressWrap.appendChild(progressBar);
+        clip.appendChild(progressWrap);
+
+        /* Bind progress bar to video */
+        if (clip.video) {
+          clip.video.addEventListener('timeupdate', function () {
+            var v = clip.video;
+            if (v.duration > 0) {
+              progressBar.style.width = ((v.currentTime / v.duration) * 100) + '%';
+            }
+          });
+          progressWrap.style.cursor = 'pointer';
+          progressWrap.addEventListener('click', function (e) {
+            var v = clip.video;
+            if (!v.duration) return;
+            var rect = progressWrap.getBoundingClientRect();
+            var ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+            v.currentTime = ratio * v.duration;
+          });
+        } else {
+          /* Animate a fake progress for images */
+          clip._fakeProgress = progressBar;
+        }
+
+        /* Comment dock */
+        var commentDock = document.createElement('div');
+        commentDock.className = 'clip-comment-dock';
+
+        var commentInput = document.createElement('input');
+        commentInput.className = 'clip-comment-input';
+        commentInput.type = 'text';
+        commentInput.placeholder = 'Add comment...';
+        commentInput.maxLength = 500;
+        commentInput.addEventListener('focus', function () {
+          if (!currentUser) { commentInput.blur(); showAuthPrompt(); }
+        });
+        commentDock.appendChild(commentInput);
+
+        var sendBtn = document.createElement('button');
+        sendBtn.className = 'clip-comment-send';
+        sendBtn.type = 'button';
+        sendBtn.setAttribute('aria-label', 'Send comment');
+        sendBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+        sendBtn.addEventListener('click', function () {
+          var text = commentInput.value.trim();
+          if (!text) return;
+          postComment(post.id, text).then(function (c) {
+            if (c) { commentInput.value = ''; }
+          }).catch(function () {});
+        });
+        commentDock.appendChild(sendBtn);
+
+        clip.appendChild(commentDock);
+
+        return clip;
+      }
+
+      function makeEngageBtn(svgMarkup, countText, ariaLabel) {
+        var btn = document.createElement('button');
+        btn.className = 'clip-action';
+        btn.type = 'button';
+        btn.setAttribute('aria-label', ariaLabel || '');
+        btn.innerHTML = svgMarkup;
+        var countEl = document.createElement('span');
+        countEl.className = 'clip-action-count';
+        countEl.textContent = countText !== null ? (countText || '') : '';
+        btn.appendChild(countEl);
+        return btn;
+      }
+
+      function hashStr(str) {
+        var h = 0;
+        for (var i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
+        return h;
+      }
+
+      /* ── IntersectionObserver for autoplay ──────────────────── */
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var clipEl = entry.target;
+          var video = clipEl.video;
+          if (entry.isIntersecting) {
+            clipEl.classList.add('playing');
+            if (video) { video.play().catch(function () {}); }
+            /* Fake progress for images */
+            if (clipEl._fakeProgress) {
+              startFakeProgress(clipEl);
+            }
+          } else {
+            clipEl.classList.remove('playing');
+            if (video) { video.pause(); }
+            if (clipEl._fakeProgressTimer) {
+              clearInterval(clipEl._fakeProgressTimer);
+              clipEl._fakeProgressTimer = null;
+              clipEl._fakeProgress.style.width = '0%';
+            }
+          }
+        });
+      }, { threshold: 0.6 });
+
+      function startFakeProgress(clipEl) {
+        if (clipEl._fakeProgressTimer) clearInterval(clipEl._fakeProgressTimer);
+        var bar = clipEl._fakeProgress;
+        var pct = 0;
+        clipEl._fakeProgressTimer = setInterval(function () {
+          pct += 0.5;
+          if (pct >= 100) { pct = 0; }
+          bar.style.width = pct + '%';
+        }, 150);
+      }
+
+      /* ── Comment sheet ──────────────────────────────────────── */
+      var commentSheetOverlay = document.getElementById('comment-sheet-overlay');
+      var commentSheetList = document.getElementById('comment-sheet-list');
+      var commentSheetClose = document.getElementById('comment-sheet-close');
+      var csInput = document.getElementById('cs-input');
+      var csSubmit = document.getElementById('cs-submit');
+
+      async function openCommentSheet(postId) {
+        activePostId = postId;
+        commentSheetList.innerHTML = '';
+        commentSheetOverlay.classList.add('open');
+        try {
+          var allComments = await getAllRecords(COMMENTS_STORE);
+          var postComments = allComments.filter(function (c) { return c.postId === postId; });
+          postComments.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+          if (postComments.length === 0) {
+            commentSheetList.innerHTML = '<p class="comment-sheet-empty">No comments yet. Be the first!</p>';
+          } else {
+            postComments.forEach(function (c) {
+              var item = document.createElement('div');
+              item.className = 'cs-comment';
+              var av = document.createElement('div');
+              av.className = 'cs-avatar';
+              av.textContent = (c.authorName || '?').charAt(0).toUpperCase();
+              item.appendChild(av);
+              var body = document.createElement('div');
+              body.className = 'cs-body';
+              var auth = document.createElement('div');
+              auth.className = 'cs-author';
+              auth.textContent = c.authorName || 'Unknown';
+              var txt = document.createElement('div');
+              txt.className = 'cs-text';
+              txt.textContent = c.text;
+              body.appendChild(auth);
+              body.appendChild(txt);
+              item.appendChild(body);
+              commentSheetList.appendChild(item);
+            });
+          }
+        } catch (e) {
+          commentSheetList.innerHTML = '<p class="comment-sheet-empty">Could not load comments.</p>';
+        }
+      }
+
+      commentSheetClose.addEventListener('click', function () {
+        commentSheetOverlay.classList.remove('open');
+        activePostId = null;
+      });
+      commentSheetOverlay.addEventListener('click', function (e) {
+        if (e.target === commentSheetOverlay) {
+          commentSheetOverlay.classList.remove('open');
+          activePostId = null;
+        }
+      });
+      csSubmit.addEventListener('click', async function () {
+        if (!currentUser) { showAuthPrompt(); return; }
+        var text = csInput.value.trim();
+        if (!text || !activePostId) return;
+        var comment = await postComment(activePostId, text);
+        if (comment) {
+          csInput.value = '';
+          var item = document.createElement('div');
+          item.className = 'cs-comment';
+          var av = document.createElement('div');
+          av.className = 'cs-avatar';
+          av.textContent = (comment.authorName || '?').charAt(0).toUpperCase();
+          item.appendChild(av);
+          var body = document.createElement('div');
+          body.className = 'cs-body';
+          var auth = document.createElement('div');
+          auth.className = 'cs-author';
+          auth.textContent = comment.authorName;
+          var txt = document.createElement('div');
+          txt.className = 'cs-text';
+          txt.textContent = comment.text;
+          body.appendChild(auth);
+          body.appendChild(txt);
+          item.appendChild(body);
+          var empty = commentSheetList.querySelector('.comment-sheet-empty');
+          if (empty) empty.remove();
+          commentSheetList.insertBefore(item, commentSheetList.firstChild);
+        }
+      });
+      csInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); csSubmit.click(); }
+      });
+
+      /* ── Share sheet ────────────────────────────────────────── */
+      var shareSheetOverlay = document.getElementById('share-sheet-overlay');
+      var sharePostId = null;
+
+      function openShareSheet(postId) {
+        sharePostId = postId;
+        shareSheetOverlay.classList.add('open');
+      }
+      document.getElementById('share-cancel-btn').addEventListener('click', function () {
+        shareSheetOverlay.classList.remove('open');
+      });
+      shareSheetOverlay.addEventListener('click', function (e) {
+        if (e.target === shareSheetOverlay) shareSheetOverlay.classList.remove('open');
+      });
+      document.getElementById('share-copy-btn').addEventListener('click', function () {
+        var url = location.origin + location.pathname + (sharePostId ? '?clip=' + sharePostId : '');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).catch(function () {});
+        }
+        shareSheetOverlay.classList.remove('open');
+      });
+      document.getElementById('share-dm-btn').addEventListener('click', function () {
+        shareSheetOverlay.classList.remove('open');
+        window.location.href = 'messages.html';
+      });
+
+      /* ── More sheet ─────────────────────────────────────────── */
+      var moreSheetOverlay = document.getElementById('more-sheet-overlay');
+
+      function openMoreSheet(postId) {
+        moreSheetOverlay.classList.add('open');
+      }
+      document.getElementById('more-cancel').addEventListener('click', function () {
+        moreSheetOverlay.classList.remove('open');
+      });
+      document.getElementById('more-not-interested').addEventListener('click', function () {
+        moreSheetOverlay.classList.remove('open');
+      });
+      document.getElementById('more-report').addEventListener('click', function () {
+        moreSheetOverlay.classList.remove('open');
+      });
+      moreSheetOverlay.addEventListener('click', function (e) {
+        if (e.target === moreSheetOverlay) moreSheetOverlay.classList.remove('open');
+      });
+
+      /* ── Auth prompt ────────────────────────────────────────── */
+      var authPromptOverlay = document.getElementById('auth-prompt-overlay');
+      function showAuthPrompt() { authPromptOverlay.classList.add('open'); }
+      document.getElementById('auth-prompt-cancel').addEventListener('click', function () {
+        authPromptOverlay.classList.remove('open');
+      });
+      document.getElementById('auth-prompt-login').addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+
+      /* ── Header buttons ─────────────────────────────────────── */
+      document.getElementById('clips-back-btn').addEventListener('click', function () {
+        history.back();
+      });
+      document.getElementById('clips-camera-btn').addEventListener('click', function () {
+        if (!currentUser) { showAuthPrompt(); return; }
+        window.location.href = 'index.html';
+      });
+
+      /* ── Footer nav ─────────────────────────────────────────── */
+      var sfMarketplace = document.getElementById('sticky-footer-marketplace');
+      var sfProfile = document.getElementById('sticky-footer-profile');
+      if (sfMarketplace) sfMarketplace.addEventListener('click', function () { window.location.href = 'marketplace.html'; });
+      if (sfProfile) sfProfile.addEventListener('click', function () { window.location.href = 'account-dashboard.html'; });
+
+      /* ── Render clips ───────────────────────────────────────── */
+      var container = document.getElementById('clips-container');
+
+      async function renderClips(posts, accounts) {
+        container.innerHTML = '';
+
+        if (!posts || posts.length === 0) {
+          var empty = document.createElement('div');
+          empty.className = 'clips-empty';
+          empty.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg><h2>No Clips Yet</h2><p>Post content on the home page and it will appear here as a clip.</p>';
+          container.appendChild(empty);
+          return;
+        }
+
+        var accountMap = {};
+        (accounts || []).forEach(function (a) { accountMap[a.id] = a; });
+
+        for (var i = 0; i < posts.length; i++) {
+          var post = posts[i];
+          var author = accountMap[post.userId] || null;
+          var mediaInfo = null;
+          if (post.mediaId) {
+            mediaInfo = await loadMediaBlob(post.mediaId);
+          }
+          var clipEl = buildClip(post, mediaInfo, author);
+          container.appendChild(clipEl);
+          clips.push(clipEl);
+          observer.observe(clipEl);
+        }
+      }
+
+      /* ── Sort / sample posts for clips ─────────────────────── */
+      function pickClipPosts(posts) {
+        /* Prefer posts with media; fall back to all posts */
+        var withMedia = posts.filter(function (p) { return p.mediaId; });
+        var without = posts.filter(function (p) { return !p.mediaId; });
+        /* Interleave: 1 media + 1 text, up to 30 clips */
+        var result = [];
+        var mi = 0, ti = 0;
+        while (result.length < 30 && (mi < withMedia.length || ti < without.length)) {
+          if (mi < withMedia.length) result.push(withMedia[mi++]);
+          if (result.length < 30 && ti < without.length) result.push(without[ti++]);
+        }
+        return result;
+      }
+
+      /* ── Bootstrap ──────────────────────────────────────────── */
+      openDB().then(async function () {
+        currentUser = await loadCurrentUser();
+        var posts = await getAllRecords(POSTS_STORE);
+        var accounts = await getAllRecords(ACCOUNTS_STORE);
+        /* Sort newest first */
+        posts.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+        var selectedPosts = pickClipPosts(posts);
+        await renderClips(selectedPosts, accounts);
+        document.getElementById('clips-loading').style.display = 'none';
+      }).catch(function (err) {
+        console.error('Clips: DB error', err);
+        document.getElementById('clips-loading').style.display = 'none';
+        var empty = document.createElement('div');
+        empty.className = 'clips-empty';
+        empty.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg><h2>Clips Unavailable</h2><p>Could not load clips. Please try again later.</p>';
+        container.appendChild(empty);
+      });
+    })();
+    </script>
+  </body>
+</html>
