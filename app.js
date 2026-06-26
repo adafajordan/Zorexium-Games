@@ -2627,9 +2627,23 @@
 
   async function syncCurrentUserFromSession() {
     const session = await getCurrentSession();
-    currentUser = session ? await getUserById(session.userId) : null;
-    if (!currentUser && session) {
+    if (!session) {
+      currentUser = null;
+      await refreshUserFacingViews();
+      return;
+    }
+    const resolvedUser = await getUserById(session.userId);
+    if (resolvedUser) {
+      currentUser = resolvedUser;
+    } else if (currentUser && currentUser.id !== session.userId) {
+      // A mismatched in-memory user indicates a stale session/account switch.
+      // Clear it so we do not keep a session that points at a different identity.
       await clearCurrentSession();
+      currentUser = null;
+    } else if (!currentUser) {
+      // Keep the session record intact here so transient account read failures don't
+      // force an unexpected logout during active flows (for example posting content).
+      currentUser = null;
     }
     await refreshUserFacingViews();
   }
@@ -4864,6 +4878,17 @@
     newPostForm.addEventListener('submit', async function (event) {
       event.preventDefault();
       event.stopImmediatePropagation();
+
+      if (!currentUser) {
+        const session = await getCurrentSession();
+        if (session && session.userId) {
+          const resolvedUser = await getUserById(session.userId);
+          if (resolvedUser) {
+            currentUser = resolvedUser;
+            await refreshUserFacingViews();
+          }
+        }
+      }
 
       if (!currentUser) {
         setNewPostStatus('Please log in before creating a post.', 'error');
