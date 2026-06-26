@@ -735,6 +735,7 @@
       var SESSION_STORE = 'session';
       var MEDIA_STORE = 'media';
       var COMMENTS_STORE = 'comments';
+      var WINDOW_SESSION_PREFIX = 'zorexium-session:';
 
       var db = null;
       var currentUser = null;
@@ -753,7 +754,7 @@
             if (!d.objectStoreNames.contains(POSTS_STORE))
               d.createObjectStore(POSTS_STORE, { keyPath: 'id' });
             if (!d.objectStoreNames.contains(SESSION_STORE))
-              d.createObjectStore(SESSION_STORE, { keyPath: 'id' });
+              d.createObjectStore(SESSION_STORE, { keyPath: 'key' });
             if (!d.objectStoreNames.contains(MEDIA_STORE))
               d.createObjectStore(MEDIA_STORE, { keyPath: 'id' });
             if (!d.objectStoreNames.contains(COMMENTS_STORE))
@@ -802,10 +803,28 @@
       }
 
       /* ── Session / auth ─────────────────────────────────────── */
+      function getWindowSession() {
+        if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
+        try {
+          var payload = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+          return payload && payload.userId ? payload : null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      async function getCurrentSession() {
+        var windowSession = getWindowSession();
+        if (windowSession && windowSession.userId) return windowSession;
+        var persisted = await getRecord(SESSION_STORE, 'current');
+        if (persisted && persisted.userId) return persisted;
+        var sessions = await getAllRecords(SESSION_STORE);
+        return sessions.find(function (s) { return s && s.active && s.userId; }) || sessions.find(function (s) { return s && s.userId; }) || null;
+      }
+
       async function loadCurrentUser() {
         try {
-          var sessions = await getAllRecords(SESSION_STORE);
-          var session = sessions.find(function (s) { return s.active; }) || sessions[0];
+          var session = await getCurrentSession();
           if (!session) return null;
           var user = await getRecord(ACCOUNTS_STORE, session.userId || session.id);
           return user || null;
@@ -882,12 +901,13 @@
           getRecord(MEDIA_STORE, mediaId).then(function (record) {
             if (!record) { resolve(null); return; }
             try {
-              var type = String(record.type || '').trim();
+              var type = String(record.type || record.mimeType || record.contentType || '').trim();
               var blob = null;
               if (record.data instanceof Blob) blob = record.data;
               else if (record.data instanceof ArrayBuffer) blob = new Blob([record.data], { type: type || 'application/octet-stream' });
               else if (record.blob instanceof Blob) blob = record.blob;
               else if (record.file instanceof Blob) blob = record.file;
+              if (!type && blob && blob.type) type = String(blob.type || '').trim();
               if (blob) {
                 var url = URL.createObjectURL(blob);
                 resolve({ url: url, type: type || blob.type || '' });
@@ -895,6 +915,10 @@
               }
               var dataUrl = String(record.dataUrl || record.url || '').trim();
               if (dataUrl) {
+                if (!type) {
+                  var dataUrlMatch = dataUrl.match(/^data:([^;,]+)[;,]/i);
+                  if (dataUrlMatch && dataUrlMatch[1]) type = String(dataUrlMatch[1]).trim();
+                }
                 resolve({ url: dataUrl, type: type || '' });
                 return;
               }
