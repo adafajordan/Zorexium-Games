@@ -4044,7 +4044,16 @@
       const isExplicitVideoId = Boolean(normalizeMediaId(post.videoMediaId));
       const postDeclaredMediaType = String(post && post.mediaType || '').trim().toLowerCase();
       const isVideoRecord = getStoredMediaType(mediaRecord).startsWith('video/');
-      const shouldRenderAsVideo = isExplicitVideoId || postDeclaredMediaType.startsWith('video') || isVideoRecord;
+      const hasLegacySingleMedia = Boolean(
+        normalizeMediaId(post.mediaId) &&
+        (!Array.isArray(post.imageMediaIds) || post.imageMediaIds.length === 0) &&
+        !hasGifUrl(post)
+      );
+      const shouldRenderAsVideo =
+        isExplicitVideoId ||
+        postDeclaredMediaType.startsWith('video') ||
+        isVideoRecord ||
+        hasLegacySingleMedia;
       const mediaSource = await getRenderableMediaSource(mediaRecord);
       if (shouldRenderAsVideo && mediaSource && mediaSource.url) {
         const mediaUrl = mediaSource.url;
@@ -5351,6 +5360,8 @@
         media = document.createElement('video');
         media.src = url;
         media.muted = true;
+        media.defaultMuted = true;
+        media.controls = true;
         media.playsInline = true;
         media.preload = 'metadata';
       } else {

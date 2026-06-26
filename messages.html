@@ -898,6 +898,13 @@
           var mediaId = String(user.profileImageMediaId || '').trim();
           if (!mediaId) return Promise.resolve('');
           return getLocal(MEDIA_STORE, mediaId).then(function (record) {
+            if (record) return record;
+            return apiFetch('GET', MEDIA_STORE, mediaId).then(function (payload) {
+              return payload && payload.record ? deserializeServerRecord(payload.record) : null;
+            }).catch(function () {
+              return null;
+            });
+          }).then(function (record) {
             var blob = mediaRecordToBlob(record);
             if (!blob) return '';
             return blobToDataUrl(blob);
@@ -930,6 +937,21 @@
             if (!r.ok) throw new Error('Server ' + r.status);
             return r.json();
           }).catch(function (err) { serverDown = true; throw err; });
+        }
+        function deserializeServerRecord(value) {
+          if (!value || typeof value !== 'object') return value;
+          if (value.__zorexiumType === 'arrayBuffer' && typeof value.base64 === 'string') {
+            var binary = atob(value.base64);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes.buffer;
+          }
+          if (Array.isArray(value)) return value.map(deserializeServerRecord);
+          var out = {};
+          Object.keys(value).forEach(function (key) {
+            out[key] = deserializeServerRecord(value[key]);
+          });
+          return out;
         }
         function loadConversation() {
           return apiFetch('GET', MESSAGES_STORE, conversationId)
