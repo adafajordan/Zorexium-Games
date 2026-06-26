@@ -780,7 +780,7 @@
           <input class="cs-input" id="cs-input" type="text" placeholder="Add a comment..." autocomplete="off" maxlength="500" />
           <button class="cs-submit" id="cs-submit" type="button">Post</button>
         </div>
-        <div class="cs-mention-menu" id="cs-mention-menu" aria-label="Mention suggestions"></div>
+        <div class="cs-mention-menu" id="cs-mention-menu" aria-label="Mention suggestions" role="listbox"></div>
       </div>
     </div>
 
@@ -859,6 +859,11 @@
       var audioUnlocked = false;
       var userGestureArmed = false;
       var MAX_CLIPS_COUNT = 30;
+      var MENTION_MENU_BLUR_DELAY = 120;
+      var MENTION_TOKEN_PATTERN = '@([a-zA-Z0-9_]+)';
+      var TRAILING_MENTION_PATTERN = '(?:^|\\s)@([a-zA-Z0-9_]*)$';
+      var HOLD_TO_PAUSE_MS = 220;
+      var MIN_AUDIBLE_VOLUME = 0.05;
 
       function openDB() {
         return new Promise(function (resolve, reject) {
@@ -975,6 +980,12 @@
         return String(n);
       }
 
+      function escapeHtml(text) {
+        return String(text || '').replace(/[&<>"']/g, function (char) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char;
+        });
+      }
+
       function buildProfileHref(userId) {
         var targetId = String(userId || '').trim();
         return targetId ? ('account-dashboard.html?user=' + encodeURIComponent(targetId)) : 'account-dashboard.html';
@@ -1044,16 +1055,14 @@
       }
 
       function formatCommentTextWithMentions(text) {
-        var escaped = String(text || '').replace(/[&<>"']/g, function (char) {
-          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char;
-        });
-        return escaped.replace(/@([a-zA-Z0-9_]+)/g, function (full) {
-          return '<span class="cs-mention">' + full + '</span>';
+        var escaped = escapeHtml(text);
+        return escaped.replace(new RegExp(MENTION_TOKEN_PATTERN, 'g'), function (full) {
+          return '<span class="cs-mention">' + escapeHtml(full) + '</span>';
         });
       }
 
       function extractMentionHandles(text) {
-        var found = String(text || '').match(/@([a-zA-Z0-9_]+)/g) || [];
+        var found = String(text || '').match(new RegExp(MENTION_TOKEN_PATTERN, 'g')) || [];
         var unique = {};
         found.forEach(function (token) { unique[token.slice(1).toLowerCase()] = true; });
         return Object.keys(unique);
@@ -1286,7 +1295,7 @@
             if (activeClip && activeClip.video) {
               activateClipAudio(activeClip, false);
             }
-          });
+          }, { once: true });
         });
       }
 
@@ -1295,7 +1304,7 @@
         if (!video) return;
         if (forceUnmute || audioUnlocked) {
           video.muted = false;
-          if (!video.volume || video.volume < 0.05) video.volume = 1;
+          if (video.volume < MIN_AUDIBLE_VOLUME) video.volume = 1;
         }
         video.play().then(function () {
           if (!video.muted) audioUnlocked = true;
@@ -1367,7 +1376,6 @@
           var holdPaused = false;
           var wasPlayingOnHoldStart = false;
           var suppressNextTap = false;
-          var HOLD_MS = 220;
           function onHoldStart() {
             var v = clip.video;
             wasPlayingOnHoldStart = Boolean(v && !v.paused);
@@ -1379,7 +1387,7 @@
               holdPaused = true;
               pauseIcon.classList.add('visible');
               clip.classList.remove('playing');
-            }, HOLD_MS);
+            }, HOLD_TO_PAUSE_MS);
           }
           function onHoldEnd() {
             clearTimeout(holdDelay);
@@ -1752,7 +1760,7 @@
         return list.filter(function (user) {
           var username = String(user.username || '').toLowerCase();
           var name = String(user.name || '').toLowerCase();
-          return username.indexOf(q) === 0 || name.indexOf(q) !== -1;
+          return username.indexOf(q) === 0 || name.indexOf(q) === 0;
         }).slice(0, 6);
       }
 
@@ -1774,7 +1782,7 @@
         var value = String(input.value || '');
         var cursor = typeof input.selectionStart === 'number' ? input.selectionStart : value.length;
         var beforeCursor = value.slice(0, cursor);
-        var matched = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+        var matched = beforeCursor.match(new RegExp(TRAILING_MENTION_PATTERN));
         if (!matched) return closeMentionMenu();
         var query = matched[1] || '';
         var rawToken = matched[0];
@@ -1787,6 +1795,7 @@
           var row = document.createElement('button');
           row.type = 'button';
           row.className = 'cs-mention-item';
+          row.setAttribute('role', 'option');
           var av = document.createElement('span');
           av.className = 'cs-mention-avatar';
           var avatarUrl = accountAvatarCache[user.id] || '';
@@ -1897,8 +1906,9 @@
           });
           replyInput.addEventListener('blur', function () {
             setTimeout(function () {
-              if (document.activeElement !== csInput && document.activeElement !== replyInput) closeMentionMenu();
-            }, 120);
+              var isReplyInputFocused = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('cs-reply-input');
+              if (document.activeElement !== csInput && !isReplyInputFocused) closeMentionMenu();
+            }, MENTION_MENU_BLUR_DELAY);
           });
           replyInput.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') {
@@ -1987,7 +1997,7 @@
       csInput.addEventListener('blur', function () {
         setTimeout(function () {
           if (document.activeElement !== csInput) closeMentionMenu();
-        }, 120);
+        }, MENTION_MENU_BLUR_DELAY);
       });
 
       /* ── Share sheet ────────────────────────────────────────── */
