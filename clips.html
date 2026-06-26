@@ -808,7 +808,7 @@
         try {
           var payload = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
           return payload && payload.userId ? payload : null;
-        } catch (e) {
+        } catch (error) {
           return null;
         }
       }
@@ -821,10 +821,10 @@
         var sessions = await getAllRecords(SESSION_STORE);
         var fallback = null;
         for (var i = 0; i < sessions.length; i++) {
-          var s = sessions[i];
-          if (!s || !s.userId) continue;
-          if (s.active) return s;
-          if (!fallback) fallback = s;
+          var session = sessions[i];
+          if (!session || !session.userId) continue;
+          if (session.active) return session;
+          if (!fallback) fallback = session;
         }
         return fallback;
       }

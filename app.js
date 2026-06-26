@@ -1666,6 +1666,8 @@
         if (error.name !== 'DataError') {
           throw error;
         }
+        // Compatibility fallback: some clients have a session object store created with
+        // keyPath "id" (instead of "key"), which throws DataError for the standard shape.
         await putRecord(SESSION_STORE, { id: 'current', userId: userId, active: true });
       }
       return;
