@@ -5361,16 +5361,9 @@
         media.src = url;
         media.muted = true;
         media.defaultMuted = true;
-        media.autoplay = true;
-        media.loop = true;
         media.controls = true;
         media.playsInline = true;
-        media.setAttribute('playsinline', 'true');
-        media.setAttribute('webkit-playsinline', 'true');
         media.preload = 'metadata';
-        media.addEventListener('loadedmetadata', function () {
-          media.play().catch(function () {});
-        }, { once: true });
       } else {
         media = document.createElement('img');
         media.src = url;

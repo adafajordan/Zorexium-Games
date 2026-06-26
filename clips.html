@@ -1586,10 +1586,10 @@
           if (!mediaId) continue;
           var mediaInfo = await loadMediaBlob(mediaId);
           if (!mediaInfo || !shouldTreatPostAsVideo(post, mediaInfo)) continue;
-          if (!(mediaInfo.type || '').startsWith('video')) {
-            mediaInfo.type = 'video/mp4';
-          }
-          var clipEl = buildClip(post, mediaInfo, author);
+          var normalizedMediaInfo = (!(mediaInfo.type || '').startsWith('video'))
+            ? Object.assign({}, mediaInfo, { type: 'video/mp4' })
+            : mediaInfo;
+          var clipEl = buildClip(post, normalizedMediaInfo, author);
           container.appendChild(clipEl);
           clips.push(clipEl);
           observer.observe(clipEl);
