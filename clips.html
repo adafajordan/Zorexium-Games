@@ -64,7 +64,9 @@
       }
       .clip-media video,
       .clip-media img {
+        width: min(100vw, calc(100vh * 9 / 16));
         width: min(100vw, calc(100dvh * 9 / 16));
+        height: min(100vh, calc(100vw * 16 / 9));
         height: min(100dvh, calc(100vw * 16 / 9));
         max-width: 100%;
         max-height: 100%;
@@ -1586,8 +1588,10 @@
           if (!mediaId) continue;
           var mediaInfo = await loadMediaBlob(mediaId);
           if (!mediaInfo || !shouldTreatPostAsVideo(post, mediaInfo)) continue;
+          var declaredVideoType = String(post.mediaType || '').trim().toLowerCase();
+          var fallbackVideoType = declaredVideoType.indexOf('video/') === 0 ? declaredVideoType : 'video/*';
           var normalizedMediaInfo = (!(mediaInfo.type || '').startsWith('video'))
-            ? Object.assign({}, mediaInfo, { type: 'video/mp4' })
+            ? Object.assign({}, mediaInfo, { type: fallbackVideoType })
             : mediaInfo;
           var clipEl = buildClip(post, normalizedMediaInfo, author);
           container.appendChild(clipEl);
