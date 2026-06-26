@@ -2616,6 +2616,8 @@
       const type = String(record.type || '').trim() || 'application/octet-stream';
       return new Blob([record.data], { type: type });
     }
+    // Legacy format: Blob/File stored directly in the `data` field.
+    if (record.data instanceof Blob) return record.data;
     // Legacy format: Blob/File stored directly in IDB.
     if (record.blob instanceof Blob) return record.blob;
     if (record.file instanceof Blob) return record.file;

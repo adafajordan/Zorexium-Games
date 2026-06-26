@@ -265,6 +265,39 @@
       }
       .dm-bubble-out { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
       .dm-bubble-in  { align-self: flex-start; background: var(--surface); color: var(--text); border-bottom-left-radius: 4px; }
+      .dm-bubble-text { white-space: pre-wrap; }
+      .dm-bubble-attachment {
+        margin-top: 8px;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .dm-bubble-attachment img,
+      .dm-bubble-attachment video {
+        width: 100%;
+        max-width: min(260px, 68vw);
+        max-height: 320px;
+        object-fit: cover;
+        border-radius: 10px;
+        display: block;
+      }
+      .dm-bubble-attachment-file {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: min(260px, 68vw);
+        padding: 8px 10px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-size: 13px;
+      }
+      .dm-bubble-in .dm-bubble-attachment-file {
+        background: #e9edf2;
+        color: #1a1f2b;
+      }
+      .dm-bubble-out .dm-bubble-attachment-file {
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+      }
       .dm-bubble-meta { font-size: 11px; color: var(--text-soft); margin-top: 3px; }
       .dm-bubble-wrap.out .dm-bubble-meta { text-align: right; }
 
@@ -310,6 +343,36 @@
       }
       .dm-attach-btn:hover { color: var(--accent); }
       .dm-attach-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+      .dm-attachment-preview {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 6px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 1;
+        min-width: 0;
+        max-width: 210px;
+        background: var(--surface);
+      }
+      .dm-attachment-preview-name {
+        font-size: 12px;
+        color: var(--text-soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dm-attachment-preview-clear {
+        border: none;
+        background: none;
+        color: var(--text-soft);
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .dm-attachment-preview-clear:hover { color: var(--accent); }
       .dm-input {
         flex: 1;
         border: 1px solid var(--border-strong);
@@ -595,9 +658,14 @@
       </div>
 
       <div id="dm-composer" class="dm-composer">
-        <button class="dm-attach-btn" type="button" aria-label="Attach file" title="Attach">
+        <button id="dm-attach-btn" class="dm-attach-btn" type="button" aria-label="Attach file" title="Attach">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </button>
+        <input id="dm-attach-input" type="file" accept="image/*,video/*,.pdf,.txt,.doc,.docx" hidden />
+        <div id="dm-attachment-preview" class="dm-attachment-preview" hidden>
+          <span id="dm-attachment-name" class="dm-attachment-preview-name"></span>
+          <button id="dm-attachment-clear" class="dm-attachment-preview-clear" type="button" aria-label="Remove attachment">&times;</button>
+        </div>
         <textarea id="dm-input" class="dm-input" placeholder="Type a message…" rows="1" aria-label="Message text"></textarea>
         <button id="dm-send" class="dm-send-btn" type="button" aria-label="Send message" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -678,6 +746,11 @@
         var threadInfoBtn      = document.getElementById('thread-info-btn');
         var messagesEl         = document.getElementById('dm-messages');
         var threadEmptyEl      = document.getElementById('dm-thread-empty');
+        var attachBtn          = document.getElementById('dm-attach-btn');
+        var attachInput        = document.getElementById('dm-attach-input');
+        var attachmentPreview  = document.getElementById('dm-attachment-preview');
+        var attachmentNameEl   = document.getElementById('dm-attachment-name');
+        var attachmentClearBtn = document.getElementById('dm-attachment-clear');
         var inputEl            = document.getElementById('dm-input');
         var sendBtn            = document.getElementById('dm-send');
 
@@ -692,6 +765,7 @@
         var serverDown       = false;
         var lastMsgCount     = 0;
         var appDbPromise     = null;
+        var pendingAttachment = null;
 
         /* ── IndexedDB helpers ─────────────────────────────────────── */
         function openDb() {
@@ -772,6 +846,28 @@
         }
         function formatTime(ts) {
           try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
+        }
+        function getMessagePreviewText(msg) {
+          if (!msg || typeof msg !== 'object') return '';
+          var text = String(msg.text || '').trim();
+          if (text) return text.slice(0, 80);
+          if (msg.attachment && msg.attachment.name) return '[Attachment] ' + String(msg.attachment.name).slice(0, 64);
+          return '';
+        }
+        function inferMimeTypeFromName(name) {
+          var fileName = String(name || '').toLowerCase();
+          if (fileName.endsWith('.pdf')) return 'application/pdf';
+          if (fileName.endsWith('.txt')) return 'text/plain';
+          if (fileName.endsWith('.doc')) return 'application/msword';
+          if (fileName.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          if (fileName.endsWith('.png')) return 'image/png';
+          if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) return 'image/jpeg';
+          if (fileName.endsWith('.gif')) return 'image/gif';
+          if (fileName.endsWith('.webp')) return 'image/webp';
+          if (fileName.endsWith('.mp4')) return 'video/mp4';
+          if (fileName.endsWith('.mov')) return 'video/quicktime';
+          if (fileName.endsWith('.webm')) return 'video/webm';
+          return 'application/octet-stream';
         }
         function blobToDataUrl(blob) {
           return new Promise(function (resolve) {
@@ -873,7 +969,14 @@
 
         /* ── Avatar rendering ──────────────────────────────────────── */
         function setAvatar(el, user) {
-          if (!user) { el.textContent = '?'; el.style.background = '#93a2b7'; return; }
+          if (!user) {
+            el.textContent = '';
+            el.style.background = '#93a2b7';
+            el.setAttribute('aria-label', 'No profile image available');
+            return;
+          }
+          var displayName = String(user.name || user.username || 'User').trim() || 'User';
+          el.setAttribute('aria-label', 'Profile avatar for ' + displayName);
           el.style.background = getAvatarColor(user.username || user.id);
           var avatarSrc = String(user.__avatarUrl || user.profilePictureDataUrl || '').trim();
           var img = el.querySelector('img');
@@ -891,6 +994,7 @@
           } else if (img) {
             img.remove();
             if (span) span.hidden = false;
+            img = null;
           }
           if (!img) {
             var textTarget = span || el;
@@ -940,7 +1044,7 @@
             var other = lookupById(otherId, accounts);
             var msgs = Array.isArray(conv.messages) ? conv.messages : [];
             var lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
-            var preview = lastMsg ? String(lastMsg.text || '').slice(0, 80) : '';
+            var preview = lastMsg ? getMessagePreviewText(lastMsg) : '';
 
             var row = document.createElement('div');
             row.className = 'conv-row';
@@ -1056,7 +1160,41 @@
 
           var bubble = document.createElement('div');
           bubble.className = 'dm-bubble ' + (isOwn ? 'dm-bubble-out' : 'dm-bubble-in');
-          bubble.textContent = msg.text || '';
+          var textValue = String((msg && msg.text) || '').trim();
+          if (textValue) {
+            var textNode = document.createElement('div');
+            textNode.className = 'dm-bubble-text';
+            textNode.textContent = textValue;
+            bubble.appendChild(textNode);
+          }
+          if (msg && msg.attachment && msg.attachment.dataUrl) {
+            var attachmentWrap = document.createElement('div');
+            attachmentWrap.className = 'dm-bubble-attachment';
+            var attachmentType = String(msg.attachment.type || '').toLowerCase();
+            if (attachmentType.indexOf('image/') === 0) {
+              var img = document.createElement('img');
+              img.src = msg.attachment.dataUrl;
+              img.alt = msg.attachment.name ? ('Image attachment: ' + msg.attachment.name) : 'Image attachment';
+              attachmentWrap.appendChild(img);
+            } else if (attachmentType.indexOf('video/') === 0) {
+              var vid = document.createElement('video');
+              vid.src = msg.attachment.dataUrl;
+              vid.controls = true;
+              vid.preload = 'metadata';
+              vid.setAttribute('aria-label', msg.attachment.name ? ('Video attachment: ' + msg.attachment.name) : 'Video attachment');
+              attachmentWrap.appendChild(vid);
+            } else {
+              var fileLink = document.createElement('a');
+              fileLink.className = 'dm-bubble-attachment-file';
+              fileLink.href = msg.attachment.dataUrl;
+              fileLink.target = '_blank';
+              fileLink.rel = 'noopener noreferrer';
+              fileLink.download = msg.attachment.name || 'attachment';
+              fileLink.textContent = '📎 ' + (msg.attachment.name || 'Attachment');
+              attachmentWrap.appendChild(fileLink);
+            }
+            bubble.appendChild(attachmentWrap);
+          }
 
           var meta = document.createElement('div');
           meta.className = 'dm-bubble-meta';
@@ -1069,16 +1207,24 @@
 
         function sendMessage() {
           var text = (inputEl.value || '').trim();
-          if (!text || !currentUser || !conversationId) return;
+          if ((!text && !pendingAttachment) || !currentUser || !conversationId) return;
           inputEl.value = '';
           sendBtn.disabled = true;
           inputEl.style.height = 'auto';
+          var attachment = pendingAttachment ? {
+            name: pendingAttachment.name,
+            type: pendingAttachment.type,
+            size: pendingAttachment.size,
+            dataUrl: pendingAttachment.dataUrl
+          } : null;
+          setPendingAttachment(null);
           updateSendBtn();
 
           var msg = {
             id: Date.now() + '-' + Math.random().toString(36).slice(2),
             senderId: currentUser.id,
             text: text,
+            attachment: attachment,
             createdAt: Date.now()
           };
 
@@ -1141,7 +1287,35 @@
           }
         }
 
-        function updateSendBtn() { sendBtn.disabled = !(inputEl.value || '').trim(); }
+        function setPendingAttachment(attachment) {
+          pendingAttachment = attachment || null;
+          if (pendingAttachment) {
+            attachmentNameEl.textContent = pendingAttachment.name || 'Attachment';
+            attachmentPreview.hidden = false;
+          } else {
+            attachmentNameEl.textContent = '';
+            attachmentPreview.hidden = true;
+          }
+        }
+        function updateSendBtn() {
+          sendBtn.disabled = !((inputEl.value || '').trim() || pendingAttachment);
+        }
+        function handleAttachmentSelection(file) {
+          if (!(file instanceof File)) {
+            console.warn('DM attachment selection skipped: invalid file input');
+            return;
+          }
+          blobToDataUrl(file).then(function (dataUrl) {
+            if (!dataUrl) return;
+            setPendingAttachment({
+              name: file.name || 'attachment',
+              type: file.type || inferMimeTypeFromName(file.name),
+              size: file.size || 0,
+              dataUrl: dataUrl
+            });
+            updateSendBtn();
+          });
+        }
 
         function showAuthNotice() {
           var notice = document.createElement('div');
@@ -1198,6 +1372,16 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled) sendMessage(); }
           });
           sendBtn.addEventListener('click', sendMessage);
+          attachBtn.addEventListener('click', function () { attachInput.click(); });
+          attachInput.addEventListener('change', function () {
+            var file = attachInput.files && attachInput.files[0] ? attachInput.files[0] : null;
+            if (file) handleAttachmentSelection(file);
+            attachInput.value = '';
+          });
+          attachmentClearBtn.addEventListener('click', function () {
+            setPendingAttachment(null);
+            updateSendBtn();
+          });
 
           loadConversation().then(function (record) {
             lastMsgCount = (record && Array.isArray(record.messages)) ? record.messages.length : 0;

@@ -880,11 +880,25 @@
         return new Promise(function (resolve) {
           if (!mediaId) { resolve(null); return; }
           getRecord(MEDIA_STORE, mediaId).then(function (record) {
-            if (!record || !record.data) { resolve(null); return; }
+            if (!record) { resolve(null); return; }
             try {
-              var blob = record.data instanceof Blob ? record.data : new Blob([record.data], { type: record.type || 'image/*' });
-              var url = URL.createObjectURL(blob);
-              resolve({ url: url, type: record.type || '' });
+              var type = String(record.type || '').trim();
+              var blob = null;
+              if (record.data instanceof Blob) blob = record.data;
+              else if (record.data instanceof ArrayBuffer) blob = new Blob([record.data], { type: type || 'application/octet-stream' });
+              else if (record.blob instanceof Blob) blob = record.blob;
+              else if (record.file instanceof Blob) blob = record.file;
+              if (blob) {
+                var url = URL.createObjectURL(blob);
+                resolve({ url: url, type: type || blob.type || '' });
+                return;
+              }
+              var dataUrl = String(record.dataUrl || record.url || '').trim();
+              if (dataUrl) {
+                resolve({ url: dataUrl, type: type || '' });
+                return;
+              }
+              resolve(null);
             } catch (e) { resolve(null); }
           }).catch(function () { resolve(null); });
         });
