@@ -2430,6 +2430,7 @@
         var POSTS_STORE = 'posts';
         var SESSION_STORE = 'session';
         var MEDIA_STORE = 'media';
+        var WINDOW_SESSION_PREFIX = 'zorexium-session:';
         var COMMENTS_STORE = 'comments';
         var NOTIFICATIONS_STORE = 'notifications';
         var ARTICLES_STORE = 'articles';
@@ -2514,6 +2515,16 @@
               resolve(Array.isArray(request.result) ? request.result : []);
             };
           });
+        }
+
+        function getWindowSession() {
+          if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
+          try {
+            var payload = JSON.parse(window.name.slice(WINDOW_SESSION_PREFIX.length));
+            return payload && payload.userId ? payload : null;
+          } catch (error) {
+            return null;
+          }
         }
 
         function putRecord(database, storeName, record) {
@@ -4277,7 +4288,7 @@
             getRecord(database, SESSION_STORE, 'current'),
             getAllRecords(database, ACCOUNTS_STORE)
           ]).then(function (results) {
-            var session = results[0];
+            var session = getWindowSession() || results[0];
             var accounts = results[1];
             viewState.allAccounts = accounts;
             if (session && session.userId) {

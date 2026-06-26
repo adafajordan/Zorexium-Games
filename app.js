@@ -1638,7 +1638,18 @@
 
   async function getPersistentSession() {
     const sessionRecord = await getRecord(SESSION_STORE, 'current');
-    return sessionRecord && sessionRecord.userId ? sessionRecord : null;
+    if (sessionRecord && sessionRecord.userId) {
+      return sessionRecord;
+    }
+    const sessions = await getAllRecords(SESSION_STORE);
+    let fallbackSession = null;
+    for (let index = 0; index < sessions.length; index += 1) {
+      const record = sessions[index];
+      if (!record || !record.userId) continue;
+      if (record.active) return record;
+      if (!fallbackSession) fallbackSession = record;
+    }
+    return fallbackSession;
   }
 
   async function getCurrentSession() {
@@ -1649,7 +1660,16 @@
     clearWindowSession();
     await deleteRecord(SESSION_STORE, 'current');
     if (remember) {
-      await putRecord(SESSION_STORE, { key: 'current', userId: userId });
+      try {
+        await putRecord(SESSION_STORE, { key: 'current', userId: userId });
+      } catch (error) {
+        if (error.name !== 'DataError') {
+          throw error;
+        }
+        // Compatibility fallback: some clients have a session object store created with
+        // keyPath "id" (instead of "key"), which throws DataError for the standard shape.
+        await putRecord(SESSION_STORE, { id: 'current', userId: userId, active: true });
+      }
       return;
     }
     setWindowSession(userId);
@@ -1814,6 +1834,18 @@
 
   function hasGifUrl(post) {
     return Boolean(String((post && post.gifUrl) || '').trim());
+  }
+
+  function normalizeMediaId(value) {
+    const id = String(value || '').trim();
+    return id || '';
+  }
+
+  function getPostVideoMediaId(post) {
+    if (!post || typeof post !== 'object') return '';
+    const directVideoId = normalizeMediaId(post.videoMediaId);
+    if (directVideoId) return directVideoId;
+    return normalizeMediaId(post.mediaId);
   }
 
   function switchAuthView(view) {
@@ -2139,7 +2171,7 @@
   }
 
   function hasPostMedia(post) {
-    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(post.videoMediaId) || hasGifUrl(post);
+    return (Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0) || Boolean(getPostVideoMediaId(post)) || hasGifUrl(post);
   }
 
   function getPostAuthorHandle(post) {
@@ -2609,11 +2641,26 @@
     closeAuthModal();
   }
 
+  function getStoredMediaType(record) {
+    if (!record || typeof record !== 'object') return '';
+    let type = String(record.type || record.mimeType || record.contentType || '').trim();
+    if (!type && record.data instanceof Blob) type = String(record.data.type || '').trim();
+    if (!type && record.blob instanceof Blob) type = String(record.blob.type || '').trim();
+    if (!type && record.file instanceof Blob) type = String(record.file.type || '').trim();
+    if (!type) {
+      const dataUrl = String(record.dataUrl || record.url || '').trim();
+      const matched = dataUrl.match(/^data:([^;,]+)[;,]/i);
+      if (matched && matched[1]) type = String(matched[1]).trim();
+    }
+    return type.toLowerCase();
+  }
+
   function getBlobFromMediaRecord(record) {
     if (!record || typeof record !== 'object') return null;
+    const normalizedType = getStoredMediaType(record);
     // New format: raw ArrayBuffer with explicit MIME type (cross-platform safe for IDB).
     if (record.data instanceof ArrayBuffer) {
-      const type = String(record.type || '').trim() || 'application/octet-stream';
+      const type = normalizedType || 'application/octet-stream';
       return new Blob([record.data], { type: type });
     }
     // Legacy format: Blob/File stored directly in the `data` field.
@@ -3991,10 +4038,15 @@
       }
     }
 
-    if (post.videoMediaId) {
-      const mediaRecord = await getMediaRecord(post.videoMediaId);
+    const videoMediaId = getPostVideoMediaId(post);
+    if (videoMediaId) {
+      const mediaRecord = await getMediaRecord(videoMediaId);
+      const isExplicitVideoId = Boolean(normalizeMediaId(post.videoMediaId));
+      const postDeclaredMediaType = String(post && post.mediaType || '').trim().toLowerCase();
+      const isVideoRecord = getStoredMediaType(mediaRecord).startsWith('video/');
+      const shouldRenderAsVideo = isExplicitVideoId || postDeclaredMediaType.startsWith('video') || isVideoRecord;
       const mediaSource = await getRenderableMediaSource(mediaRecord);
-      if (mediaSource && mediaSource.url) {
+      if (shouldRenderAsVideo && mediaSource && mediaSource.url) {
         const mediaUrl = mediaSource.url;
         if (mediaSource.isObjectUrl) generatedMediaUrls.push(mediaUrl);
 
@@ -4027,8 +4079,9 @@
     if (Array.isArray(post.imageMediaIds)) {
       mediaIds.push(...post.imageMediaIds);
     }
-    if (post.videoMediaId) {
-      mediaIds.push(post.videoMediaId);
+    const videoMediaId = getPostVideoMediaId(post);
+    if (videoMediaId) {
+      mediaIds.push(videoMediaId);
     }
     await Promise.all(mediaIds.map(function (id) {
       return deleteRecord(MEDIA_STORE, id);
