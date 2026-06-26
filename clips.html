@@ -124,16 +124,12 @@
       .clip-engage {
         position: absolute;
         right: 10px;
-        bottom: calc(var(--footer-h) + 100px);
+        bottom: calc(var(--footer-h) + 72px);
         z-index: 10;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 22px;
-        padding: 12px 8px;
-        border-radius: 24px;
-        background: rgba(0, 0, 0, 0.34);
-        backdrop-filter: blur(6px);
+        gap: 12px;
       }
       .clip-action {
         display: flex;
@@ -227,6 +223,12 @@
         cursor: pointer;
       }
       .clip-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+      .clip-profile-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+      }
       .clip-handle {
         font-size: 14px;
         font-weight: 700;
@@ -409,6 +411,57 @@
       .cs-body { flex: 1; min-width: 0; }
       .cs-author { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
       .cs-text { font-size: 13px; line-height: 1.45; color: rgba(255,255,255,0.9); word-break: break-word; }
+      .cs-mention { color: #7ab7ff; font-weight: 600; }
+      .cs-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 6px;
+      }
+      .cs-action-btn {
+        border: none;
+        background: none;
+        color: rgba(255,255,255,0.7);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0;
+      }
+      .cs-action-btn.liked { color: var(--accent); }
+      .cs-replies {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .cs-comment.cs-reply {
+        margin-left: 2px;
+      }
+      .cs-reply-box {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .cs-reply-input {
+        flex: 1;
+        height: 34px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 17px;
+        color: #fff;
+        font-size: 12px;
+        padding: 0 12px;
+        outline: none;
+      }
+      .cs-reply-submit {
+        border: none;
+        border-radius: 17px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0 12px;
+        height: 34px;
+        cursor: pointer;
+      }
       .comment-sheet-input-row {
         display: flex;
         gap: 8px;
@@ -442,6 +495,47 @@
         cursor: pointer;
         white-space: nowrap;
       }
+      .cs-mention-menu {
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        bottom: 64px;
+        z-index: 2;
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 14px;
+        background: rgba(32,32,32,0.98);
+        display: none;
+      }
+      .cs-mention-menu.open { display: block; }
+      .cs-mention-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        border: none;
+        background: none;
+        color: #fff;
+        text-align: left;
+        font-size: 13px;
+        padding: 10px 12px;
+        cursor: pointer;
+      }
+      .cs-mention-item + .cs-mention-item { border-top: 1px solid rgba(255,255,255,0.08); }
+      .cs-mention-avatar {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #555;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .cs-mention-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
       /* ── Share sheet ───────────────────────────── */
       .share-sheet-overlay {
@@ -686,6 +780,7 @@
           <input class="cs-input" id="cs-input" type="text" placeholder="Add a comment..." autocomplete="off" maxlength="500" />
           <button class="cs-submit" id="cs-submit" type="button">Post</button>
         </div>
+        <div class="cs-mention-menu" id="cs-mention-menu" aria-label="Mention suggestions"></div>
       </div>
     </div>
 
@@ -757,7 +852,12 @@
       var db = null;
       var currentUser = null;
       var activePostId = null; // for comment sheet
+      var activeMentionInput = null;
       var clips = []; // rendered clip elements
+      var accountLookup = {};
+      var accountAvatarCache = {};
+      var audioUnlocked = false;
+      var userGestureArmed = false;
       var MAX_CLIPS_COUNT = 30;
 
       function openDB() {
@@ -875,6 +975,15 @@
         return String(n);
       }
 
+      function buildProfileHref(userId) {
+        var targetId = String(userId || '').trim();
+        return targetId ? ('account-dashboard.html?user=' + encodeURIComponent(targetId)) : 'account-dashboard.html';
+      }
+
+      function navigateToProfile(userId) {
+        window.location.href = buildProfileHref(userId);
+      }
+
       /* ── Session / auth ─────────────────────────────────────── */
       function getWindowSession() {
         if (!window.name || window.name.indexOf(WINDOW_SESSION_PREFIX) !== 0) return null;
@@ -912,25 +1021,89 @@
       }
 
       /* ── Like / Save / Comment ──────────────────────────────── */
+      async function persistCurrentUser() {
+        if (!currentUser) return;
+        await putRecord(ACCOUNTS_STORE, currentUser);
+      }
+
+      function syncClipActionCount(postId, action, count) {
+        var nextCount = Math.max(0, Math.round(Number(count) || 0));
+        container.querySelectorAll('.clip-action[data-post-id="' + postId + '"][data-action="' + action + '"] .clip-action-count').forEach(function (node) {
+          node.textContent = formatCount(nextCount);
+        });
+      }
+
+      async function updatePostCount(postId, field, delta) {
+        var post = await getRecord(POSTS_STORE, postId);
+        if (!post) return 0;
+        var current = Math.max(0, Math.round(Number(post[field]) || 0));
+        var next = delta < 0 ? Math.max(0, current + delta) : current + delta;
+        post[field] = next;
+        await putRecord(POSTS_STORE, post);
+        return next;
+      }
+
+      function formatCommentTextWithMentions(text) {
+        var escaped = String(text || '').replace(/[&<>"']/g, function (char) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char;
+        });
+        return escaped.replace(/@([a-zA-Z0-9_]+)/g, function (full) {
+          return '<span class="cs-mention">' + full + '</span>';
+        });
+      }
+
+      function extractMentionHandles(text) {
+        var found = String(text || '').match(/@([a-zA-Z0-9_]+)/g) || [];
+        var unique = {};
+        found.forEach(function (token) { unique[token.slice(1).toLowerCase()] = true; });
+        return Object.keys(unique);
+      }
+
+      function getCommentActionIds(fieldName) {
+        if (!currentUser) return [];
+        return Array.isArray(currentUser[fieldName]) ? currentUser[fieldName].slice() : [];
+      }
+
+      async function toggleCommentLike(commentId) {
+        if (!currentUser) { showAuthPrompt(); return { active: false, count: 0 }; }
+        var ids = getCommentActionIds('likedCommentIds');
+        var index = ids.indexOf(commentId);
+        var active = index === -1;
+        if (active) ids.push(commentId);
+        else ids.splice(index, 1);
+        currentUser = Object.assign({}, currentUser, { likedCommentIds: ids });
+        await persistCurrentUser();
+        var count = await updatePostlessCommentCount(commentId, 'likeCount', active ? 1 : -1);
+        return { active: active, count: count };
+      }
+
+      async function updatePostlessCommentCount(commentId, field, delta) {
+        var comment = await getRecord(COMMENTS_STORE, commentId);
+        if (!comment) return 0;
+        var current = Math.max(0, Math.round(Number(comment[field]) || 0));
+        var next = delta < 0 ? Math.max(0, current + delta) : current + delta;
+        comment[field] = next;
+        await putRecord(COMMENTS_STORE, comment);
+        return next;
+      }
+
       async function toggleLike(postId, btn, countEl) {
         if (!currentUser) { showAuthPrompt(); return; }
         var liked = (currentUser.likedPostIds || []).slice();
         var idx = liked.indexOf(postId);
         var isLiked = idx !== -1;
-        var post = await getRecord(POSTS_STORE, postId);
         if (isLiked) {
           liked.splice(idx, 1);
-          if (post) { post.likeCount = Math.max(0, (post.likeCount || 0) - 1); }
         } else {
           liked.push(postId);
-          if (post) { post.likeCount = (post.likeCount || 0) + 1; }
         }
-        if (post) await putRecord(POSTS_STORE, post);
+        var likeCount = await updatePostCount(postId, 'likeCount', isLiked ? -1 : 1);
         currentUser = Object.assign({}, currentUser, { likedPostIds: liked });
-        await putRecord(ACCOUNTS_STORE, currentUser);
+        await persistCurrentUser();
         var nowLiked = !isLiked;
         btn.classList.toggle('liked', nowLiked);
-        if (countEl) countEl.textContent = formatCount(post ? post.likeCount : 0);
+        if (countEl) countEl.textContent = formatCount(likeCount);
+        syncClipActionCount(postId, 'like', likeCount);
       }
 
       async function toggleSave(postId, btn, countEl) {
@@ -938,38 +1111,46 @@
         var saved = (currentUser.savedPostIds || []).slice();
         var idx = saved.indexOf(postId);
         var isSaved = idx !== -1;
-        var post = await getRecord(POSTS_STORE, postId);
         if (isSaved) {
           saved.splice(idx, 1);
-          if (post) { post.saveCount = Math.max(0, (post.saveCount || 0) - 1); }
         } else {
           saved.push(postId);
-          if (post) { post.saveCount = (post.saveCount || 0) + 1; }
         }
-        if (post) await putRecord(POSTS_STORE, post);
+        var saveCount = await updatePostCount(postId, 'saveCount', isSaved ? -1 : 1);
         currentUser = Object.assign({}, currentUser, { savedPostIds: saved });
-        await putRecord(ACCOUNTS_STORE, currentUser);
+        await persistCurrentUser();
         btn.classList.toggle('saved', !isSaved);
-        if (countEl) countEl.textContent = formatCount(post ? post.saveCount : 0);
+        if (countEl) countEl.textContent = formatCount(saveCount);
+        syncClipActionCount(postId, 'save', saveCount);
       }
 
-      async function postComment(postId, text) {
+      async function postComment(postId, text, parentCommentId) {
         if (!currentUser) { showAuthPrompt(); return; }
         text = String(text).trim();
         if (!text) return;
+        var mentionHandles = extractMentionHandles(text);
+        var mentionUserIds = mentionHandles.map(function (handle) {
+          var user = accountLookup[handle];
+          return user ? user.id : null;
+        }).filter(Boolean);
         var comment = {
           id: generateId('comment'),
           postId: postId,
           userId: currentUser.id,
           authorName: currentUser.name || currentUser.username || 'You',
           text: text,
+          parentCommentId: parentCommentId || null,
+          mentionHandles: mentionHandles,
+          mentionUserIds: mentionUserIds,
+          likeCount: 0,
+          replyCount: 0,
           createdAt: Date.now()
         };
         await putRecord(COMMENTS_STORE, comment);
-        var post = await getRecord(POSTS_STORE, postId);
-        if (post) {
-          post.commentCount = (post.commentCount || 0) + 1;
-          await putRecord(POSTS_STORE, post);
+        var commentCount = await updatePostCount(postId, 'commentCount', 1);
+        syncClipActionCount(postId, 'comment', commentCount);
+        if (parentCommentId) {
+          await updatePostlessCommentCount(parentCommentId, 'replyCount', 1);
         }
         return comment;
       }
@@ -1095,11 +1276,42 @@
         'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
       ];
 
+      function ensureClipAudioInteractionHooks() {
+        if (userGestureArmed) return;
+        userGestureArmed = true;
+        ['touchstart', 'click', 'keydown'].forEach(function (eventName) {
+          document.addEventListener(eventName, function () {
+            if (audioUnlocked) return;
+            var activeClip = clips.find(function (node) { return node && node.classList.contains('playing') && node.video; }) || clips[0];
+            if (activeClip && activeClip.video) {
+              activateClipAudio(activeClip, false);
+            }
+          });
+        });
+      }
+
+      function activateClipAudio(clip, forceUnmute) {
+        var video = clip && clip.video;
+        if (!video) return;
+        if (forceUnmute || audioUnlocked) {
+          video.muted = false;
+          if (!video.volume || video.volume < 0.05) video.volume = 1;
+        }
+        video.play().then(function () {
+          if (!video.muted) audioUnlocked = true;
+        }).catch(function () {
+          video.muted = true;
+          video.play().catch(function () {});
+        });
+      }
+
       /* ── Build a single clip element ────────────────────────── */
       function buildClip(post, mediaInfo, author) {
         var clip = document.createElement('div');
         clip.className = 'clip';
         clip.setAttribute('data-post-id', post.id);
+        var profileHref = buildProfileHref(author && author.id);
+        var displayName = (author && (author.name || author.username)) || 'Unknown';
 
         /* Media layer */
         var mediaDiv = document.createElement('div');
@@ -1116,8 +1328,12 @@
             video.setAttribute('playsinline', '');
             video.setAttribute('webkit-playsinline', '');
             video.preload = 'metadata';
+            video.setAttribute('muted', '');
             clip.dataset.video = 'true';
             clip.video = video;
+            video.addEventListener('volumechange', function () {
+              if (!video.muted && video.volume > 0) audioUnlocked = true;
+            });
             mediaDiv.appendChild(video);
           } else {
             var img = document.createElement('img');
@@ -1147,10 +1363,51 @@
         clip.appendChild(tapZone);
 
         if (clip.dataset.video) {
+          var holdDelay = null;
+          var holdPaused = false;
+          var wasPlayingOnHoldStart = false;
+          var suppressNextTap = false;
+          var HOLD_MS = 220;
+          function onHoldStart() {
+            var v = clip.video;
+            wasPlayingOnHoldStart = Boolean(v && !v.paused);
+            holdPaused = false;
+            clearTimeout(holdDelay);
+            holdDelay = setTimeout(function () {
+              if (!v || v.paused) return;
+              v.pause();
+              holdPaused = true;
+              pauseIcon.classList.add('visible');
+              clip.classList.remove('playing');
+            }, HOLD_MS);
+          }
+          function onHoldEnd() {
+            clearTimeout(holdDelay);
+            holdDelay = null;
+            if (!holdPaused) return;
+            holdPaused = false;
+            suppressNextTap = true;
+            if (wasPlayingOnHoldStart) {
+              activateClipAudio(clip, false);
+              pauseIcon.classList.remove('visible');
+              clip.classList.add('playing');
+            }
+          }
+          tapZone.addEventListener('touchstart', onHoldStart, { passive: true });
+          tapZone.addEventListener('touchend', onHoldEnd);
+          tapZone.addEventListener('touchcancel', onHoldEnd);
+          tapZone.addEventListener('mousedown', onHoldStart);
+          tapZone.addEventListener('mouseup', onHoldEnd);
+          tapZone.addEventListener('mouseleave', onHoldEnd);
           tapZone.addEventListener('click', function () {
+            if (suppressNextTap) {
+              suppressNextTap = false;
+              return;
+            }
+            if (holdPaused) return;
             var v = clip.video;
             if (v.paused) {
-              v.play().catch(function () {});
+              activateClipAudio(clip, true);
               pauseIcon.classList.remove('visible');
               clip.classList.add('playing');
             } else {
@@ -1177,6 +1434,8 @@
           'Like'
         );
         if (isLiked) likeBtn.classList.add('liked');
+        likeBtn.setAttribute('data-post-id', post.id);
+        likeBtn.setAttribute('data-action', 'like');
         var likeCountEl = likeBtn.querySelector('.clip-action-count');
         likeBtn.addEventListener('click', function () { toggleLike(post.id, likeBtn, likeCountEl); });
         engage.appendChild(likeBtn);
@@ -1187,6 +1446,8 @@
           formatCount(post.commentCount || 0),
           'Comments'
         );
+        commentBtn.setAttribute('data-post-id', post.id);
+        commentBtn.setAttribute('data-action', 'comment');
         commentBtn.addEventListener('click', function () { openCommentSheet(post.id); });
         engage.appendChild(commentBtn);
 
@@ -1196,6 +1457,8 @@
           formatCount(post.shareCount || 0),
           'Share'
         );
+        shareBtn.setAttribute('data-post-id', post.id);
+        shareBtn.setAttribute('data-action', 'share');
         shareBtn.addEventListener('click', function () { openShareSheet(post.id); });
         engage.appendChild(shareBtn);
 
@@ -1206,6 +1469,8 @@
           'Save'
         );
         if (isSaved) bookmarkBtn.classList.add('saved');
+        bookmarkBtn.setAttribute('data-post-id', post.id);
+        bookmarkBtn.setAttribute('data-action', 'save');
         var saveCountEl = bookmarkBtn.querySelector('.clip-action-count');
         bookmarkBtn.addEventListener('click', function () { toggleSave(post.id, bookmarkBtn, saveCountEl); });
         engage.appendChild(bookmarkBtn);
@@ -1235,7 +1500,15 @@
         } else {
           disc.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
         }
-        discWrap.appendChild(disc);
+        if (author && author.id) {
+          var discLink = document.createElement('a');
+          discLink.className = 'clip-profile-link';
+          discLink.href = profileHref;
+          discLink.appendChild(disc);
+          discWrap.appendChild(discLink);
+        } else {
+          discWrap.appendChild(disc);
+        }
         engage.appendChild(discWrap);
 
         clip.appendChild(engage);
@@ -1258,11 +1531,28 @@
           var authorName = (author && (author.name || author.username)) || '?';
           avatar.textContent = authorName.charAt(0).toUpperCase();
         }
-        identity.appendChild(avatar);
+        if (author && author.id) {
+          var avatarLink = document.createElement('a');
+          avatarLink.className = 'clip-profile-link';
+          avatarLink.href = profileHref;
+          avatarLink.appendChild(avatar);
+          identity.appendChild(avatarLink);
+        } else {
+          identity.appendChild(avatar);
+        }
 
-        var handle = document.createElement('span');
+        var handle = document.createElement(author && author.id ? 'a' : 'span');
         handle.className = 'clip-handle';
-        handle.textContent = '@' + ((author && (author.username || author.name)) || 'unknown');
+        handle.textContent = displayName;
+        if (author && author.id) {
+          handle.classList.add('clip-profile-link');
+          handle.href = profileHref;
+          handle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            navigateToProfile(author.id);
+          });
+        }
         identity.appendChild(handle);
 
         var followBtn = document.createElement('button');
@@ -1358,7 +1648,10 @@
           var text = commentInput.value.trim();
           if (!text) return;
           postComment(post.id, text).then(function (c) {
-            if (c) { commentInput.value = ''; }
+            if (c) {
+              commentInput.value = '';
+              if (activePostId === post.id) openCommentSheet(post.id);
+            }
           }).catch(function () {});
         });
         commentDock.appendChild(sendBtn);
@@ -1394,7 +1687,13 @@
           var video = clipEl.video;
           if (entry.isIntersecting) {
             clipEl.classList.add('playing');
-            if (video) { video.play().catch(function () {}); }
+            if (video) {
+              if (audioUnlocked) activateClipAudio(clipEl, true);
+              else {
+                video.muted = true;
+                video.play().catch(function () {});
+              }
+            }
             /* Fake progress for images */
             if (clipEl._fakeProgress) {
               startFakeProgress(clipEl);
@@ -1428,6 +1727,205 @@
       var commentSheetClose = document.getElementById('comment-sheet-close');
       var csInput = document.getElementById('cs-input');
       var csSubmit = document.getElementById('cs-submit');
+      var mentionMenu = document.getElementById('cs-mention-menu');
+      var mentionContext = null;
+
+      function closeMentionMenu() {
+        mentionMenu.classList.remove('open');
+        mentionMenu.innerHTML = '';
+        mentionContext = null;
+      }
+
+      function hydrateCommentUser(comment) {
+        var user = accountLookup[comment.userId] || null;
+        if (!user && comment.userId) user = { id: comment.userId, name: comment.authorName || 'Unknown', username: '' };
+        return user;
+      }
+
+      function getMentionCandidates(query) {
+        var q = String(query || '').toLowerCase();
+        var list = Object.keys(accountLookup).map(function (key) { return accountLookup[key]; }).filter(function (user) {
+          return user && user.id;
+        }).filter(function (user, index, arr) {
+          return arr.findIndex(function (other) { return other.id === user.id; }) === index;
+        });
+        return list.filter(function (user) {
+          var username = String(user.username || '').toLowerCase();
+          var name = String(user.name || '').toLowerCase();
+          return username.indexOf(q) === 0 || name.indexOf(q) !== -1;
+        }).slice(0, 6);
+      }
+
+      function applyMentionToInput(user) {
+        if (!mentionContext || !mentionContext.input || !user) return;
+        var input = mentionContext.input;
+        var value = String(input.value || '');
+        var before = value.slice(0, mentionContext.start);
+        var after = value.slice(mentionContext.end);
+        input.value = before + '@' + user.username + ' ' + after;
+        var caret = (before + '@' + user.username + ' ').length;
+        input.focus();
+        if (typeof input.setSelectionRange === 'function') input.setSelectionRange(caret, caret);
+        closeMentionMenu();
+      }
+
+      function refreshMentionMenu(input) {
+        if (!input) return closeMentionMenu();
+        var value = String(input.value || '');
+        var cursor = typeof input.selectionStart === 'number' ? input.selectionStart : value.length;
+        var beforeCursor = value.slice(0, cursor);
+        var matched = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+        if (!matched) return closeMentionMenu();
+        var query = matched[1] || '';
+        var rawToken = matched[0];
+        var start = cursor - rawToken.length + (rawToken.charAt(0) === ' ' ? 1 : 0);
+        var results = getMentionCandidates(query).filter(function (user) { return user.username; });
+        if (!results.length) return closeMentionMenu();
+        mentionContext = { input: input, start: start, end: cursor };
+        mentionMenu.innerHTML = '';
+        results.forEach(function (user) {
+          var row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'cs-mention-item';
+          var av = document.createElement('span');
+          av.className = 'cs-mention-avatar';
+          var avatarUrl = accountAvatarCache[user.id] || '';
+          if (avatarUrl) {
+            var img = document.createElement('img');
+            img.src = avatarUrl;
+            img.alt = '';
+            av.appendChild(img);
+          } else {
+            av.textContent = (user.name || user.username || '?').charAt(0).toUpperCase();
+          }
+          var text = document.createElement('span');
+          text.textContent = (user.name || user.username) + ' @' + user.username;
+          row.appendChild(av);
+          row.appendChild(text);
+          row.addEventListener('click', function () { applyMentionToInput(user); });
+          mentionMenu.appendChild(row);
+        });
+        mentionMenu.classList.add('open');
+      }
+      document.addEventListener('click', function (event) {
+        if (!mentionMenu.classList.contains('open')) return;
+        if (mentionMenu.contains(event.target)) return;
+        if (activeMentionInput && event.target === activeMentionInput) return;
+        closeMentionMenu();
+      });
+
+      function renderCommentNode(comment, repliesByParent, nested) {
+        var user = hydrateCommentUser(comment);
+        var item = document.createElement('div');
+        item.className = 'cs-comment' + (nested ? ' cs-reply' : '');
+        var avatar = document.createElement(user && user.id ? 'a' : 'div');
+        avatar.className = 'cs-avatar';
+        if (user && user.id) avatar.href = buildProfileHref(user.id);
+        var avatarUrl = (user && user.id && accountAvatarCache[user.id]) || '';
+        if (avatarUrl) {
+          var avImg = document.createElement('img');
+          avImg.src = avatarUrl;
+          avImg.alt = '';
+          avatar.appendChild(avImg);
+        } else {
+          avatar.textContent = (user && (user.name || user.username || '?') || '?').charAt(0).toUpperCase();
+        }
+        item.appendChild(avatar);
+
+        var body = document.createElement('div');
+        body.className = 'cs-body';
+        var author = document.createElement(user && user.id ? 'a' : 'div');
+        author.className = 'cs-author';
+        author.textContent = user ? (user.name || user.username || 'Unknown') : (comment.authorName || 'Unknown');
+        if (user && user.id) author.href = buildProfileHref(user.id);
+        var text = document.createElement('div');
+        text.className = 'cs-text';
+        text.innerHTML = formatCommentTextWithMentions(comment.text);
+        body.appendChild(author);
+        body.appendChild(text);
+
+        var actions = document.createElement('div');
+        actions.className = 'cs-actions';
+        var likedCommentIds = getCommentActionIds('likedCommentIds');
+        var liked = likedCommentIds.indexOf(comment.id) !== -1;
+        var likeBtn = document.createElement('button');
+        likeBtn.type = 'button';
+        likeBtn.className = 'cs-action-btn' + (liked ? ' liked' : '');
+        likeBtn.textContent = 'Like · ' + Math.max(0, Math.round(Number(comment.likeCount) || 0));
+        likeBtn.addEventListener('click', async function () {
+          if (!currentUser) { showAuthPrompt(); return; }
+          var state = await toggleCommentLike(comment.id);
+          likeBtn.classList.toggle('liked', state.active);
+          likeBtn.textContent = 'Like · ' + state.count;
+        });
+        actions.appendChild(likeBtn);
+
+        var replyBtn = document.createElement('button');
+        replyBtn.type = 'button';
+        replyBtn.className = 'cs-action-btn';
+        var replyChildren = repliesByParent[comment.id] || [];
+        replyBtn.textContent = 'Reply · ' + replyChildren.length;
+        actions.appendChild(replyBtn);
+        body.appendChild(actions);
+
+        replyBtn.addEventListener('click', function () {
+          if (!currentUser) { showAuthPrompt(); return; }
+          var existing = body.querySelector('.cs-reply-box');
+          if (existing) { existing.remove(); return; }
+          var replyBox = document.createElement('div');
+          replyBox.className = 'cs-reply-box';
+          var replyInput = document.createElement('input');
+          replyInput.type = 'text';
+          replyInput.maxLength = 500;
+          replyInput.className = 'cs-reply-input';
+          replyInput.placeholder = user && user.username ? ('Reply to @' + user.username + '...') : 'Reply...';
+          var replySubmit = document.createElement('button');
+          replySubmit.type = 'button';
+          replySubmit.className = 'cs-reply-submit';
+          replySubmit.textContent = 'Reply';
+          replySubmit.addEventListener('click', async function () {
+            var value = replyInput.value.trim();
+            if (!value || !activePostId) return;
+            await postComment(activePostId, value, comment.id);
+            closeMentionMenu();
+            await openCommentSheet(activePostId);
+          });
+          replyInput.addEventListener('input', function () { refreshMentionMenu(replyInput); });
+          replyInput.addEventListener('focus', function () {
+            activeMentionInput = replyInput;
+            refreshMentionMenu(replyInput);
+          });
+          replyInput.addEventListener('blur', function () {
+            setTimeout(function () {
+              if (document.activeElement !== csInput && document.activeElement !== replyInput) closeMentionMenu();
+            }, 120);
+          });
+          replyInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              replySubmit.click();
+            }
+          });
+          replyBox.appendChild(replyInput);
+          replyBox.appendChild(replySubmit);
+          body.appendChild(replyBox);
+          activeMentionInput = replyInput;
+          replyInput.focus();
+        });
+
+        var replies = repliesByParent[comment.id] || [];
+        if (replies.length) {
+          var repliesWrap = document.createElement('div');
+          repliesWrap.className = 'cs-replies';
+          replies.forEach(function (child) {
+            repliesWrap.appendChild(renderCommentNode(child, repliesByParent, true));
+          });
+          body.appendChild(repliesWrap);
+        }
+
+        item.appendChild(body);
+        return item;
+      }
 
       async function openCommentSheet(postId) {
         activePostId = postId;
@@ -1435,30 +1933,20 @@
         commentSheetOverlay.classList.add('open');
         try {
           var allComments = await getAllRecords(COMMENTS_STORE);
-          var postComments = allComments.filter(function (c) { return c.postId === postId; });
-          postComments.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+          var postComments = allComments.filter(function (c) { return c.postId === postId; }).sort(function (a, b) {
+            return (b.createdAt || 0) - (a.createdAt || 0);
+          });
           if (postComments.length === 0) {
             commentSheetList.innerHTML = '<p class="comment-sheet-empty">No comments yet. Be the first!</p>';
           } else {
+            var repliesByParent = {};
             postComments.forEach(function (c) {
-              var item = document.createElement('div');
-              item.className = 'cs-comment';
-              var av = document.createElement('div');
-              av.className = 'cs-avatar';
-              av.textContent = (c.authorName || '?').charAt(0).toUpperCase();
-              item.appendChild(av);
-              var body = document.createElement('div');
-              body.className = 'cs-body';
-              var auth = document.createElement('div');
-              auth.className = 'cs-author';
-              auth.textContent = c.authorName || 'Unknown';
-              var txt = document.createElement('div');
-              txt.className = 'cs-text';
-              txt.textContent = c.text;
-              body.appendChild(auth);
-              body.appendChild(txt);
-              item.appendChild(body);
-              commentSheetList.appendChild(item);
+              if (!c.parentCommentId) return;
+              if (!repliesByParent[c.parentCommentId]) repliesByParent[c.parentCommentId] = [];
+              repliesByParent[c.parentCommentId].push(c);
+            });
+            postComments.filter(function (c) { return !c.parentCommentId; }).forEach(function (comment) {
+              commentSheetList.appendChild(renderCommentNode(comment, repliesByParent, false));
             });
           }
         } catch (e) {
@@ -1469,11 +1957,13 @@
       commentSheetClose.addEventListener('click', function () {
         commentSheetOverlay.classList.remove('open');
         activePostId = null;
+        closeMentionMenu();
       });
       commentSheetOverlay.addEventListener('click', function (e) {
         if (e.target === commentSheetOverlay) {
           commentSheetOverlay.classList.remove('open');
           activePostId = null;
+          closeMentionMenu();
         }
       });
       csSubmit.addEventListener('click', async function () {
@@ -1481,32 +1971,23 @@
         var text = csInput.value.trim();
         if (!text || !activePostId) return;
         var comment = await postComment(activePostId, text);
-        if (comment) {
-          csInput.value = '';
-          var item = document.createElement('div');
-          item.className = 'cs-comment';
-          var av = document.createElement('div');
-          av.className = 'cs-avatar';
-          av.textContent = (comment.authorName || '?').charAt(0).toUpperCase();
-          item.appendChild(av);
-          var body = document.createElement('div');
-          body.className = 'cs-body';
-          var auth = document.createElement('div');
-          auth.className = 'cs-author';
-          auth.textContent = comment.authorName;
-          var txt = document.createElement('div');
-          txt.className = 'cs-text';
-          txt.textContent = comment.text;
-          body.appendChild(auth);
-          body.appendChild(txt);
-          item.appendChild(body);
-          var empty = commentSheetList.querySelector('.comment-sheet-empty');
-          if (empty) empty.remove();
-          commentSheetList.insertBefore(item, commentSheetList.firstChild);
-        }
+        if (!comment) return;
+        csInput.value = '';
+        closeMentionMenu();
+        await openCommentSheet(activePostId);
       });
+      csInput.addEventListener('focus', function () {
+        activeMentionInput = csInput;
+        refreshMentionMenu(csInput);
+      });
+      csInput.addEventListener('input', function () { refreshMentionMenu(csInput); });
       csInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); csSubmit.click(); }
+      });
+      csInput.addEventListener('blur', function () {
+        setTimeout(function () {
+          if (document.activeElement !== csInput) closeMentionMenu();
+        }, 120);
       });
 
       /* ── Share sheet ────────────────────────────────────────── */
@@ -1528,9 +2009,19 @@
         if (navigator.clipboard) {
           navigator.clipboard.writeText(url).catch(function () {});
         }
+        if (sharePostId) {
+          updatePostCount(sharePostId, 'shareCount', 1).then(function (count) {
+            syncClipActionCount(sharePostId, 'share', count);
+          }).catch(function () {});
+        }
         shareSheetOverlay.classList.remove('open');
       });
       document.getElementById('share-dm-btn').addEventListener('click', function () {
+        if (sharePostId) {
+          updatePostCount(sharePostId, 'shareCount', 1).then(function (count) {
+            syncClipActionCount(sharePostId, 'share', count);
+          }).catch(function () {});
+        }
         shareSheetOverlay.classList.remove('open');
         window.location.href = 'messages.html';
       });
@@ -1575,6 +2066,7 @@
 
       async function renderClips(posts, accounts) {
         container.innerHTML = '';
+        clips = [];
 
         if (!posts || posts.length === 0) {
           var empty = document.createElement('div');
@@ -1585,7 +2077,21 @@
         }
 
         var accountMap = {};
-        (accounts || []).forEach(function (a) { accountMap[a.id] = a; });
+        accountLookup = {};
+        accountAvatarCache = {};
+        (accounts || []).forEach(function (a) {
+          if (!a || !a.id) return;
+          accountMap[a.id] = a;
+          accountLookup[a.id] = a;
+          var usernameKey = String(a.username || '').trim().toLowerCase();
+          if (usernameKey) accountLookup[usernameKey] = a;
+        });
+        await Promise.all((accounts || []).map(async function (a) {
+          if (!a || !a.id) return;
+          var avatarUrl = await resolveUserAvatarUrl(a);
+          accountAvatarCache[a.id] = avatarUrl || '';
+          a.avatarUrl = avatarUrl;
+        }));
 
         for (var i = 0; i < posts.length; i++) {
           var post = posts[i];
@@ -1606,6 +2112,7 @@
           clips.push(clipEl);
           observer.observe(clipEl);
         }
+        ensureClipAudioInteractionHooks();
       }
 
       /* ── Sort / sample posts for clips ─────────────────────── */

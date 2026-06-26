@@ -2627,9 +2627,16 @@
 
   async function syncCurrentUserFromSession() {
     const session = await getCurrentSession();
-    currentUser = session ? await getUserById(session.userId) : null;
-    if (!currentUser && session) {
-      await clearCurrentSession();
+    if (!session) {
+      currentUser = null;
+      await refreshUserFacingViews();
+      return;
+    }
+    const resolvedUser = await getUserById(session.userId);
+    if (resolvedUser) {
+      currentUser = resolvedUser;
+    } else if (!currentUser || currentUser.id !== session.userId) {
+      currentUser = null;
     }
     await refreshUserFacingViews();
   }
@@ -4864,6 +4871,17 @@
     newPostForm.addEventListener('submit', async function (event) {
       event.preventDefault();
       event.stopImmediatePropagation();
+
+      if (!currentUser) {
+        const session = await getCurrentSession();
+        if (session && session.userId) {
+          const resolvedUser = await getUserById(session.userId);
+          if (resolvedUser) {
+            currentUser = resolvedUser;
+            await refreshUserFacingViews();
+          }
+        }
+      }
 
       if (!currentUser) {
         setNewPostStatus('Please log in before creating a post.', 'error');
