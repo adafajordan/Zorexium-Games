@@ -1642,11 +1642,14 @@
       return sessionRecord;
     }
     const sessions = await getAllRecords(SESSION_STORE);
-    return sessions.find(function (record) {
-      return record && record.active && record.userId;
-    }) || sessions.find(function (record) {
-      return record && record.userId;
-    }) || null;
+    let fallbackSession = null;
+    for (let index = 0; index < sessions.length; index += 1) {
+      const record = sessions[index];
+      if (!record || !record.userId) continue;
+      if (record.active) return record;
+      if (!fallbackSession) fallbackSession = record;
+    }
+    return fallbackSession;
   }
 
   async function getCurrentSession() {
@@ -1660,7 +1663,7 @@
       try {
         await putRecord(SESSION_STORE, { key: 'current', userId: userId });
       } catch (error) {
-        if (!error || error.name !== 'DataError') {
+        if (error.name !== 'DataError') {
           throw error;
         }
         await putRecord(SESSION_STORE, { id: 'current', userId: userId, active: true });

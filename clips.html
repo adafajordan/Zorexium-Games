@@ -819,7 +819,14 @@
         var persisted = await getRecord(SESSION_STORE, 'current');
         if (persisted && persisted.userId) return persisted;
         var sessions = await getAllRecords(SESSION_STORE);
-        return sessions.find(function (s) { return s && s.active && s.userId; }) || sessions.find(function (s) { return s && s.userId; }) || null;
+        var fallback = null;
+        for (var i = 0; i < sessions.length; i++) {
+          var s = sessions[i];
+          if (!s || !s.userId) continue;
+          if (s.active) return s;
+          if (!fallback) fallback = s;
+        }
+        return fallback;
       }
 
       async function loadCurrentUser() {
