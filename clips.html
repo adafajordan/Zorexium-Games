@@ -20,9 +20,9 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #fff;
+        background: #000;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: #111;
+        color: #fff;
       }
 
       /* ── Clips scroll container ────────────────── */
@@ -33,6 +33,7 @@
         scroll-snap-type: y mandatory;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
+        background: #000;
       }
       .clips-container::-webkit-scrollbar { display: none; }
 
@@ -63,9 +64,13 @@
       }
       .clip-media video,
       .clip-media img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        width: min(100vw, calc(100dvh * 9 / 16));
+        height: min(100dvh, calc(100vw * 16 / 9));
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        aspect-ratio: 9 / 16;
+        background: #000;
         display: block;
       }
       .clip-media-placeholder {
@@ -118,6 +123,10 @@
         flex-direction: column;
         align-items: center;
         gap: 22px;
+        padding: 12px 8px;
+        border-radius: 24px;
+        background: rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(6px);
       }
       .clip-action {
         display: flex;
@@ -736,6 +745,7 @@
       var MEDIA_STORE = 'media';
       var COMMENTS_STORE = 'comments';
       var WINDOW_SESSION_PREFIX = 'zorexium-session:';
+      var serverDown = false;
 
       var db = null;
       var currentUser = null;
@@ -791,6 +801,61 @@
         });
       }
 
+      function deserializeServerRecord(value) {
+        if (!value || typeof value !== 'object') return value;
+        if (value.__zorexiumType === 'arrayBuffer' && typeof value.base64 === 'string') {
+          var binary = atob(value.base64);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          return bytes.buffer;
+        }
+        if (Array.isArray(value)) return value.map(deserializeServerRecord);
+        var out = {};
+        Object.keys(value).forEach(function (key) {
+          out[key] = deserializeServerRecord(value[key]);
+        });
+        return out;
+      }
+
+      function fetchStoreRecords(storeName, key) {
+        if (serverDown) return Promise.reject(new Error('server down'));
+        var url = '/api/store/' + encodeURIComponent(storeName) + (key ? '/' + encodeURIComponent(String(key)) : '');
+        return fetch(url).then(function (response) {
+          if (!response.ok) throw new Error('server ' + response.status);
+          return response.json();
+        }).then(function (payload) {
+          if (payload && payload.record) {
+            payload.record = deserializeServerRecord(payload.record);
+          }
+          if (payload && Array.isArray(payload.records)) {
+            payload.records = payload.records.map(deserializeServerRecord);
+          }
+          return payload;
+        }).catch(function (error) {
+          serverDown = true;
+          throw error;
+        });
+      }
+
+      function getAllRecordsWithServerFallback(storeName) {
+        return fetchStoreRecords(storeName).then(function (payload) {
+          return payload && Array.isArray(payload.records) ? payload.records : [];
+        }).catch(function () {
+          return getAllRecords(storeName);
+        });
+      }
+
+      function getRecordWithServerFallback(storeName, id) {
+        return getRecord(storeName, id).then(function (localRecord) {
+          if (localRecord) return localRecord;
+          return fetchStoreRecords(storeName, id).then(function (payload) {
+            return payload && payload.record ? payload.record : null;
+          }).catch(function () {
+            return null;
+          });
+        });
+      }
+
       function generateId(prefix) {
         return (prefix || 'id') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
       }
@@ -833,7 +898,7 @@
         try {
           var session = await getCurrentSession();
           if (!session) return null;
-          var user = await getRecord(ACCOUNTS_STORE, session.userId || session.id);
+          var user = await getRecordWithServerFallback(ACCOUNTS_STORE, session.userId || session.id);
           return user || null;
         } catch (e) { return null; }
       }
@@ -905,7 +970,7 @@
       function loadMediaBlob(mediaId) {
         return new Promise(function (resolve) {
           if (!mediaId) { resolve(null); return; }
-          getRecord(MEDIA_STORE, mediaId).then(function (record) {
+          getRecordWithServerFallback(MEDIA_STORE, mediaId).then(function (record) {
             if (!record) { resolve(null); return; }
             try {
               var type = String(record.type || record.mimeType || record.contentType || '').trim();
@@ -935,6 +1000,33 @@
         });
       }
 
+      function hasGifUrl(post) {
+        return Boolean(String((post && post.gifUrl) || '').trim());
+      }
+
+      function getPostVideoMediaId(post) {
+        if (!post || typeof post !== 'object') return '';
+        var explicitId = String(post.videoMediaId || '').trim();
+        if (explicitId) return explicitId;
+        return String(post.mediaId || '').trim();
+      }
+
+      function shouldTreatPostAsVideo(post, mediaInfo) {
+        if (!post) return false;
+        var mediaType = String(post.mediaType || '').trim().toLowerCase();
+        if (mediaType.indexOf('video') === 0) return true;
+        if (mediaInfo && String(mediaInfo.type || '').toLowerCase().indexOf('video') === 0) return true;
+        if (String(post.videoMediaId || '').trim()) return true;
+        var hasImageArray = Array.isArray(post.imageMediaIds) && post.imageMediaIds.length > 0;
+        return Boolean(String(post.mediaId || '').trim() && !hasImageArray && !hasGifUrl(post));
+      }
+
+      function isPostPublished(post) {
+        if (!post || typeof post !== 'object') return false;
+        var scheduledAt = Number(post.scheduledAt || 0);
+        return !(scheduledAt && scheduledAt > Date.now());
+      }
+
       function mediaRecordToDataUrl(record) {
         return new Promise(function (resolve) {
           if (!record || !record.data) { resolve(''); return; }
@@ -957,7 +1049,7 @@
         var profileImageMediaId = String(user.profileImageMediaId || '').trim();
         if (!profileImageMediaId) return '';
         try {
-          var mediaRecord = await getRecord(MEDIA_STORE, profileImageMediaId);
+          var mediaRecord = await getRecordWithServerFallback(MEDIA_STORE, profileImageMediaId);
           return await mediaRecordToDataUrl(mediaRecord);
         } catch (error) {
           return '';
@@ -1490,10 +1582,13 @@
         for (var i = 0; i < posts.length; i++) {
           var post = posts[i];
           var author = accountMap[post.userId] || null;
-          var mediaId = post.videoMediaId || post.mediaId || null;
+          var mediaId = getPostVideoMediaId(post) || null;
           if (!mediaId) continue;
           var mediaInfo = await loadMediaBlob(mediaId);
-          if (!mediaInfo || !(mediaInfo.type || '').startsWith('video')) continue;
+          if (!mediaInfo || !shouldTreatPostAsVideo(post, mediaInfo)) continue;
+          if (!(mediaInfo.type || '').startsWith('video')) {
+            mediaInfo.type = 'video/mp4';
+          }
           var clipEl = buildClip(post, mediaInfo, author);
           container.appendChild(clipEl);
           clips.push(clipEl);
@@ -1503,15 +1598,17 @@
 
       /* ── Sort / sample posts for clips ─────────────────────── */
       function pickClipPosts(posts) {
-        return posts.filter(function (p) { return Boolean(p.videoMediaId || p.mediaId); }).slice(0, 30);
+        return posts.filter(function (p) {
+          return isPostPublished(p) && Boolean(getPostVideoMediaId(p));
+        }).slice(0, 30);
       }
 
       /* ── Bootstrap ──────────────────────────────────────────── */
       openDB().then(async function () {
         currentUser = await loadCurrentUser();
         await applyStickyFooterAvatar();
-        var posts = await getAllRecords(POSTS_STORE);
-        var accounts = await getAllRecords(ACCOUNTS_STORE);
+        var posts = await getAllRecordsWithServerFallback(POSTS_STORE);
+        var accounts = await getAllRecordsWithServerFallback(ACCOUNTS_STORE);
         /* Sort newest first */
         posts.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
         var selectedPosts = pickClipPosts(posts);
