@@ -42,6 +42,7 @@
   });
   const MAX_IMAGE_COUNT = 10;
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+  const MAX_SERVER_RECORD_PAYLOAD_BYTES = 12 * 1024 * 1024;
   const PROFILE_PIC_ID_PREFIX = 'profilepic-';
   const PROFILE_BANNER_ID_PREFIX = 'profilebanner-';
   const MAX_VIDEO_DURATION_SECONDS = 10 * 60;
@@ -138,6 +139,7 @@
   let appDbPromise = null;
   let serverStoreUnavailable = false;
   let generatedMediaUrls = [];
+  let npcPreviewMediaUrls = [];
   let lastMediaWheelZoomAt = 0;
   let profileEditEscapeHandlerAttached = false;
   let activeDashboardTab = 'posts';
@@ -1841,6 +1843,21 @@
     return id || '';
   }
 
+  function isVideoFile(file) {
+    if (!(file instanceof Blob)) return false;
+    const mimeType = String(file.type || '').trim().toLowerCase();
+    if (mimeType.startsWith('video/')) return true;
+    const name = file instanceof File ? String(file.name || '').trim().toLowerCase() : '';
+    return /\.(mp4|mov|m4v|webm|ogv|ogg|avi|mkv|3gp)$/.test(name);
+  }
+
+  function estimateSerializedArrayBufferBytes(byteLength) {
+    const raw = Math.max(0, Number(byteLength) || 0);
+    // Base64 expands binary payloads to 4 bytes for every 3 bytes of input.
+    // Add a small constant for JSON envelope + metadata fields in the store payload.
+    return (Math.ceil(raw / 3) * 4) + 2048;
+  }
+
   function getPostVideoMediaId(post) {
     if (!post || typeof post !== 'object') return '';
     const directVideoId = normalizeMediaId(post.videoMediaId);
@@ -1887,18 +1904,18 @@
   }
 
   function closeNewPostModal() {
-    if (typeof window.closeNewPostModal === 'function' && window.closeNewPostModal !== closeNewPostModal) {
-      window.closeNewPostModal();
-      return;
-    }
     const modal = document.getElementById('new-post-modal');
     if (!modal) return;
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-    if (newPostForm) {
-      newPostForm.reset();
+    if (typeof window.closeNewPostModal === 'function' && window.closeNewPostModal !== closeNewPostModal) {
+      window.closeNewPostModal();
+    } else {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      if (newPostForm) {
+        newPostForm.reset();
+      }
+      setNewPostStatus('');
     }
-    setNewPostStatus('');
     npcResetState();
   }
 
@@ -2745,6 +2762,12 @@
       throw new Error('Unable to read the selected media file. Please try selecting it again.' + (err && err.message ? ' (' + err.message + ')' : ''));
     }
     const type = String(file.type || '').trim() || 'application/octet-stream';
+    if (type.startsWith('video/') || isVideoFile(file)) {
+      const estimatedPayloadBytes = estimateSerializedArrayBufferBytes(file.size);
+      if (shouldUseServerStore(MEDIA_STORE) && estimatedPayloadBytes > MAX_SERVER_RECORD_PAYLOAD_BYTES) {
+        throw new Error('This video is too large to upload (processing limit exceeded). Please choose a smaller video and try again.');
+      }
+    }
     const name = (file instanceof File) ? (file.name || '') : '';
     const record = {
       id: generateId('media'),
@@ -2799,6 +2822,16 @@
       }
     });
     generatedMediaUrls = [];
+  }
+
+  function clearNpcPreviewMediaUrls() {
+    npcPreviewMediaUrls.forEach(function (url) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (error) {
+      }
+    });
+    npcPreviewMediaUrls = [];
   }
 
   function ensureActionCountNode(button) {
@@ -4316,6 +4349,9 @@
     }
 
     if (video) {
+      if (!isVideoFile(video)) {
+        throw new Error('Please choose a supported video file (MP4, MOV, WebM, OGG, AVI, MKV, or 3GP).');
+      }
       const duration = await loadVideoDuration(video);
       if (!Number.isFinite(duration) || duration > MAX_VIDEO_DURATION_SECONDS) {
         throw new Error('Your video must be 10 minutes or shorter.');
@@ -4896,6 +4932,12 @@
         return;
       }
 
+      if (npcState.isUploading) {
+        setNewPostStatus('Publishing post…');
+        return;
+      }
+      npcState.isUploading = true;
+      npcUpdateSubmitButton();
       const textInput = document.getElementById('new-post-text');
       const text = String(textInput ? textInput.value : '').trim();
       const images = getSelectedImages();
@@ -4925,6 +4967,9 @@
         setTimeout(closeNewPostModal, 800);
       } catch (error) {
         setNewPostStatus(error && error.message ? error.message : 'Unable to publish this post.', 'error');
+      } finally {
+        npcState.isUploading = false;
+        npcUpdateSubmitButton();
       }
     }, true);
   }
@@ -5239,6 +5284,7 @@
   };
 
   function npcResetState() {
+    clearNpcPreviewMediaUrls();
     npcState.images = [];
     npcState.videoFile = null;
     npcState.gifUrl = '';
@@ -5328,6 +5374,7 @@
   function npcRenderMediaPreview() {
     const container = document.getElementById('npc-media-preview');
     if (!container) return;
+    clearNpcPreviewMediaUrls();
 
     const allItems = npcState.images.concat(npcState.videoFile ? [npcState.videoFile] : []);
     if (!allItems.length && !npcState.gifUrl) {
@@ -5375,10 +5422,10 @@
       const item = document.createElement('div');
       item.className = 'npc-img-item';
 
-      const isVideo = file.type && file.type.startsWith('video/');
+      const isVideo = isVideoFile(file);
       // url is a browser-generated blob: URL from a local File object (not user text), safe to assign to src.
       const url = URL.createObjectURL(file);
-      generatedMediaUrls.push(url);
+      npcPreviewMediaUrls.push(url);
 
       let media;
       if (isVideo) {
@@ -5996,7 +6043,7 @@
           return file.type.startsWith('image/');
         });
         const selectedVideos = files.filter(function (file) {
-          return file.type.startsWith('video/');
+          return isVideoFile(file);
         });
         if (selectedImages.length && selectedVideos.length) {
           setNewPostStatus('Choose images or one video for a post, not both together.', 'error');
