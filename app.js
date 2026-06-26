@@ -1843,17 +1843,19 @@
     return id || '';
   }
 
-  function isLikelyVideoFile(file) {
+  function isVideoFile(file) {
     if (!(file instanceof Blob)) return false;
     const mimeType = String(file.type || '').trim().toLowerCase();
     if (mimeType.startsWith('video/')) return true;
-    const name = String(file.name || '').trim().toLowerCase();
+    const name = file instanceof File ? String(file.name || '').trim().toLowerCase() : '';
     return /\.(mp4|mov|m4v|webm|ogv|ogg|avi|mkv|3gp)$/.test(name);
   }
 
   function estimateSerializedArrayBufferBytes(byteLength) {
     const raw = Math.max(0, Number(byteLength) || 0);
-    return Math.ceil(raw / 3) * 4;
+    // Base64 expands binary payloads to 4 bytes for every 3 bytes of input.
+    // Add a small constant for JSON envelope + metadata fields in the store payload.
+    return (Math.ceil(raw / 3) * 4) + 2048;
   }
 
   function getPostVideoMediaId(post) {
@@ -2760,10 +2762,10 @@
       throw new Error('Unable to read the selected media file. Please try selecting it again.' + (err && err.message ? ' (' + err.message + ')' : ''));
     }
     const type = String(file.type || '').trim() || 'application/octet-stream';
-    if (type.startsWith('video/') || isLikelyVideoFile(file)) {
+    if (type.startsWith('video/') || isVideoFile(file)) {
       const estimatedPayloadBytes = estimateSerializedArrayBufferBytes(file.size);
       if (shouldUseServerStore(MEDIA_STORE) && estimatedPayloadBytes > MAX_SERVER_RECORD_PAYLOAD_BYTES) {
-        throw new Error('This video is too large to upload reliably. Please choose a smaller video and try again.');
+        throw new Error('This video is too large to upload (processing limit exceeded). Please choose a smaller video and try again.');
       }
     }
     const name = (file instanceof File) ? (file.name || '') : '';
@@ -4347,8 +4349,8 @@
     }
 
     if (video) {
-      if (!isLikelyVideoFile(video)) {
-        throw new Error('Please choose a supported video file.');
+      if (!isVideoFile(video)) {
+        throw new Error('Please choose a supported video file (MP4, MOV, WebM, OGG, AVI, MKV, or 3GP).');
       }
       const duration = await loadVideoDuration(video);
       if (!Number.isFinite(duration) || duration > MAX_VIDEO_DURATION_SECONDS) {
@@ -4930,15 +4932,16 @@
         return;
       }
 
-      const textInput = document.getElementById('new-post-text');
-      const text = String(textInput ? textInput.value : '').trim();
-      const images = getSelectedImages();
-      const video = getSelectedVideo();
       if (npcState.isUploading) {
+        setNewPostStatus('Publishing post…');
         return;
       }
       npcState.isUploading = true;
       npcUpdateSubmitButton();
+      const textInput = document.getElementById('new-post-text');
+      const text = String(textInput ? textInput.value : '').trim();
+      const images = getSelectedImages();
+      const video = getSelectedVideo();
 
       try {
         const gifUrl = getSelectedGifUrl();
@@ -5419,7 +5422,7 @@
       const item = document.createElement('div');
       item.className = 'npc-img-item';
 
-      const isVideo = isLikelyVideoFile(file);
+      const isVideo = isVideoFile(file);
       // url is a browser-generated blob: URL from a local File object (not user text), safe to assign to src.
       const url = URL.createObjectURL(file);
       npcPreviewMediaUrls.push(url);
@@ -6040,7 +6043,7 @@
           return file.type.startsWith('image/');
         });
         const selectedVideos = files.filter(function (file) {
-          return isLikelyVideoFile(file);
+          return isVideoFile(file);
         });
         if (selectedImages.length && selectedVideos.length) {
           setNewPostStatus('Choose images or one video for a post, not both together.', 'error');
