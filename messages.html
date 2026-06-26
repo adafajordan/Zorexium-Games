@@ -975,7 +975,8 @@
             el.setAttribute('aria-label', 'No profile image available');
             return;
           }
-          el.removeAttribute('aria-label');
+          var displayName = String(user.name || user.username || 'User').trim() || 'User';
+          el.setAttribute('aria-label', 'Profile avatar for ' + displayName);
           el.style.background = getAvatarColor(user.username || user.id);
           var avatarSrc = String(user.__avatarUrl || user.profilePictureDataUrl || '').trim();
           var img = el.querySelector('img');
@@ -1173,13 +1174,14 @@
             if (attachmentType.indexOf('image/') === 0) {
               var img = document.createElement('img');
               img.src = msg.attachment.dataUrl;
-              img.alt = msg.attachment.name || 'Attachment';
+              img.alt = msg.attachment.name ? ('Image attachment: ' + msg.attachment.name) : 'Image attachment';
               attachmentWrap.appendChild(img);
             } else if (attachmentType.indexOf('video/') === 0) {
               var vid = document.createElement('video');
               vid.src = msg.attachment.dataUrl;
               vid.controls = true;
               vid.preload = 'metadata';
+              vid.setAttribute('aria-label', msg.attachment.name ? ('Video attachment: ' + msg.attachment.name) : 'Video attachment');
               attachmentWrap.appendChild(vid);
             } else {
               var fileLink = document.createElement('a');
